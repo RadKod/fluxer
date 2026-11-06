@@ -3,21 +3,21 @@
 import * as v from 'valibot';
 
 const buildInfoSchema = v.object({
-	PUBLIC_BUILD_VERSION: v.nullish(v.string(), 'dev'),
-	PUBLIC_RELEASE_CHANNEL: v.picklist(['stable', 'canary', 'development']),
+	BUILD_VERSION: v.nullish(v.string(), 'dev'),
+	BUILD_CHANNEL: v.picklist(['stable', 'canary', 'development']),
 });
 class BuildInfoInvariantError extends Error {
 	constructor(issues: string) {
 		super(
-			`Invalid build info: ${issues}. PUBLIC_BUILD_VERSION and PUBLIC_RELEASE_CHANNEL are injected by rspack at build time and by fluxer_app/vitest.config.ts test.env under test. PUBLIC_RELEASE_CHANNEL must be stable, canary or development.`,
+			`Invalid build info: ${issues}. rspack injects BUILD_VERSION and BUILD_CHANNEL at build time. BUILD_CHANNEL must be stable, canary or development.`,
 		);
 		this.name = 'BuildInfoInvariantError';
 	}
 }
 
 const parsedBuildInfo = v.safeParse(buildInfoSchema, {
-	PUBLIC_BUILD_VERSION: import.meta.env.PUBLIC_BUILD_VERSION,
-	PUBLIC_RELEASE_CHANNEL: import.meta.env.PUBLIC_RELEASE_CHANNEL,
+	BUILD_VERSION: import.meta.env.BUILD_VERSION,
+	BUILD_CHANNEL: import.meta.env.BUILD_CHANNEL,
 });
 if (!parsedBuildInfo.success) {
 	throw new BuildInfoInvariantError(parsedBuildInfo.issues.map((issue) => issue.message).join(', '));
@@ -34,7 +34,7 @@ function servedReleaseChannel(): 'stable' | 'canary' | null {
 	return value === 'stable' || value === 'canary' ? value : null;
 }
 
-function clientReleaseChannel(value: (typeof buildInfo)['PUBLIC_RELEASE_CHANNEL']): 'stable' | 'canary' {
+function clientReleaseChannel(value: (typeof buildInfo)['BUILD_CHANNEL']): 'stable' | 'canary' {
 	switch (value) {
 		case 'stable':
 			return 'stable';
@@ -50,8 +50,8 @@ const analyticsMeasurementId =
 		: (document.querySelector<HTMLMetaElement>('meta[name="micup-ga4-measurement-id"]')?.content ?? null);
 
 export default {
-	PUBLIC_BUILD_VERSION: buildInfo.PUBLIC_BUILD_VERSION,
+	BUILD_VERSION: buildInfo.BUILD_VERSION,
 	PUBLIC_GA4_MEASUREMENT_ID:
 		analyticsMeasurementId && /^G-[A-Z0-9]{4,20}$/u.test(analyticsMeasurementId) ? analyticsMeasurementId : null,
-	PUBLIC_RELEASE_CHANNEL: servedReleaseChannel() ?? clientReleaseChannel(buildInfo.PUBLIC_RELEASE_CHANNEL),
+	RELEASE_CHANNEL: servedReleaseChannel() ?? clientReleaseChannel(buildInfo.BUILD_CHANNEL),
 } as const;

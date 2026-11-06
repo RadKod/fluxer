@@ -2,7 +2,6 @@
 
 import RuntimeCrash from '@app/features/app/state/RuntimeCrash';
 import {openClaimAccountModal} from '@app/features/auth/components/modals/ClaimAccountModal';
-import {useSudo} from '@app/features/auth/hooks/useSudo';
 import NewDeviceMonitoring from '@app/features/auth/state/NewDeviceMonitoring';
 import SudoPrompt from '@app/features/auth/state/SudoPrompt';
 import * as PrivateChannelCommands from '@app/features/channel/commands/PrivateChannelCommands';
@@ -17,6 +16,7 @@ import GatewaySessions from '@app/features/gateway/transport/GatewaySessionPool'
 import {TRY_AGAIN_IN_A_MOMENT_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
 import {KeyboardModeIntroModal} from '@app/features/input/components/modals/KeyboardModeIntroModal';
 import {Logger} from '@app/features/platform/utils/AppLogger';
+import {isAbortError} from '@app/features/platform/utils/PlatformHelpers';
 import {remFromPx} from '@app/features/theme/layout/RemFromPx';
 
 import TrustedDomain from '@app/features/trusted_domain/state/TrustedDomain';
@@ -114,7 +114,6 @@ const RESETTING_PREMIUM_STATE_DESCRIPTOR = msg({
 });
 export const ToolsMenu: React.FC<{onClose: () => void}> = observer(({onClose}) => {
 	const {i18n} = useLingui();
-	const sudo = useSudo();
 	const [isForgettingAuthorizedIps, setIsForgettingAuthorizedIps] = useState(false);
 	const [isClearingTrustedDomains, setIsClearingTrustedDomains] = useState(false);
 	const [isResettingPremiumState, setIsResettingPremiumState] = useState(false);
@@ -123,9 +122,7 @@ export const ToolsMenu: React.FC<{onClose: () => void}> = observer(({onClose}) =
 	const handleForgetAuthorizedIps = useCallback(async () => {
 		setIsForgettingAuthorizedIps(true);
 		try {
-			const sudoPayload = await sudo.require();
-			await UserCommands.forgetAuthorizedIps(sudoPayload);
-			sudo.finalize();
+			await UserCommands.forgetAuthorizedIps();
 			ToastCommands.createToast({
 				type: 'success',
 				children: i18n._(AUTHORIZED_IPS_CLEARED_NEW_LOGINS_WILL_REQUIRE_EMAIL_DESCRIPTOR),
@@ -141,7 +138,7 @@ export const ToolsMenu: React.FC<{onClose: () => void}> = observer(({onClose}) =
 		} finally {
 			setIsForgettingAuthorizedIps(false);
 		}
-	}, [sudo, i18n]);
+	}, [i18n]);
 	const handleForgetAuthorizedIpsClick = useCallback(() => {
 		openDangerConfirmation({
 			onClose,
@@ -204,11 +201,14 @@ export const ToolsMenu: React.FC<{onClose: () => void}> = observer(({onClose}) =
 			onPrimary: handleResetPremiumState,
 		});
 	}, [handleResetPremiumState, onClose, i18n]);
-	const clearTrustedDomainsLabel = TrustedDomain.trustAllDomains
-		? i18n._(CLEAR_TRUST_ALL_SETTING_DESCRIPTOR)
-		: trustedDomainsCount === 0
-			? i18n._(NO_TRUSTED_DOMAINS_DESCRIPTOR)
-			: i18n._(CLEAR_TRUSTED_DOMAINS_COUNT_DESCRIPTOR, {trustedDomainsCount});
+	let clearTrustedDomainsLabel: string;
+	if (TrustedDomain.trustAllDomains) {
+		clearTrustedDomainsLabel = i18n._(CLEAR_TRUST_ALL_SETTING_DESCRIPTOR);
+	} else if (trustedDomainsCount === 0) {
+		clearTrustedDomainsLabel = i18n._(NO_TRUSTED_DOMAINS_DESCRIPTOR);
+	} else {
+		clearTrustedDomainsLabel = i18n._(CLEAR_TRUSTED_DOMAINS_COUNT_DESCRIPTOR, {trustedDomainsCount});
+	}
 	return (
 		<MenuItemSubmenu
 			label={i18n._(RUNTIME_UTILITIES_DESCRIPTOR)}
@@ -284,7 +284,7 @@ export const ToolsMenu: React.FC<{onClose: () => void}> = observer(({onClose}) =
 						<Trans>Show keyboard mode intro</Trans>
 					</MenuItem>
 					<MenuItem
-						onClick={() => openClaimAccountModal({force: true})}
+						onClick={() => openClaimAccountModal()}
 						data-flx="channel.channel-header-components.developer-tools-context-menu.tools-menu.menu-item.open-claim-account-modal"
 					>
 						<Trans>Open claim account modal</Trans>
@@ -296,7 +296,9 @@ export const ToolsMenu: React.FC<{onClose: () => void}> = observer(({onClose}) =
 							void SudoPrompt.requestVerification({
 								method: 'POST',
 								path: '<developer-tools>',
-							}).catch(() => {});
+							}).catch((error: unknown) => {
+								if (!isAbortError(error)) logger.warn('Failed to open sudo verification', error);
+							});
 						}}
 						data-flx="channel.channel-header-components.developer-tools-context-menu.tools-menu.menu-item.close--2"
 					>

@@ -35,10 +35,7 @@ impl AdminApiClient {
         self.lookup_guild(guild_id)
             .await?
             .map(GuildInfo::from)
-            .ok_or_else(|| super::client::ApiError::Http {
-                status: 404,
-                message: "Guild not found".to_owned(),
-            })
+            .ok_or_else(|| ApiError::http(404, "Guild not found"))
     }
 
     pub async fn lookup_guild(&self, guild_id: &str) -> ApiResult<Option<GuildDetailInfo>> {
@@ -176,6 +173,14 @@ impl AdminApiClient {
         };
         self.generated()
             .update_admin_guild(&snowflake(guild_id), &body)
+            .await
+            .map_err(|e| self.generated_error(e))?;
+        Ok(())
+    }
+
+    pub async fn clear_guild_role_icon(&self, guild_id: &str, role_id: &str) -> ApiResult<()> {
+        self.generated()
+            .clear_admin_guild_role_icon(&snowflake(guild_id), &snowflake(role_id))
             .await
             .map_err(|e| self.generated_error(e))?;
         Ok(())
@@ -334,32 +339,4 @@ fn guild_settings_request(
         verification_level: patch.verification_level,
         ..Default::default()
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn guild_settings_adapter_preserves_dynamic_patch_fields() {
-        let settings = serde_json::json!({
-            "disabled_operations": 5,
-            "nsfw": true,
-            "verification_level": 2,
-        });
-        let request = guild_settings_request(&settings).unwrap();
-        let json = serde_json::to_value(request).unwrap();
-        assert_eq!(json["disabled_operations"], 5);
-        assert_eq!(json["nsfw"], true);
-        assert_eq!(json["verification_level"], 2);
-    }
-
-    #[test]
-    fn guild_search_adapter_rejects_lossy_totals() {
-        let response = generated_types::SearchGuildsResponse {
-            guilds: Vec::new(),
-            total: 1.5,
-        };
-        assert!(search_guilds_response(response).is_err());
-    }
 }

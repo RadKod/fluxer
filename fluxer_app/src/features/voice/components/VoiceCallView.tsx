@@ -27,6 +27,7 @@ import {BottomSheet} from '@app/features/ui/bottom_sheet/BottomSheet';
 import * as ToastCommands from '@app/features/ui/commands/ToastCommands';
 import FocusRing from '@app/features/ui/focus_ring/FocusRing';
 import {usePopout} from '@app/features/ui/hooks/usePopout';
+import {ArrowLeftIcon} from '@app/features/ui/icons/DirectionalIcons';
 import {PortalHostContext} from '@app/features/ui/overlay/PortalHostContext';
 import {Popout as PopoverPopout} from '@app/features/ui/popover/PopoverPopout';
 import ContextMenu, {isContextMenuNodeTarget} from '@app/features/ui/state/ContextMenu';
@@ -51,6 +52,7 @@ import {
 	useVoiceCallAppFullscreen,
 	useVoiceCallFullscreenPortalHost,
 } from '@app/features/voice/components/useVoiceCallAppFullscreen';
+import {useVoiceCallCornerLift} from '@app/features/voice/components/useVoiceCallCornerLift';
 import {useVoiceCallTracksAndLayout} from '@app/features/voice/components/useVoiceCallTracksAndLayout';
 import {useVoiceEngineConnectionState} from '@app/features/voice/components/useVoiceEngineConnectionState';
 import {VoiceCallCornerControls} from '@app/features/voice/components/VoiceCallCornerControls';
@@ -90,15 +92,7 @@ import {useVoiceSceneTvFullscreen} from '@app/features/voice_scene/state/VoiceSc
 import {ME} from '@fluxer/constants/src/AppConstants';
 import {msg, plural} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
-import {
-	ArrowLeftIcon,
-	ChartBarIcon,
-	CornersInIcon,
-	CornersOutIcon,
-	ListIcon,
-	PhoneIcon,
-	StarIcon,
-} from '@phosphor-icons/react';
+import {ChartBarIcon, CornersInIcon, CornersOutIcon, ListIcon, PhoneIcon, StarIcon} from '@phosphor-icons/react';
 import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
@@ -196,6 +190,7 @@ const VoiceCallViewInner = observer(
 			isFullscreen: isVoiceCallAppFullscreen,
 			enterFullscreen: enterVoiceCallAppFullscreen,
 		});
+		const cornerLift = useVoiceCallCornerLift(containerRef);
 		const [isPointerHudActive, setIsPointerHudActive] = useState(false);
 		const connectionState = useVoiceEngineConnectionState();
 		const normalizedConnectionState = asVoiceEngineConnectionState(connectionState);
@@ -485,6 +480,7 @@ const VoiceCallViewInner = observer(
 						isChromePinned && styles.contextMenuActive,
 						keyboardModeEnabled && styles.keyboardModeActive,
 					)}
+					style={{'--voice-call-corner-lift': `${cornerLift}px`} as React.CSSProperties}
 					onPointerEnter={handleVoiceRootPointerActivity}
 					onPointerMove={handleVoiceRootPointerActivity}
 					onPointerDown={handleVoiceRootPointerActivity}
@@ -708,7 +704,7 @@ const VoiceCallViewInner = observer(
 					<VoiceCallCornerControls
 						wrapClassName={clsx(styles.fullscreenButtonWrap, styles.voiceChrome)}
 						buttonClassName={styles.voiceHeaderIconButton}
-						showPopout={!inPopout && isVoicePopoutSupported()}
+						showPopout={!inPopout && !isMobile && isVoicePopoutSupported()}
 						onPopOut={handlePopOutCall}
 						showFullscreen={!inPopout && supportsVoiceCallAppFullscreen}
 						isFullscreen={isVoiceCallAppFullscreen}

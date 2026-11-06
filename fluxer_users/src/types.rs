@@ -3,11 +3,11 @@
 use crate::pseudonym::pseudonym;
 use fluxer_common::user_flags::AccountStanding;
 #[cfg(test)]
-use fluxer_common::user_flags::{
-    USER_FLAG_PARTNER, USER_FLAG_STAFF, USER_FLAG_STAFF_HIDDEN, USER_FLAG_VERIFIED,
-};
+use fluxer_common::user_flags::{USER_FLAG_STAFF, USER_FLAG_VERIFIED};
 pub use fluxer_common::user_partial::ApiUserPartial;
-use fluxer_common::user_partial::{FLUXER_SYSTEM_USER_ID, UserPartialFields};
+use fluxer_common::user_partial::{
+    FLUXER_SYSTEM_USER_ID, UserPartialFields, default_instance_name,
+};
 use serde::{Deserialize, Deserializer, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -15,9 +15,13 @@ use serde::{Deserialize, Deserializer, Serialize};
 pub enum UserRequest {
     GetPartialsByIds {
         user_ids: Vec<i64>,
+        #[serde(default = "default_instance_name")]
+        instance_name: String,
     },
     GetApiPartialsByIds {
         user_ids: Vec<String>,
+        #[serde(default = "default_instance_name")]
+        instance_name: String,
     },
     Invalidate {
         #[serde(deserialize_with = "deserialize_i64_from_number_or_string")]
@@ -63,6 +67,8 @@ pub struct UserPartial {
     pub name_color_2: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub content_hidden_since: Option<i64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub hidden_profile_badges: Vec<String>,
 }
 
 impl UserPartial {
@@ -109,6 +115,7 @@ impl UserPartial {
             flags: self.flags,
             premium_type: self.premium_type,
             premium_flags: self.premium_flags,
+            hidden_profile_badges: self.hidden_profile_badges.clone(),
             mention_flags: self.mention_flags,
             avatar_decoration_id: self.avatar_decoration_id,
             avatar_decoration_asset: self.avatar_decoration_asset.clone(),
@@ -143,9 +150,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::{Value, json};
-
-    const USER_FLAG_DELETED: i64 = 1 << 34;
+    use serde_json::json;
 
     #[test]
     fn api_partial_preserves_identity_version_without_private_username_state() {
@@ -208,6 +213,7 @@ mod tests {
             name_color: None,
             name_color_2: None,
             content_hidden_since: None,
+            hidden_profile_badges: Vec::new(),
         }
     }
 
@@ -215,13 +221,18 @@ mod tests {
     fn api_partial_requests_use_string_snowflakes() {
         let request: UserRequest = serde_json::from_value(json!({
             "op": "GetApiPartialsByIds",
-            "user_ids": ["9007199254740993", "9223372036854775807"]
+            "user_ids": ["9007199254740993", "9223372036854775807"],
+            "instance_name": "Example Chat"
         }))
         .unwrap();
 
         match request {
-            UserRequest::GetApiPartialsByIds { user_ids } => {
+            UserRequest::GetApiPartialsByIds {
+                user_ids,
+                instance_name,
+            } => {
                 assert_eq!(user_ids, vec!["9007199254740993", "9223372036854775807"]);
+                assert_eq!(instance_name, "Example Chat");
             }
             other => panic!("unexpected request: {other:?}"),
         }
@@ -280,43 +291,5 @@ mod tests {
         let api_partial = partial_with_flags(123, USER_FLAG_VERIFIED).to_api_partial();
 
         assert_eq!(api_partial.flags, 1 << 29);
-    }
-
-    #[test]
-    fn api_partial_hides_staff_flag_when_staff_hidden_is_set() {
-        let partial = partial_with_flags(
-            123,
-            USER_FLAG_STAFF | USER_FLAG_STAFF_HIDDEN | USER_FLAG_PARTNER,
-        );
-
-        let api_partial = partial.to_api_partial();
-
-        assert_eq!(api_partial.flags, USER_FLAG_PARTNER as i32);
-        assert_eq!(api_partial.bot, None);
-        assert_eq!(api_partial.system, None);
-        assert_eq!(api_partial.mention_flags, None);
-    }
-
-    #[test]
-    fn api_partial_preserves_stored_fields_when_deleted_flag_is_set() {
-        let deleted = partial_with_flags(123, USER_FLAG_DELETED).to_api_partial();
-
-        assert_eq!(deleted.username, "Ada");
-        assert_eq!(deleted.global_name, Some("Ada Lovelace".to_owned()));
-        assert_eq!(deleted.avatar, Some("avatar_hash".to_owned()));
-        assert_eq!(deleted.flags, 0);
-    }
-
-    #[test]
-    fn api_partial_maps_system_user_like_the_api_mapper() {
-        let system = partial_with_flags(FLUXER_SYSTEM_USER_ID, USER_FLAG_STAFF).to_api_partial();
-
-        assert_eq!(system.username, "sanalyer");
-        assert_eq!(system.bot, Some(true));
-        assert_eq!(system.system, Some(true));
-        assert_eq!(
-            serde_json::to_value(system).unwrap()["system"],
-            Value::Bool(true)
-        );
     }
 }

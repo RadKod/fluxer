@@ -10,10 +10,12 @@ import styles from '@app/features/user/components/profile/profile_card/ProfileCa
 import {
 	getProfileAvatarDecorationBounds,
 	getProfileAvatarLeft,
+	getBannerCutoutCx,
 	PROFILE_POPOUT_BANNER_AVATAR_CUTOUT,
 	PROFILE_POPOUT_GEOMETRY,
 } from '@app/features/user/constants/UserProfileSurfaceGeometry';
 import type {User} from '@app/features/user/models/User';
+import {useDirection} from '@base-ui/react/direction-provider';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
 import {useId, useMemo} from 'react';
@@ -54,6 +56,7 @@ export const ProfileCardBanner: React.FC<ProfileCardBannerProps> = observer(
 		const reactId = useId();
 		const safeId = reactId.replace(/[^a-zA-Z0-9_-]/g, '');
 		const maskId = `uid_${safeId}`;
+		const direction = useDirection();
 		const hasProfileUltra = decorationSurface === 'profile' && Boolean(user.avatarUltra);
 		const bounds =
 			decorationSurface === 'profile' && !hasProfileUltra
@@ -140,7 +143,13 @@ export const ProfileCardBanner: React.FC<ProfileCardBannerProps> = observer(
 							/>
 							<circle
 								fill="black"
-								cx={avatarLeft + PROFILE_POPOUT_GEOMETRY.avatarBorderPx + PROFILE_POPOUT_GEOMETRY.avatarSizePx / 2}
+								cx={getBannerCutoutCx(
+									{
+										viewBoxWidthPx: PROFILE_POPOUT_BANNER_AVATAR_CUTOUT.viewBoxWidthPx,
+										cx: avatarLeft + PROFILE_POPOUT_GEOMETRY.avatarBorderPx + PROFILE_POPOUT_GEOMETRY.avatarSizePx / 2,
+									},
+									direction,
+								)}
 								cy={avatarTop + PROFILE_POPOUT_GEOMETRY.avatarBorderPx + PROFILE_POPOUT_GEOMETRY.avatarSizePx / 2}
 								r={PROFILE_POPOUT_BANNER_AVATAR_CUTOUT.r}
 								data-flx="user.profile.profile-card.profile-card-banner.circle"

@@ -11,6 +11,7 @@ import {entityTagMatches} from '@app/api/utils/EntityTag';
 import {lookupGeoip} from '@app/api/utils/IpUtils';
 import {Headers as HttpHeaders} from '@fluxer/constants/src/Headers';
 import {resolveDomainMigrationAssignment} from '@fluxer/schema/src/domains/admin/DomainMigrationSchemas';
+import {guildVisitsUserActive} from '@fluxer/schema/src/domains/admin/GuildVisitsSchemas';
 import {resolveVoiceNoiseSuppressionAssignment} from '@fluxer/schema/src/domains/admin/VoiceNoiseSuppressionSchemas';
 import {resolveVoiceP2pAssignment} from '@fluxer/schema/src/domains/admin/VoiceP2pSchemas';
 import {resolveVoiceRoomAssignment} from '@fluxer/schema/src/domains/admin/VoiceRoomConfigSchemas';
@@ -41,6 +42,7 @@ export function ExperimentController(app: HonoApp) {
 				voiceRoomConfig,
 				voiceNoiseConfig,
 				geoip,
+				guildVisitsConfig,
 			] = await Promise.all([
 				instanceConfigRepository.getExperimentDeliveryConfig(),
 				instanceConfigRepository.getDomainMigrationConfig(),
@@ -49,6 +51,7 @@ export function ExperimentController(app: HonoApp) {
 				instanceConfigRepository.getVoiceRoomConfig(),
 				instanceConfigRepository.getVoiceNoiseSuppressionConfig(),
 				lookupGeoip(ctx.req.raw),
+				instanceConfigRepository.getGuildVisitsConfig(),
 			]);
 			const user = ctx.get('user');
 			const userId = user.id.toString();
@@ -65,6 +68,7 @@ export function ExperimentController(app: HonoApp) {
 					domain_migration: resolveDomainMigrationAssignment(domainMigrationConfig, userId, targeting),
 					plutonium_page: {enabled: true},
 					voice_p2p: resolveVoiceP2pAssignment(voiceP2pConfig, userId, targeting),
+					guild_visits: {enabled: guildVisitsUserActive(guildVisitsConfig, userId)},
 				},
 			};
 			body.assignments.channel_threads = {active: true, config_version: channelThreadsConfig.config_version};

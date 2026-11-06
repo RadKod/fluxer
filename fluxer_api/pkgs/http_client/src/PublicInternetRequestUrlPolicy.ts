@@ -5,14 +5,14 @@ import dns from 'node:dns';
 import type {LookupFunction} from 'node:net';
 import {BlockList, isIP} from 'node:net';
 import {ipToBytes} from '@fluxer/ip_utils/src/IpAddress';
-import {isFqdnHostname} from '@fluxer/schema/src/primitives/UrlValidators';
+import {isFqdnHostname, isSingleLabelHostname} from '@fluxer/schema/src/primitives/UrlValidators';
 import {formatUrlForDiagnostics} from '@pkgs/http_client/src/HttpClientDiagnostics';
 import type {
 	FetchDispatcher,
 	RequestUrlPolicy,
 	RequestUrlValidationContext,
 } from '@pkgs/http_client/src/HttpClientTypes';
-import {HttpError} from '@pkgs/http_client/src/HttpError';
+import {HttpError, type HttpErrorType} from '@pkgs/http_client/src/HttpError';
 import {Agent, Dispatcher1Wrapper} from 'undici';
 
 const DEFAULT_DNS_CACHE_TTL_MS = 60000;
@@ -146,9 +146,14 @@ function getPolicyErrorContext(context: RequestUrlValidationContext): string {
 	return 'initial request';
 }
 
-function createBlockedRequestError(url: URL, context: RequestUrlValidationContext, reason: string): HttpError {
+function createBlockedRequestError(
+	url: URL,
+	context: RequestUrlValidationContext,
+	reason: string,
+	errorType: HttpErrorType = 'blocked',
+): HttpError {
 	const message = `Blocked outbound ${getPolicyErrorContext(context)} to ${formatUrlForDiagnostics(url)}: ${reason}`;
-	return new HttpError(message, undefined, undefined, true, 'network_error');
+	return new HttpError(message, undefined, undefined, true, errorType);
 }
 
 async function defaultLookupHost(hostname: string): Promise<Array<string>> {
@@ -243,12 +248,15 @@ export function createPublicInternetRequestUrlPolicy(
 			}
 			return;
 		}
-		if (!isFqdnHostname(normalizedHostname)) {
+		if (!isFqdnHostname(normalizedHostname) && !(allowPrivateAddresses && isSingleLabelHostname(normalizedHostname))) {
 			throw createBlockedRequestError(url, context, 'Hostname is not a valid FQDN');
 		}
-		const resolvedAddresses = await resolveHostname(normalizedHostname);
+		const resolvedAddresses = await resolveHostname(normalizedHostname).catch((error: unknown) => {
+			const reason = error instanceof Error ? error.message : String(error);
+			throw createBlockedRequestError(url, context, `Hostname lookup failed: ${reason}`, 'unresolvable_host');
+		});
 		if (resolvedAddresses.length === 0) {
-			throw createBlockedRequestError(url, context, 'Hostname resolved to no IP addresses');
+			throw createBlockedRequestError(url, context, 'Hostname resolved to no IP addresses', 'unresolvable_host');
 		}
 		if (allowPrivateAddresses) {
 			return;

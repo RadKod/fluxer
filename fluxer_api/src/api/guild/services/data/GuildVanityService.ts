@@ -9,6 +9,7 @@ import {
 } from '@app/api/BrandedTypes';
 import type {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
 import type {GuildDataHelpers} from '@app/api/guild/services/data/GuildDataHelpers';
+import {enqueueEndGuildVisitsForCode} from '@app/api/guild/visits/GuildVisitLifecycle';
 import {type InviteRepository, isUnownedInvite} from '@app/api/invite/InviteRepository';
 import {Logger} from '@app/api/Logger';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
@@ -16,7 +17,7 @@ import {getCacheService} from '@app/api/middleware/ServiceSingletons';
 import type {Guild} from '@app/api/models/Guild';
 import {serializeGuildForAudit} from '@app/api/utils/AuditSerializationUtils';
 import {AuditLogActionType} from '@fluxer/constants/src/AuditLogActionType';
-import {InviteTypes, Permissions} from '@fluxer/constants/src/ChannelConstants';
+import {Permissions} from '@fluxer/constants/src/ChannelConstants';
 import {GuildFeatures} from '@fluxer/constants/src/GuildConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
@@ -82,11 +83,12 @@ export async function setGuildVanityCode(
 		.upsertPartial(guildId, {vanity_url_code: code == null ? null : createVanityURLCode(code)}, guild.toRow())
 		.catch(releaseClaimAndRethrow);
 	if (guild.vanityUrlCode != null && guild.vanityUrlCode !== code) {
-		await inviteRepository
-			.deleteVanity(vanityCodeToInviteCode(guild.vanityUrlCode), guildId)
-			.catch((error: unknown) => {
-				Logger.error({error, guildId}, 'Failed to release the previous vanity URL code after a successful update');
-			});
+		const previousCode = vanityCodeToInviteCode(guild.vanityUrlCode);
+		await inviteRepository.deleteVanity(previousCode, guildId).catch((error: unknown) => {
+			Logger.error({error, guildId}, 'Failed to release the previous vanity URL code after a successful update');
+		});
+		// Upstream: visits that came in through the released code end with it.
+		await enqueueEndGuildVisitsForCode(guildId, previousCode);
 	}
 	return updatedGuild;
 }

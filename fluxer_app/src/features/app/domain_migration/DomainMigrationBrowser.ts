@@ -54,13 +54,13 @@ function domainMigrationDiscoveryApiEndpoint(): string | null {
 	}
 }
 
-export async function loadDomainMigrationDiscovery(): Promise<void> {
+export async function loadDomainMigrationDiscovery(timeoutMs = DOMAIN_MIGRATION_DISCOVERY_TIMEOUT_MS): Promise<void> {
 	if (domainMigrationDiscoveryApiEndpoint() === null) {
 		return;
 	}
 	await InstanceSnapshotStore.resolve({
 		input: window.location.origin,
-		signal: AbortSignal.timeout(DOMAIN_MIGRATION_DISCOVERY_TIMEOUT_MS),
+		signal: AbortSignal.timeout(timeoutMs),
 	});
 }
 
@@ -149,6 +149,15 @@ export async function hasStoredAccount(): Promise<boolean> {
 	const {default: accountStorage} = await import('@app/features/auth/state/AccountStorage');
 	const {records: accounts} = await accountStorage.getAllAccounts();
 	return accounts.some((account) => Boolean(account.token));
+}
+
+export async function hasUsableStoredAccount(): Promise<boolean> {
+	if (readActiveSessionToken() !== null) {
+		return true;
+	}
+	const {default: accountStorage} = await import('@app/features/auth/state/AccountStorage');
+	const {records: accounts} = await accountStorage.getAllAccounts();
+	return accounts.some((account) => Boolean(account.token) && account.isValid !== false);
 }
 
 function openInBrowser(url: string): void {

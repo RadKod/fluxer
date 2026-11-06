@@ -15,10 +15,10 @@ import markupStyles from '@app/features/theme/styles/Markup.module.css';
 import styles from '@app/features/theme/styles/Message.module.css';
 import {Avatar} from '@app/features/ui/components/Avatar';
 import FocusRing from '@app/features/ui/focus_ring/FocusRing';
+import {ArrowBendUpLeftIcon} from '@app/features/ui/icons/DirectionalIcons';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
-import {ArrowBendUpLeftIcon} from '@phosphor-icons/react';
 import {clsx} from 'clsx';
 import {computed} from 'mobx';
 import {observer} from 'mobx-react-lite';
@@ -89,7 +89,9 @@ export const ReplyPreview = observer(
 				});
 			}
 		}, [referenceChannelId, message.channelId, message.id, message.messageReference]);
-		if (!message.messageReference || message.isCrosspostCopy) return null;
+		if (!message.messageReference || message.isCrosspostCopy) {
+			return null;
+		}
 		if (resolution.state !== MessageReferenceState.LOADED) {
 			const isDeleted = resolution.state === MessageReferenceState.DELETED;
 			return (
@@ -144,12 +146,12 @@ export const ReplyPreview = observer(
 			referencedMessage.author.id !== Authentication.currentUserId &&
 			LocalUserSpamOverride.isUserMarkedAsSpammer(referencedMessage.author.id, referencedMessage.author.flags);
 		const isCollapsedReferenceRevealed = revealedReference.get();
-		const hiddenReplyReason =
-			blockedReference?.get() && !isCollapsedReferenceRevealed
-				? i18n._(REPLY_HIDDEN_BECAUSE_THE_ORIGINAL_AUTHOR_IS_BLOCKED_DESCRIPTOR)
-				: isSpammerReply && !isCollapsedReferenceRevealed
-					? i18n._(REPLY_HIDDEN_BECAUSE_THE_ORIGINAL_AUTHOR_IS_MARKED_DESCRIPTOR)
-					: null;
+		let hiddenReplyReason: string | null = null;
+		if (blockedReference?.get() && !isCollapsedReferenceRevealed) {
+			hiddenReplyReason = i18n._(REPLY_HIDDEN_BECAUSE_THE_ORIGINAL_AUTHOR_IS_BLOCKED_DESCRIPTOR);
+		} else if (isSpammerReply && !isCollapsedReferenceRevealed) {
+			hiddenReplyReason = i18n._(REPLY_HIDDEN_BECAUSE_THE_ORIGINAL_AUTHOR_IS_MARKED_DESCRIPTOR);
+		}
 		if (hiddenReplyReason) {
 			return (
 				<div

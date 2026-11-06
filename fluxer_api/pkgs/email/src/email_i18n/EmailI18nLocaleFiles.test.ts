@@ -7,85 +7,76 @@ import type {EmailTemplate, EmailTemplateKey} from '@pkgs/email/src/email_i18n/E
 import {describe, expect, it} from 'vitest';
 
 const LOCALES = Object.keys(EMAIL_I18N_LOCALE_MESSAGES) as Array<keyof typeof EMAIL_I18N_LOCALE_MESSAGES>;
-const ACTION_URL_VARIABLES: Record<string, string> = {
-	donation_confirmation: 'manageUrl',
-	donation_magic_link: 'manageUrl',
-	email_change_revert: 'revertUrl',
-	email_verification: 'verifyUrl',
-	harvest_completed: 'downloadUrl',
-	inactivity_warning: 'loginUrl',
-	ip_authorization: 'authUrl',
-	password_reset: 'resetUrl',
-	registration_approved: 'channelsUrl',
-};
-const BUTTON_TEMPLATES = Object.keys(ACTION_URL_VARIABLES).sort();
-const WELCOME_TEMPLATES = [
-	'email_verification',
-	'referral_reward_ready',
-	'registration_approved',
-	'unban_notification',
-];
-const PARTY_POPPER = '\u{1F389}';
-const CATALOGS: Array<[string, Record<string, EmailTemplate>]> = [
-	['en-US', EMAIL_I18N_MESSAGES],
-	...LOCALES.map((locale): [string, Record<string, EmailTemplate>] => [locale, EMAIL_I18N_LOCALE_MESSAGES[locale]]),
-];
-const SAMPLE_VARIABLES = {
-	username: 'ayse',
-	reason: null,
-	ipAddress: '203.0.113.7',
-	location: 'Istanbul',
-	deletionDate: new Date('2026-10-20T00:00:00Z'),
-	lastActiveDate: new Date('2025-10-01T00:00:00Z'),
-	expiresAt: new Date('2026-10-20T00:00:00Z'),
-	totalMessages: 12,
-	fileSizeMB: 1.5,
-	newEmail: 'new@example.test',
-	amount: '$5.00',
-	currency: 'USD',
-	interval: 'month',
-	support_email: 'info@sanalyer.com',
-};
-
-function buttonTemplates(catalog: Record<string, EmailTemplate>): Array<string> {
-	return Object.entries(catalog)
-		.filter(([, template]) => typeof template.button === 'string' && template.button.trim() !== '')
-		.map(([key]) => key)
-		.sort();
-}
-
 const TEMPLATE_KEYS = Object.keys(EMAIL_I18N_MESSAGES) as Array<EmailTemplateKey>;
 const DATE = new Date('2026-10-01T23:30:00Z');
 
 const FIXTURE: {[K in EmailTemplateKey]: EmailTemplateVariables[K]} = {
-	account_deletion_cancelled: {username: 'testuser', safety_email: 'safety@fluxer.com'},
-	account_deletion_scheduled_inactivity: {
-		username: 'testuser',
-		deletion_date: 'Dec 1, 2026',
-		support_email: 'support@fluxer.com',
+	account_deletion_cancelled: {},
+	account_deletion_scheduled_inactivity: {deletion_date: 'Dec 1, 2026'},
+	account_deletion_scheduled_requested: {deletion_date: 'Dec 14, 2026'},
+
+	bulk_message_deletion_completed: {message_count: 1240, channel_count: 18},
+	donation_cancellation_confirmation: {
+		sellerAddress: 'c/o Embassy House, Östgötagatan 12, 116 25 Stockholm, Sweden',
+		sellerEmail: 'support@fluxer.com',
+		receivedFormatted: 'October 1, 2026 at 11:30 PM UTC',
+		endsAt: DATE,
+		reference: 'sub_123',
 	},
-	account_deletion_scheduled_requested: {
-		username: 'testuser',
-		deletion_date: 'Dec 14, 2026',
-		safety_email: 'safety@fluxer.com',
+	donation_card_expiring: {
+		sellerAddress: 'c/o Embassy House, Östgötagatan 12, 116 25 Stockholm, Sweden',
+		sellerEmail: 'support@fluxer.com',
+		branded: 'yes',
+		brand: 'Visa',
+		last4: '4242',
+		expiryFormatted: 'October 2026',
+		chargeAt: DATE,
+		amountFormatted: '$4.99',
+		tax: 'yes',
 	},
-	donation_confirmation: {amount: '$5.00', currency: 'USD', interval: 'month', manageUrl: 'https://example.com/m'},
-	donation_magic_link: {manageUrl: 'https://example.com/m', expiresAt: DATE},
+	donation_confirmation: {amount: '$5.00', interval: 'month', paidAt: DATE, documentNumber: 'DN-000001'},
+	donation_magic_link: {minutes: 15},
+	donation_payment_failed: {reason: 'declined', attemptedAt: DATE, amountFormatted: '$5.00'},
+	donation_receipt: {
+		interval: 'month',
+		paidAt: DATE,
+		periodStart: DATE,
+		periodEnd: DATE,
+		amountFormatted: '$5.00',
+		document: 'yes',
+		documentNumber: 'DN-000001',
+	},
+	donation_refund_receipt: {refundedAt: DATE, amountFormatted: '$5.00'},
+	donation_renewal_notice: {
+		sellerAddress: 'c/o Embassy House, Östgötagatan 12, 116 25 Stockholm, Sweden',
+		sellerEmail: 'support@fluxer.com',
+		method: 'card',
+		brand: 'Visa',
+		last4: '4242',
+		methodName: '',
+		chargeAt: DATE,
+		nextFormatted: '$49.99',
+		regularFormatted: '$49.99',
+		tax: 'yes',
+		differs: 'no',
+		cancelByFormatted: 'October 1, 2026 at 11:30 PM UTC',
+	},
 	dsa_report_resolved: {
-		reportId: '1',
-		publicComment: 'Thanks',
-		hasComment: 'yes',
 		outcome: 'removed',
 		appeals_email: 'appeals@fluxer.com',
+		target: 'message_community',
+		reportedAt: DATE,
+		username: 'example',
+		communityName: 'Fluxer HQ',
+		channelName: 'general',
 	},
-	dsa_report_verification: {code: '123456', expiresAt: DATE},
-	email_change_new: {username: 'testuser', code: '123456', expiresAt: DATE},
-	email_change_original: {username: 'testuser', code: '123456', expiresAt: DATE},
-	email_change_revert: {username: 'testuser', newEmail: 'new@example.com', revertUrl: 'https://example.com/r'},
-	email_verification: {username: 'testuser', verifyUrl: 'https://example.com/verify'},
-	gift_chargeback_notification: {username: 'testuser', support_email: 'support@fluxer.com'},
+	dsa_report_verification: {minutes: 10},
+	email_change_new: {minutes: 10},
+	email_change_original: {minutes: 10},
+	email_change_revert: {},
+	email_verification: {},
+	email_verification_code: {minutes: 10},
 	enforcement_ended: {
-		username: 'testuser',
 		outcome: 'reversed',
 		decision_id: '123',
 		restores_access: 'yes',
@@ -93,7 +84,6 @@ const FIXTURE: {[K in EmailTemplateKey]: EmailTemplateVariables[K]} = {
 		content_removed: 'no',
 	},
 	enforcement_notice: {
-		username: 'testuser',
 		kind_label: 'suspension',
 		neutral: 'no',
 		summary: 'We suspended your account.',
@@ -108,116 +98,268 @@ const FIXTURE: {[K in EmailTemplateKey]: EmailTemplateVariables[K]} = {
 		redress: null,
 		decision_id: '123',
 	},
-	harvest_completed: {
-		username: 'testuser',
-		downloadUrl: 'https://example.com/d',
-		totalMessages: 1200,
-		fileSizeMB: 3.5,
-		expiresAt: DATE,
-		support_email: 'support@fluxer.com',
+	gift_chargeback_notification: {premiumName: 'Plutonium', plan: 'monthly'},
+	harvest_completed: {totalMessages: 1200, fileSizeMB: 3.5, expiresAt: DATE},
+	inactivity_warning: {deletionDate: DATE, lastActiveDate: DATE},
+	ip_authorization: {},
+	mfa_backup_codes_view: {minutes: 10},
+	operator_pass_offer_accepted: {recipientName: 'Grace', remainingCount: 2, visionary: 'no'},
+	operator_pass_offer_ended: {otherName: 'Grace', ended: 'declined'},
+	operator_pass_offer_received: {senderName: 'Ada'},
+	operator_pass_perks_removed: {
+		scope: 'temporary',
+		until: DATE,
+		automated: 'no',
+		visionary: 'yes',
+		cause: 'dispute',
+		disputeId: 'dp_test',
+		deadline: DATE,
 	},
-	inactivity_warning: {
-		username: 'testuser',
-		deletionDate: DATE,
-		lastActiveDate: DATE,
-		loginUrl: 'https://example.com/login',
-		support_email: 'support@fluxer.com',
+	operator_pass_purchase_confirmation: {
+		termsVersion: '2026-10-18',
+		orderDate: DATE,
+		quantity: 2,
+		priceFormatted: '$199',
+		taxFormatted: '$39.80',
+		business: 'yes',
+		document: 'yes',
+		documentNumber: 'OP-000001',
+		withdrawalEndsOn: '2026-11-08',
+		consentAt: DATE,
+		labs_name: 'Fluxer Labs',
+		wallName: 'Ada',
+		wallOptOut: 'no',
+		sellerAddress: 'c/o Embassy House, Östgötagatan 12, 116 25 Stockholm, Sweden',
+		sellerPhone: '+46 79 101 18 18',
+		sellerEmail: 'support@fluxer.com',
 	},
-	ip_authorization: {
-		username: 'testuser',
-		authUrl: 'https://example.com/a',
-		ipAddress: '192.0.2.1',
-		location: 'Stockholm',
+	operator_pass_refund_receipt: {
+		orderDate: DATE,
+		refundedAt: DATE,
+		amountFormatted: '$199',
+		delivered: 'yes',
+		passCount: 2,
+		lastPass: 'yes',
+		visionary: 'yes',
 	},
-	mfa_backup_codes_view: {username: 'testuser', code: '123456', expiresAt: DATE},
-	password_change_verification: {username: 'testuser', code: '123456', expiresAt: DATE},
-	password_reset: {username: 'testuser', resetUrl: 'https://example.com/reset'},
-	referral_reward_ready: {username: 'testuser'},
-	registration_approved: {username: 'testuser', channelsUrl: 'https://example.com/channels'},
-	report_received: {reportId: '1', targetKind: 'message'},
+	operator_pass_removal_notice: {replyDays: 7, visionary: 'yes'},
+	operator_pass_revoked: {cause: 'refund', lastPass: 'yes', visionary: 'yes'},
+	operator_pass_purchase_refused: {},
+	operator_pass_wall_hidden: {reason: 'guidelines'},
+	operator_pass_wall_name_replaced: {target: 'both', shown: 'operator', reason: 'rights'},
+	operator_pass_wall_quote_cleared: {reason: 'rights'},
+	operator_pass_visionary_turned_on: {
+		badge: 'no',
+		wallName: 'Ada',
+		wallOptOut: 'no',
+		member: 'no',
+		termsVersion: '2026-11-01',
+	},
+	operator_pass_welcome: {
+		founderName: 'Hampus',
+		deliveredAt: DATE,
+		wallName: 'Ada',
+		wallOptOut: 'no',
+		labs: 'none',
+	},
+	operator_pass_withdrawal_receipt: {
+		receivedAt: DATE,
+		orderDate: DATE,
+		amountFormatted: '$199',
+		delivered: 'yes',
+		passCount: 2,
+		lastPass: 'yes',
+		visionary: 'yes',
+		refund: 'started',
+	},
+	password_change_verification: {minutes: 10},
+	password_reset: {},
+	payment_dispute_warning: {
+		appeals_email: 'appeals@fluxer.com',
+		privacy_email: 'privacy@fluxer.com',
+		product: 'plutonium',
+		orderDate: DATE,
+		warningDate: DATE,
+	},
+	plutonium_cancellation_confirmation: {
+		sellerAddress: 'c/o Embassy House, Östgötagatan 12, 116 25 Stockholm, Sweden',
+		sellerEmail: 'support@fluxer.com',
+		receivedFormatted: 'October 1, 2026 at 11:30 PM UTC',
+		endsAt: DATE,
+		reference: 'sub_123',
+		unpaid: 'no',
+		unpaidFormatted: '',
+		premiumName: 'Plutonium',
+		plan: 'yearly',
+	},
+	plutonium_card_expiring: {
+		sellerAddress: 'c/o Embassy House, Östgötagatan 12, 116 25 Stockholm, Sweden',
+		sellerEmail: 'support@fluxer.com',
+		branded: 'yes',
+		brand: 'Visa',
+		last4: '4242',
+		expiryFormatted: 'October 2026',
+		chargeAt: DATE,
+		amountFormatted: '$4.99',
+		tax: 'yes',
+		premiumName: 'Plutonium',
+	},
+	plutonium_ended_unpaid: {
+		sellerAddress: 'c/o Embassy House, Östgötagatan 12, 116 25 Stockholm, Sweden',
+		sellerEmail: 'support@fluxer.com',
+		premiumName: 'Plutonium',
+		owed: 'open',
+		amountFormatted: '$4.99',
+	},
+	plutonium_gift_applied: {
+		sellerAddress: 'c/o Embassy House, Östgötagatan 12, 116 25 Stockholm, Sweden',
+		sellerEmail: 'support@fluxer.com',
+		method: 'named',
+		brand: '',
+		last4: '',
+		methodName: 'Pix',
+		premiumName: 'Plutonium',
+		plan: 'monthly',
+		trialEnd: DATE,
+		amountFormatted: '$4.99',
+		tax: 'no',
+	},
+	plutonium_payment_failed: {
+		premiumName: 'Plutonium',
+		reason: 'declined',
+		attemptedAt: DATE,
+		amountFormatted: '$4.99',
+		access: 'yes',
+		accessEndsAt: DATE,
+	},
+	plutonium_payment_receipt: {
+		premiumName: 'Plutonium',
+		plan: 'monthly',
+		gift: 'no',
+		paidAt: DATE,
+		periodStart: DATE,
+		periodEnd: DATE,
+		amountFormatted: '$4.99',
+		taxFormatted: '$0.83',
+		business: 'no',
+		document: 'yes',
+		documentNumber: 'PL-000001',
+		renewal: 'month',
+		renewalFormatted: '$4.99',
+		renewalTax: 'included',
+		consentAt: DATE,
+		withdrawalEndsAt: DATE,
+		invoiceNumber: 'B1Q2W3E4-0001',
+		sellerAddress: 'c/o Embassy House, Östgötagatan 12, 116 25 Stockholm, Sweden',
+		sellerEmail: 'support@fluxer.com',
+	},
+	plutonium_refund_receipt: {
+		premiumName: 'Plutonium',
+		plan: 'yearly',
+		refundedAt: DATE,
+		amountFormatted: '$49.99',
+		paidFormatted: '$49.99',
+		paidAt: DATE,
+		partial: 'no',
+		requestedFormatted: 'October 1, 2026 at 11:30 PM UTC',
+		reference: 'sub_123',
+	},
+	plutonium_renewal_notice: {
+		sellerAddress: 'c/o Embassy House, Östgötagatan 12, 116 25 Stockholm, Sweden',
+		sellerEmail: 'support@fluxer.com',
+		method: 'card',
+		brand: 'Visa',
+		last4: '4242',
+		methodName: '',
+		chargeAt: DATE,
+		nextFormatted: '$49.99',
+		regularFormatted: '$49.99',
+		tax: 'yes',
+		differs: 'no',
+		cancelByFormatted: 'October 1, 2026 at 11:30 PM UTC',
+		premiumName: 'Plutonium',
+		gift: 'no',
+		annual: 'yes',
+		plan: 'yearly',
+		giftEndsAt: DATE,
+		yearStartsAt: DATE,
+	},
+	plutonium_withdrawal_receipt: {
+		premiumName: 'Plutonium',
+		receivedAt: DATE,
+		purchasedAt: DATE,
+		gift: 'no',
+		amountFormatted: '$49.99',
+		refund: 'started',
+		brazil: 'no',
+	},
+	reauth_code: {minutes: 10},
+	referral_reward_ready: {},
+	registration_approved: {},
+	registration_pending: {},
+	report_received: {targetKind: 'message'},
 	report_resolved: {
-		username: 'testuser',
-		reportId: '1',
-		publicComment: 'Thanks',
-		hasComment: 'yes',
 		outcome: 'restricted',
 		appeals_email: 'appeals@fluxer.com',
+		target: 'message_community',
+		reportedAt: DATE,
+		username: 'example',
+		communityName: 'Fluxer HQ',
+		channelName: 'general',
 	},
-	self_deletion_scheduled: {username: 'testuser', deletionDate: DATE},
+	self_deletion_scheduled: {deletionDate: DATE},
+	sign_in_code: {minutes: 10},
+	sign_up_code: {minutes: 10},
 };
 
+function withReply<K extends EmailTemplateKey>(key: K): EmailTemplateVariables[K] {
+	return {...FIXTURE[key], reply: 'yes'} as EmailTemplateVariables[K];
+}
+
 describe('EmailI18n locale files', () => {
-	it('labels the action button of the action templates in the source catalog', () => {
-		expect(buttonTemplates(EMAIL_I18N_MESSAGES)).toEqual(BUTTON_TEMPLATES);
-	});
-	it.each(LOCALES)('%s labels the same action buttons as the source catalog', (locale) => {
-		expect(buttonTemplates(EMAIL_I18N_LOCALE_MESSAGES[locale])).toEqual(BUTTON_TEMPLATES);
-	});
-	it.each(LOCALES.flatMap((locale) => BUTTON_TEMPLATES.map((key) => [locale, key] as const)))(
-		'%s %s compiles and keeps the action URL on a line of its own',
-		(locale, key) => {
-			const url = `https://example.test/${key}`;
-			const template = getEmailTemplate(
-				key as EmailTemplateKey,
-				locale,
-				{...SAMPLE_VARIABLES, [ACTION_URL_VARIABLES[key]]: url} as EmailTemplateVariables[EmailTemplateKey],
-				'sanalyer',
-			);
-			expect(template.ok).toBe(true);
-			if (!template.ok) return;
-			expect(template.value.button?.trim()).toBeTruthy();
-			expect(template.value.body.split('\n').map((line) => line.trim())).toContain(url);
-		},
-	);
-	it.each(CATALOGS)('%s opens only the welcome emails with the party popper', (_locale, catalog) => {
-		for (const [key, template] of Object.entries(catalog)) {
-			const count = `${template.subject}${template.body}${template.button ?? ''}`.split(PARTY_POPPER).length - 1;
-			const welcome = WELCOME_TEMPLATES.includes(key);
-			expect([key, template.body.startsWith(`${PARTY_POPPER} `), count]).toEqual([key, welcome, welcome ? 1 : 0]);
+	it.each(LOCALES)('%s has the same template fields as the source catalog', (locale) => {
+		const messages: Partial<Record<EmailTemplateKey, EmailTemplate>> = EMAIL_I18N_LOCALE_MESSAGES[locale];
+		for (const key of TEMPLATE_KEYS) {
+			expect(Object.keys(messages[key] ?? {}).sort(), key).toEqual(Object.keys(EMAIL_I18N_MESSAGES[key]).sort());
 		}
 	});
-	it('compiles the button label with the template variables', () => {
-		const template = getEmailTemplate(
-			'registration_approved',
-			'tr',
-			{username: 'ayse', channelsUrl: 'https://example.com/channels/@me'},
-			'sanalyer',
-		);
-		expect(template.ok && template.value.button).toBe("sanalyer'i aç");
-	});
-	it.each(LOCALES)('%s keeps the source placeholders in every template', (locale) => {
-		const messages: Partial<Record<EmailTemplateKey, {subject: string; body: string}>> =
-			EMAIL_I18N_LOCALE_MESSAGES[locale];
+	it.each(LOCALES)('%s keeps the source placeholders in every template field', (locale) => {
+		const messages: Partial<Record<EmailTemplateKey, EmailTemplate>> = EMAIL_I18N_LOCALE_MESSAGES[locale];
 		for (const key of TEMPLATE_KEYS) {
-			const source = EMAIL_I18N_MESSAGES[key];
+			const source: EmailTemplate = EMAIL_I18N_MESSAGES[key];
 			const translated = messages[key];
 			expect(translated, key).toBeDefined();
 			if (!translated) continue;
-			expect(extractMessageTemplatePlaceholders(translated.subject), `${key}.subject`).toEqual(
-				extractMessageTemplatePlaceholders(source.subject),
-			);
-			expect(extractMessageTemplatePlaceholders(translated.body), `${key}.body`).toEqual(
-				extractMessageTemplatePlaceholders(source.body),
-			);
+			for (const field of Object.keys(source)) {
+				expect(extractMessageTemplatePlaceholders(translated[field] ?? ''), `${key}.${field}`).toEqual(
+					extractMessageTemplatePlaceholders(source[field]),
+				);
+			}
 		}
 	});
-	it.each(['en-US', ...LOCALES])('%s gives every reporter outcome its own wording', (locale) => {
-		for (const key of ['report_resolved', 'dsa_report_resolved'] as const) {
-			const bodies = (['removed', 'restricted', 'action_taken', 'no_violation'] as const).map((outcome) => {
-				const result = getEmailTemplate(key, locale, {...FIXTURE[key], outcome}, 'Fluxer');
-				return result.ok ? result.value.body : null;
-			});
-			expect(bodies, key).not.toContain(null);
-			expect(new Set(bodies).size, key).toBe(bodies.length);
+	it.each(LOCALES)('%s keeps every link tag of the source in every template field', (locale) => {
+		const messages: Partial<Record<EmailTemplateKey, EmailTemplate>> = EMAIL_I18N_LOCALE_MESSAGES[locale];
+		const tags = (text: string) => (text.match(/<\/?(mail|settings|dsa|arn|labs)>/g) ?? []).sort();
+		for (const key of TEMPLATE_KEYS) {
+			const source: EmailTemplate = EMAIL_I18N_MESSAGES[key];
+			for (const [field, text] of Object.entries(source)) {
+				const translated = messages[key]?.[field] ?? '';
+				expect(tags(translated), `${key}.${field}`).toEqual(tags(text));
+				expect(translated, `${key}.${field}`).not.toMatch(
+					/<(mail|settings|dsa|arn|labs)>[^<]*<(mail|settings|dsa|arn|labs)>/,
+				);
+			}
 		}
 	});
 	it.each(['en-US', ...LOCALES])('%s renders every template with UTC times', (locale) => {
 		for (const key of TEMPLATE_KEYS) {
-			const result = getEmailTemplate(key, locale, FIXTURE[key], 'Fluxer');
+			const result = getEmailTemplate(key, locale, withReply(key), 'Fluxer');
 			expect(result.ok, key).toBe(true);
 			if (!result.ok) continue;
-			expect(result.value.body, key).not.toContain('GMT');
-			expect(result.value.body, key).not.toContain('Coordinated Universal Time');
+			for (const [field, text] of Object.entries(result.value)) {
+				expect(text, `${key}.${field}`).not.toContain('GMT');
+				expect(text, `${key}.${field}`).not.toContain('Coordinated Universal Time');
+			}
 		}
 	});
 });

@@ -43,7 +43,7 @@ describe('Öncü badge closure', () => {
 			AdminACLs.BADGES_MANAGE,
 		]);
 		badge = await createBuilder<BadgeResponse>(harness, admin.token)
-			.post('/admin/badges')
+			.post('/admin/badge-catalog')
 			.body({icon: getPngDataUrl(), description: TEXT})
 			.expect(HTTP_STATUS.OK)
 			.execute();

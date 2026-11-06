@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
-export const MODULE_SYSTEM_BUILD_ENABLED = process.env.FLUXER_MODULES === '1';
+const MODULE_SYSTEM_BUILD_ENABLED = process.env.FLUXER_MODULES === '1';
 
 const OFFLINE_RENDERER_DIRECTORY_SEGMENTS: ReadonlyArray<string> = Object.freeze(['..', 'renderer']);
 const OFFLINE_RENDERER_INDEX_NAME = 'index.html';
@@ -13,7 +13,7 @@ const MODULE_SYSTEM_ENV = 'FLUXER_MODULE_SYSTEM';
 const MODULE_SYSTEM_DISABLE_ARGUMENT = '--fluxer-no-module-system';
 const FALSY_VALUES: ReadonlySet<string> = new Set(['0', 'false', 'no', 'off']);
 
-export function readModuleSystemDisableRequest(
+function readModuleSystemDisableRequest(
 	argv: ReadonlyArray<string> = process.argv,
 	env: NodeJS.ProcessEnv = process.env,
 ): boolean {
@@ -84,8 +84,22 @@ export function resolveModuleSystemLaunch({
 	}
 }
 
-export function getOfflineRendererRoot(mainModuleUrl: string): string {
-	return path.join(path.dirname(fileURLToPath(mainModuleUrl)), ...OFFLINE_RENDERER_DIRECTORY_SEGMENTS);
+const ASAR_ARCHIVE_SEGMENT = `.asar${path.sep}`;
+const ASAR_UNPACKED_SEGMENT = `.asar.unpacked${path.sep}`;
+
+export function resolveAsarUnpackedPath(target: string): string {
+	const index = target.lastIndexOf(ASAR_ARCHIVE_SEGMENT);
+	if (index < 0) {
+		return target;
+	}
+	const unpacked = `${target.slice(0, index)}${ASAR_UNPACKED_SEGMENT}${target.slice(index + ASAR_ARCHIVE_SEGMENT.length)}`;
+	return fs.existsSync(unpacked) ? unpacked : target;
+}
+
+function getOfflineRendererRoot(mainModuleUrl: string): string {
+	return resolveAsarUnpackedPath(
+		path.join(path.dirname(fileURLToPath(mainModuleUrl)), ...OFFLINE_RENDERER_DIRECTORY_SEGMENTS),
+	);
 }
 
 export function hasOfflineRenderer(mainModuleUrl: string): boolean {

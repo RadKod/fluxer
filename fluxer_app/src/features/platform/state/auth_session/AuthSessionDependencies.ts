@@ -30,6 +30,7 @@ import {
 	type SessionCredentialMirror,
 } from '@app/features/platform/state/auth_session/SessionCredentialMirror';
 import AppStorage, {
+	type AppStorageScopeActivation,
 	activateAppStorageScope,
 	deleteAppStorageScope,
 	getAppStorageScope,
@@ -58,9 +59,11 @@ export interface AuthSessionAccountStorage {
 	restoreAccountData(accountKey: string): Promise<StoredAccount | null>;
 	deleteAccount(accountKey: string): Promise<void>;
 	updateAccountValidity(accountKey: string, isValid: boolean, expectedToken?: string): Promise<void>;
+	updateAccountToken(accountKey: string, expectedToken: string, token: string): Promise<void>;
+	updateAccountSwitcherPositions(positions: ReadonlyMap<string, number>): Promise<void>;
 }
 
-export interface AuthSessionHttpOptions {
+interface AuthSessionHttpOptions {
 	readonly headers?: Record<string, string>;
 	readonly auth?: 'session' | 'none';
 	readonly target: InstanceHTTPTarget;
@@ -68,7 +71,7 @@ export interface AuthSessionHttpOptions {
 	readonly retries?: number;
 }
 
-export interface AuthSessionHttp {
+interface AuthSessionHttp {
 	get<T>(url: string, options: AuthSessionHttpOptions): Promise<{body: T}>;
 }
 
@@ -89,7 +92,7 @@ export interface AuthSessionDependencies {
 	readonly abortRuntimeSnapshot: (prepared: PreparedRuntimeConfig) => Promise<void>;
 	readonly deactivateRuntime: () => Promise<void>;
 	readonly allowsCrossInstanceSwitching: () => boolean;
-	readonly activateStorageScope: (accountKey: string | null) => Promise<void>;
+	readonly activateStorageScope: (accountKey: string | null) => Promise<AppStorageScopeActivation>;
 	readonly resetClientState: (options: ResetClientStateOptions, accountScope?: string) => Promise<void>;
 	readonly deleteAccountStorageScope: (accountKey: string) => Promise<void>;
 	readonly closeLayers: () => void | Promise<void>;

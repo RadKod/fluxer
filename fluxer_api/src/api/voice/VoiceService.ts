@@ -11,6 +11,7 @@ import type {InstanceConfigRepository} from '@app/api/instance/InstanceConfigRep
 import {Logger} from '@app/api/Logger';
 import {getUsernameSelectionGate} from '@app/api/middleware/ServiceRegistry';
 import type {User} from '@app/api/models/User';
+import {assertTierAllows, canReachOthers, NO_TIER_CONTEXT} from '@app/api/user/AccountTier';
 import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import type {VoiceAccessContext, VoiceAvailabilityService} from '@app/api/voice/VoiceAvailabilityService';
 import type {VoiceRegionAvailability, VoiceServerRecord} from '@app/api/voice/VoiceModel';
@@ -20,9 +21,8 @@ import {
 	selectVoiceRegionId,
 } from '@app/api/voice/VoiceRegionSelection';
 import {generateConnectionId} from '@app/api/words/Words';
+import {TierGatedActions} from '@fluxer/constants/src/AccountTierConstants';
 import {ChannelTypes} from '@fluxer/constants/src/ChannelConstants';
-import {UnclaimedAccountCannotJoinOneOnOneVoiceCallsError} from '@fluxer/errors/src/domains/channel/UnclaimedAccountCannotJoinOneOnOneVoiceCallsError';
-import {UnclaimedAccountCannotJoinVoiceChannelsError} from '@fluxer/errors/src/domains/channel/UnclaimedAccountCannotJoinVoiceChannelsError';
 import {UnknownChannelError} from '@fluxer/errors/src/domains/channel/UnknownChannelError';
 import {FeatureTemporarilyDisabledError} from '@fluxer/errors/src/domains/core/FeatureTemporarilyDisabledError';
 import {UnknownGuildMemberError} from '@fluxer/errors/src/domains/guild/UnknownGuildMemberError';
@@ -102,18 +102,8 @@ export class VoiceService {
 		if (!channel) {
 			throw new UnknownChannelError();
 		}
-		const isUnclaimed = user.isUnclaimedAccount();
-		if (isUnclaimed) {
-			if (channel.type === ChannelTypes.DM) {
-				throw new UnclaimedAccountCannotJoinOneOnOneVoiceCallsError();
-			}
-			if (channel.type === ChannelTypes.GUILD_VOICE) {
-				const guild = guildId ? await this.guildRepository.findUnique(guildId) : null;
-				const isOwner = guild?.ownerId === userId;
-				if (!isOwner) {
-					throw new UnclaimedAccountCannotJoinVoiceChannelsError();
-				}
-			}
+		if (!canReachOthers(user)) {
+			await this.assertVoiceReach(user, channel.type, guildId);
 		}
 		let mute = false;
 		let deaf = false;
@@ -205,11 +195,11 @@ export class VoiceService {
 				if (!regionId) {
 					throw new FeatureTemporarilyDisabledError();
 				}
-				const serverSelection = this.selectServerForRegion({
+				const serverSelection = this.voiceAvailabilityService.selectServerOrFallback(
 					regionId,
 					context,
 					accessibleRegions,
-				});
+				);
 				if (!serverSelection) {
 					throw new FeatureTemporarilyDisabledError();
 				}
@@ -333,7 +323,11 @@ export class VoiceService {
 			return null;
 		}
 		const serverRecord = this.liveKitService.getServer(pinnedServer.regionId, pinnedServer.serverId);
-		if (serverRecord && this.voiceAvailabilityService.isServerAccessible(serverRecord, context)) {
+		if (
+			serverRecord &&
+			this.voiceAvailabilityService.isServerAccessible(serverRecord, context) &&
+			!this.voiceAvailabilityService.isServerDown(serverRecord)
+		) {
 			return {
 				regionId: pinnedServer.regionId,
 				serverId: pinnedServer.serverId,
@@ -341,35 +335,6 @@ export class VoiceService {
 			};
 		}
 		await this.voiceRoomStore.deleteRoomServer(guildId, channelId);
-		return null;
-	}
-
-	private selectServerForRegion({
-		regionId,
-		context,
-		accessibleRegions,
-	}: {
-		regionId: string;
-		context: VoiceAccessContext;
-		accessibleRegions: Array<VoiceRegionAvailability>;
-	}): {
-		regionId: string;
-		server: VoiceServerRecord;
-	} | null {
-		const initialServer = this.voiceAvailabilityService.selectServer(regionId, context);
-		if (initialServer) {
-			return {regionId, server: initialServer};
-		}
-		const fallbackRegion = accessibleRegions.find((region) => region.id !== regionId);
-		if (fallbackRegion) {
-			const fallbackServer = this.voiceAvailabilityService.selectServer(fallbackRegion.id, context);
-			if (fallbackServer) {
-				return {
-					regionId: fallbackRegion.id,
-					server: fallbackServer,
-				};
-			}
-		}
 		return null;
 	}
 
@@ -381,7 +346,7 @@ export class VoiceService {
 		for (const region of accessibleRegions) {
 			servers.push(...this.voiceAvailabilityService.getAccessibleServersForRegion(region.id, context));
 		}
-		return servers;
+		return this.voiceAvailabilityService.preferPlaceableServers(servers);
 	}
 
 	async updateParticipant(params: {
@@ -502,5 +467,18 @@ export class VoiceService {
 			canVideo,
 			deaf,
 		});
+	}
+
+	private async assertVoiceReach(user: User, channelType: number, guildId: GuildID | null | undefined): Promise<void> {
+		if (channelType === ChannelTypes.GUILD_VOICE) {
+			const guild = guildId ? await this.guildRepository.findUnique(guildId) : null;
+			assertTierAllows(user, TierGatedActions.VOICE, {...NO_TIER_CONTEXT, isGuildOwner: guild?.ownerId === user.id});
+			return;
+		}
+		if (channelType === ChannelTypes.DM) {
+			assertTierAllows(user, TierGatedActions.CALL, NO_TIER_CONTEXT);
+		} else if (channelType === ChannelTypes.GROUP_DM) {
+			assertTierAllows(user, TierGatedActions.GROUP_CALL, NO_TIER_CONTEXT);
+		}
 	}
 }

@@ -30,7 +30,7 @@ import {Trans, useLingui} from '@lingui/react/macro';
 import {MagnifyingGlassIcon} from '@phosphor-icons/react';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
-import {useCallback, useMemo, useRef, useState} from 'react';
+import {useCallback, useId, useMemo, useRef, useState} from 'react';
 
 export interface RecipientItem {
 	id: string;
@@ -124,10 +124,12 @@ interface RecipientListProps {
 	searchQuery?: string;
 	onSearchQueryChange?: (value: string) => void;
 	showSearchInput?: boolean;
+	emptyText?: React.ReactNode;
 }
 
 export const RecipientList = observer((props: RecipientListProps) => {
 	const {i18n} = useLingui();
+	const listId = useId();
 	const [internalSearchQuery, setInternalSearchQuery] = useState('');
 	const searchQuery = props.searchQuery ?? internalSearchQuery;
 	const filteredRecipients = useMemo(() => {
@@ -142,6 +144,11 @@ export const RecipientList = observer((props: RecipientListProps) => {
 			return username.includes(query) || displayName.includes(query) || channelName.includes(query);
 		});
 	}, [searchQuery, props.recipients]);
+	const emptyText = props.emptyText ?? (
+		<Trans comment="Shown in a list of people to choose from when the account has no friends and no direct messages yet.">
+			No friends or direct messages yet.
+		</Trans>
+	);
 	const handleSearchChange = (value: string) => {
 		if (props.onSearchQueryChange) {
 			props.onSearchQueryChange(value);
@@ -177,7 +184,7 @@ export const RecipientList = observer((props: RecipientListProps) => {
 				>
 					{filteredRecipients.length === 0 ? (
 						<div className={styles.noResults} data-flx="app.recipient-list.no-results">
-							{<Trans>No friends match that.</Trans>}
+							{searchQuery.trim() ? <Trans>No friends match that.</Trans> : emptyText}
 						</div>
 					) : (
 						<div className={styles.friendList} data-flx="app.recipient-list.friend-list">
@@ -194,6 +201,7 @@ export const RecipientList = observer((props: RecipientListProps) => {
 								})();
 								const groupChannel =
 									item.type === 'group_dm' && item.channelId ? Channels.getChannel(item.channelId) : null;
+								const itemId = `${listId}-${userId}`;
 								return (
 									<div key={userId} className={styles.friendItem} data-flx="app.recipient-list.friend-item">
 										<div className={styles.friendItemLeft} data-flx="app.recipient-list.friend-item-left">
@@ -207,15 +215,26 @@ export const RecipientList = observer((props: RecipientListProps) => {
 												/>
 											)}
 											<div className={styles.friendInfo} data-flx="app.recipient-list.friend-info">
-												<span className={styles.friendName} data-flx="app.recipient-list.friend-name">
+												<span
+													id={`${itemId}-name`}
+													className={styles.friendName}
+													data-flx="app.recipient-list.friend-name"
+												>
 													{displayName}
 												</span>
-												<span className={styles.friendSecondary} data-flx="app.recipient-list.friend-secondary">
+												<span
+													id={`${itemId}-secondary`}
+													className={styles.friendSecondary}
+													data-flx="app.recipient-list.friend-secondary"
+												>
 													{secondaryText}
 												</span>
 											</div>
 										</div>
 										<Button
+											id={`${itemId}-action`}
+											aria-labelledby={`${itemId}-action ${itemId}-name`}
+											aria-describedby={`${itemId}-secondary`}
 											small
 											variant="secondary"
 											onClick={() => props.onSend(item)}

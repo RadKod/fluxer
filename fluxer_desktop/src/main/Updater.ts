@@ -13,6 +13,7 @@ import {
 	sweepAbandonedAppImageUpdates,
 } from '@electron/main/AppImageUpdate';
 import {destroyDesktopTray} from '@electron/main/DesktopTray';
+import {getFlatpakAppId} from '@electron/main/LinuxSandbox';
 import {MANUAL_DESKTOP_FORMATS, type ManualDesktopFormat} from '@electron/main/ShellDownloadFormats';
 import {resolveShellUpdatePlan, ShellUpdateCapability} from '@electron/main/ShellUpdateCapability';
 import {relaunchAndExit} from '@electron/main/Troubleshooting';
@@ -33,7 +34,7 @@ import {
 	type UpdaterDownloadOption,
 } from '@electron/main/UpdaterDownloads';
 import {setQuitting} from '@electron/main/Window';
-import {app, autoUpdater, type BrowserWindow, ipcMain} from 'electron';
+import {app, autoUpdater, type BrowserWindow, ipcMain, net} from 'electron';
 import log from 'electron-log';
 import type {UpdateInfo, VelopackAsset} from 'velopack';
 
@@ -487,6 +488,7 @@ function registerElectronUpdater(getMainWindow: () => BrowserWindow | null): voi
 let manualLatestCache: {at: number; info: ManualLatestInfo} | null = null;
 
 const MANUAL_CACHE_TTL_MS = 5 * 60 * 1000;
+const FLATHUB_APPSTREAM_URL = 'https://flathub.org/api/v2/appstream';
 
 function parseSemverTuple(input: string): [number, number, number, string] {
 	const trimmed = input.trim().replace(/^v/, '');
@@ -532,11 +534,7 @@ function parseManualLatestFiles(value: unknown): Partial<Record<ManualDesktopFor
 	return files;
 }
 
-async function fetchManualLatest(options: {forceRefresh?: boolean} = {}): Promise<ManualLatestInfo> {
-	const now = Date.now();
-	if (!options.forceRefresh && manualLatestCache && now - manualLatestCache.at < MANUAL_CACHE_TTL_MS) {
-		return manualLatestCache.info;
-	}
+async function fetchFluxerLatest(): Promise<ManualLatestInfo> {
 	const response = await fetch(`${UPDATE_BASE_URL}/latest`, {
 		cache: 'no-store',
 		headers: {
@@ -552,11 +550,56 @@ async function fetchManualLatest(options: {forceRefresh?: boolean} = {}): Promis
 	if (typeof payload.version !== 'string' || payload.version.length === 0) {
 		throw new Error('Latest version response missing version string');
 	}
-	const info: ManualLatestInfo = {
+	return {
 		version: payload.version,
 		pubDate: typeof payload.pub_date === 'string' ? payload.pub_date : null,
 		files: parseManualLatestFiles(payload.files),
 	};
+}
+
+function newestFlathubReleaseVersion(payload: unknown): string | null {
+	if (!isRecord(payload) || !Array.isArray(payload.releases)) {
+		return null;
+	}
+	let newest: string | null = null;
+	for (const release of payload.releases) {
+		if (!isRecord(release) || typeof release.version !== 'string') {
+			continue;
+		}
+		if (newest == null || compareVersions(release.version, newest) > 0) {
+			newest = release.version;
+		}
+	}
+	return newest;
+}
+
+async function fetchFlathubLatest(): Promise<ManualLatestInfo> {
+	const appId = getFlatpakAppId();
+	if (appId == null) {
+		throw new Error('The Flatpak app id is unknown, so Flathub cannot be asked for a release');
+	}
+	const response = await net.fetch(`${FLATHUB_APPSTREAM_URL}/${encodeURIComponent(appId)}?locale=en`, {
+		cache: 'no-store',
+		headers: {Accept: 'application/json'},
+	});
+	if (!response.ok) {
+		throw new Error(`Flathub release request failed: ${response.status}`);
+	}
+	const version = newestFlathubReleaseVersion(await response.json());
+	if (version == null) {
+		throw new Error('Flathub lists no release version');
+	}
+	return {version, pubDate: null, files: {}};
+}
+
+async function fetchManualLatest(options: {forceRefresh?: boolean} = {}): Promise<ManualLatestInfo> {
+	const now = Date.now();
+	if (!options.forceRefresh && manualLatestCache && now - manualLatestCache.at < MANUAL_CACHE_TTL_MS) {
+		return manualLatestCache.info;
+	}
+	const plan = resolveShellUpdatePlan();
+	const fromFlathub = plan.capability === ShellUpdateCapability.MANAGED_PACKAGE && plan.releaseFeed === 'flathub';
+	const info = fromFlathub ? await fetchFlathubLatest() : await fetchFluxerLatest();
 	manualLatestCache = {at: now, info};
 	return info;
 }

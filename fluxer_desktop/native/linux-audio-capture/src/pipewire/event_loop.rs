@@ -2,7 +2,7 @@
 
 #![allow(dead_code)]
 
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, Mutex};
 
 use pipewire as pw;
@@ -229,7 +229,6 @@ pub(crate) fn stop_direct_streams(
     if matches!(sink_retention, DirectSinkRetention::Drop) {
         runtime.sink_proxy.borrow_mut().take();
     }
-    runtime.running.store(false, Ordering::Relaxed);
 }
 
 pub(crate) fn clear_direct_samples(samples: &Arc<Mutex<DirectAudioBuffer>>) {
@@ -263,7 +262,6 @@ pub(crate) fn recompute_direct_streams(
 
 fn ensure_or_promote_direct_stream(core: &pw::core::CoreRc, runtime: &DirectStreamRuntime) {
     if runtime.active_stream.borrow().is_some() {
-        runtime.running.store(true, Ordering::Relaxed);
         return;
     }
     let args = BuildDirectStreamArgs {
@@ -275,15 +273,9 @@ fn ensure_or_promote_direct_stream(core: &pw::core::CoreRc, runtime: &DirectStre
         clock: runtime.clock.clone(),
         screen_audio_sink: runtime.screen_audio_sink.clone(),
     };
-    match build_direct_stream(args) {
-        Ok((stream, listener)) => {
-            *runtime.active_stream.borrow_mut() = Some(stream);
-            *runtime.active_listener.borrow_mut() = Some(listener);
-            runtime.running.store(true, Ordering::Relaxed);
-        }
-        Err(_) => {
-            runtime.running.store(false, Ordering::Relaxed);
-        }
+    if let Ok((stream, listener)) = build_direct_stream(args) {
+        *runtime.active_stream.borrow_mut() = Some(stream);
+        *runtime.active_listener.borrow_mut() = Some(listener);
     }
 }
 
@@ -291,7 +283,6 @@ pub(crate) struct DirectWorkerInputs {
     pub(crate) samples: Arc<Mutex<DirectAudioBuffer>>,
     pub(crate) inventory: Arc<Mutex<InventorySnapshot>>,
     pub(crate) owned_link_snapshot: Arc<Mutex<Vec<LinkKey>>>,
-    pub(crate) running: Arc<AtomicBool>,
     pub(crate) sink_node_name: String,
     pub(crate) last_push_ns: Arc<AtomicU64>,
     pub(crate) clock: Arc<dyn MonotonicClock>,
@@ -307,7 +298,6 @@ fn build_direct_runtime(inputs: &DirectWorkerInputs) -> std::rc::Rc<DirectStream
         owned_link_snapshot: inputs.owned_link_snapshot.clone(),
         sink_proxy: std::rc::Rc::new(std::cell::RefCell::new(None)),
         samples: inputs.samples.clone(),
-        running: inputs.running.clone(),
         sink_node_name: inputs.sink_node_name.clone(),
         stream_node_name,
         last_push_ns: inputs.last_push_ns.clone(),

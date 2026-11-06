@@ -256,7 +256,6 @@ export class InMemoryCassandraQueryExecutor implements CassandraQueryExecutorFor
 
 	constructor(private readonly options: InMemoryCassandraOptions = {}) {}
 	readonly executed: Array<KvQueryMeta> = [];
-	readonly batchAtomicity: Array<boolean> = [];
 	countStatements(statement: string): number {
 		return this.executed.filter((meta) => `${meta.action}:${meta.table.name}` === statement).length;
 	}
@@ -266,7 +265,6 @@ export class InMemoryCassandraQueryExecutor implements CassandraQueryExecutorFor
 		this.timestampedTables.clear();
 		this.clock = 0n;
 		this.executed.length = 0;
-		this.batchAtomicity.length = 0;
 	}
 
 	private table(meta: KvQueryMeta): Map<string, Row> {
@@ -336,12 +334,21 @@ export class InMemoryCassandraQueryExecutor implements CassandraQueryExecutorFor
 		return [];
 	}
 
+	async executePagedQuery<T = Row>(
+		query: PreparedQuery,
+		options: {pageSize: number; pageState?: string | null},
+	): Promise<{rows: Array<T>; pageState: string | null}> {
+		const rows = await this.executeQuery<T>(query);
+		const offset = options.pageState ? Number.parseInt(options.pageState, 10) : 0;
+		const page = rows.slice(offset, offset + options.pageSize);
+		const nextOffset = offset + page.length;
+		return {rows: page, pageState: nextOffset < rows.length ? String(nextOffset) : null};
+	}
+
 	async executeBatch(
 		queries: Array<{query: string; params: object; meta?: KvQueryMeta}>,
-		atomic?: boolean,
+		_atomic?: boolean,
 	): Promise<void> {
-		this.batchAtomicity.push(atomic ?? true);
-
 		for (const query of queries) {
 			if (isConditionalQuery({cql: query.query, params: query.params as CassandraParams, kvMeta: query.meta})) {
 				throw new Error('Conditional writes must use executeConditional to preserve their result');

@@ -14,7 +14,7 @@ import {AuthRegisterFormCore} from '@app/features/auth/flow/AuthRegisterFormCore
 import {AuthRouterLink} from '@app/features/auth/flow/AuthRouterLink';
 import {AuthRuntimeTargetGate} from '@app/features/auth/flow/AuthRuntimeTargetGate';
 import {AuthRuntimeTargetResetAction} from '@app/features/auth/flow/AuthRuntimeTargetResetAction';
-import {AuthSsoPanel, resolveAuthPanelSso} from '@app/features/auth/flow/AuthSsoPanel';
+import {AuthSsoPanel, isSsoLoginEnforced, resolveAuthPanelSso} from '@app/features/auth/flow/AuthSsoPanel';
 import {isHandoffRequest} from '@app/features/auth/flow/auth_login_core/useDesktopHandoffFlow';
 import {DesktopDeepLinkPrompt} from '@app/features/auth/flow/DesktopDeepLinkPrompt';
 import {linkRegisterFields, readRegistrationUrlCode} from '@app/features/auth/flow/RegisterFormFields';
@@ -32,7 +32,7 @@ import type {ReactNode} from 'react';
 import {useCallback, useMemo} from 'react';
 
 export type ResourceAuthMode = 'login' | 'register';
-export interface ResourceAuthState<T> {
+interface ResourceAuthState<T> {
 	loading: boolean;
 	error: boolean;
 	resource: T | null;
@@ -129,7 +129,7 @@ const ResourceAuthContent = observer(function ResourceAuthContent<T>({
 					desktopHandoff={isHandoffRequest(params)}
 					excludeCurrentUser={false}
 					extraTopContent={
-						<>
+						<div className={sharedStyles.loginHeader} data-flx={`${prefix}.login-header`}>
 							<DesktopDeepLinkPrompt
 								code={id}
 								kind={config.kind}
@@ -137,7 +137,7 @@ const ResourceAuthContent = observer(function ResourceAuthContent<T>({
 								data-flx={`${prefix}.desktop-deep-link-prompt`}
 							/>
 							{config.renderHeader(state.resource, 'login', false)}
-						</>
+						</div>
 					}
 					forgotPasswordAction={null}
 					showTitle={false}
@@ -165,7 +165,7 @@ const ResourceAuthContent = observer(function ResourceAuthContent<T>({
 			</AuthLoginStepCarousel>
 		);
 	const runtimeSso = resolveAuthPanelSso(runtimeSnapshot);
-	const sso = runtimeSso?.enabled === true && runtimeSso.enforced === true;
+	const sso = isSsoLoginEnforced(runtimeSso);
 	const usernameSignIn = usesUsernameSignIn(runtimeSnapshot.features);
 	const header = (
 		<>

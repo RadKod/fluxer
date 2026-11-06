@@ -9,6 +9,7 @@ type EagerlySetVariable = 'apiContext' | 'sudoModeValid';
 
 type ExternallySetVariable =
 	| 'adminApiKeyAcls'
+	| 'adminApiKeyId'
 	| 'adminUserAcls'
 	| 'adminUserId'
 	| 'auditLogReason'
@@ -26,7 +27,10 @@ type ExternallySetVariable =
 	| 'sudoModeToken'
 	| 'user';
 
-type ConfigurationDependentService = 'ageVerificationService' | 'donationService';
+type ConfigurationDependentService =
+	| 'donationService'
+	| 'operatorPassCheckoutService'
+	| 'operatorPassEntitlementService';
 
 export type RequestScopedServices = Omit<
 	RequestVariables,

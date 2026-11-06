@@ -18,8 +18,8 @@ const SPLASH_OPTION_MAX_COUNT = 8;
 const SPLASH_OPTION_VALUE_PATTERN = /^[a-z0-9_]{1,32}$/;
 const SPLASH_PROGRESS_MAX = 100;
 
-export const SPLASH_READY_WATCHDOG_MS = 3000;
-export const SPLASH_CLOSE_DELAY_MS = 100;
+const SPLASH_READY_WATCHDOG_MS = 3000;
+const SPLASH_CLOSE_DELAY_MS = 100;
 
 export const DESKTOP_SPLASH_STATE_CHANNEL = 'desktop-splash:state';
 export const DESKTOP_SPLASH_READY_CHANNEL = 'desktop-splash:ready';
@@ -319,7 +319,7 @@ export function openSplashWindow(): BrowserWindow {
 	nativeTheme.themeSource = 'dark';
 	const window = new BrowserWindow({
 		width: SPLASH_WINDOW_WIDTH,
-		height: getSplashWindowHeight(process.platform),
+		height: process.platform === 'darwin' ? SPLASH_WINDOW_HEIGHT_DARWIN : SPLASH_WINDOW_HEIGHT_DEFAULT,
 		frame: false,
 		hasShadow: true,
 		resizable: false,
@@ -348,7 +348,9 @@ export function openSplashWindow(): BrowserWindow {
 			splashWindow = null;
 		}
 		restoreThemeSource();
-		if (!shouldQuitOnSplashClosed(process.platform, launchLatched)) return;
+		if (process.platform === 'darwin' || launchLatched) {
+			return;
+		}
 		logger.info('The splash window closed before launch, quitting');
 		app.quit();
 	});

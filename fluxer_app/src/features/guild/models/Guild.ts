@@ -45,6 +45,7 @@ export class Guild {
 	readonly embedSplashWidth: number | null;
 	readonly embedSplashHeight: number | null;
 	readonly features: ReadonlySet<string>;
+	readonly badgeIds: ReadonlyArray<string>;
 	readonly vanityURLCode: string | null;
 	readonly ownerId: string;
 	readonly systemChannelId: string | null;
@@ -63,6 +64,7 @@ export class Guild {
 	private readonly _disabledOperations: number;
 	readonly joinedAt: string | null;
 	readonly unavailable: boolean;
+	readonly visiting: boolean;
 	readonly messageHistoryCutoff: string | null;
 	readonly memberCount: number;
 	readonly premiumTier: number | null;
@@ -86,6 +88,7 @@ export class Guild {
 		this.embedSplashWidth = this.normalizeEmbedSplashWidth(guild);
 		this.embedSplashHeight = this.normalizeEmbedSplashHeight(guild);
 		this.features = new Set(guild.features);
+		this.badgeIds = this.normalizeFieldWithDefault(guild, 'badge_ids', 'badgeIds', []);
 		this.vanityURLCode = this.normalizeVanityUrlCode(guild);
 		this.ownerId = this.normalizeOwnerId(guild);
 		this.systemChannelId = this.normalizeSystemChannelId(guild);
@@ -105,6 +108,7 @@ export class Guild {
 		this.joinedAt = this.normalizeJoinedAt(guild);
 		this.messageHistoryCutoff = this.normalizeMessageHistoryCutoff(guild);
 		this.unavailable = guild.unavailable ?? false;
+		this.visiting = guild.visiting === true;
 		this.memberCount = this.normalizeMemberCount(guild);
 		this.premiumTier = this.normalizeField(guild, 'premium_tier', 'premiumTier');
 		this.premiumSubscriptionCount = this.normalizeField(
@@ -292,8 +296,9 @@ export class Guild {
 			{
 				...guildData.properties,
 				roles,
-				joined_at: guildData.joined_at,
+				joined_at: guildData.joined_at ?? undefined,
 				unavailable: guildData.unavailable,
+				visiting: guildData.visiting === true ? true : undefined,
 			},
 			{instanceId},
 		);
@@ -315,6 +320,7 @@ export class Guild {
 			embed_splash_width: this.embedSplashWidth,
 			embed_splash_height: this.embedSplashHeight,
 			features: [...this.features],
+			badge_ids: this.badgeIds,
 			vanity_url_code: this.vanityURLCode,
 			owner_id: this.ownerId,
 			system_channel_id: this.systemChannelId,
@@ -334,6 +340,7 @@ export class Guild {
 			message_history_cutoff: this.messageHistoryCutoff,
 			joined_at: this.joinedAt ?? undefined,
 			unavailable: this.unavailable,
+			visiting: this.visiting ? true : undefined,
 			member_count: this.memberCount,
 			premium_tier: this.premiumTier ?? undefined,
 			premium_subscription_count: this.premiumSubscriptionCount ?? undefined,

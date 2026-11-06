@@ -4,7 +4,7 @@
 
 use std::mem;
 use std::ops::Range;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 
 use fluxer_screen_frame_bus::NativeScreenFrameSinkHandleRef;
@@ -186,7 +186,6 @@ pub(crate) struct DirectStreamRuntime {
     pub(crate) owned_link_snapshot: Arc<Mutex<Vec<LinkKey>>>,
     pub(crate) sink_proxy: std::rc::Rc<std::cell::RefCell<Option<pw::node::Node>>>,
     pub(crate) samples: Arc<Mutex<DirectAudioBuffer>>,
-    pub(crate) running: Arc<AtomicBool>,
     pub(crate) sink_node_name: String,
     pub(crate) stream_node_name: String,
     pub(crate) last_push_ns: Arc<AtomicU64>,

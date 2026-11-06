@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {Routes} from '@app/app/Routes';
 import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
+import * as RouterUtils from '@app/features/navigation/utils/RouterUtils';
 import {useLocation} from '@app/features/platform/components/router/RouterReact';
 import styles from '@app/features/premium/components/pages/PremiumCallbackPage.module.css';
+import {isOperatorPassAvailable} from '@app/features/premium/utils/OperatorPassUtils';
 import {
 	CONFIRMING_PAYMENT_DESCRIPTOR,
 	PAYMENT_RETURN_PENDING_DESCRIPTOR,
@@ -25,13 +28,19 @@ const PremiumCallbackPage = observer(() => {
 	const isPayriffReturn =
 		RuntimeConfig.isSelfHosted() && RuntimeConfig.giftCodesEnabled && PAYRIFF_RETURN_STATUSES.has(status ?? '');
 	const leavesForApp = RuntimeConfig.isSelfHosted() && !isPayriffReturn;
+	const isOperatorPass = isOperatorPassAvailable() && queryParams.get('product') === 'operator_pass';
+	const operatorPassSessionId = isOperatorPass && status === 'success' ? queryParams.get('session_id') : null;
 	useEffect(() => {
 		if (leavesForApp) {
 			window.location.replace('/');
+			return;
 		}
-	}, [leavesForApp]);
+		if (operatorPassSessionId) {
+			RouterUtils.replaceWith(`${Routes.OPERATOR_PASS}?session_id=${encodeURIComponent(operatorPassSessionId)}`);
+		}
+	}, [leavesForApp, operatorPassSessionId]);
 
-	if (leavesForApp) {
+	if (leavesForApp || operatorPassSessionId) {
 		return null;
 	}
 	const isPayriffPending = isPayriffReturn && status === 'pending';

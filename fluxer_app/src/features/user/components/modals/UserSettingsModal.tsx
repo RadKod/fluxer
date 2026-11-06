@@ -57,7 +57,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = observer(
 		const {i18n} = useLingui();
 		const initialPageRoute = getTabPageRoute(initialTab);
 		const isMobileExperience = isMobileExperienceEnabled();
-		const settingsTabs = useMemo(() => getSettingsTabs(i18n), [i18n.locale]);
+		const settingsTabs = getSettingsTabs(i18n);
 		const initialAccountSection =
 			getAccountSectionForNestedTab(initialTab) ?? getAccountSectionForLegacySection(initialSubtab);
 		const normalizedInitialTab = initialAccountSection ? ACCOUNT_SETTINGS_TAB : initialTab;

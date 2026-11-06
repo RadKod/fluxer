@@ -12,12 +12,14 @@ import {FollowRateLimitConfigs} from '@app/api/rate_limit_configs/FollowRateLimi
 import {GuildBoostRateLimitConfigs} from '@app/api/rate_limit_configs/GuildBoostRateLimitConfig';
 import {GuildRateLimitConfigs} from '@app/api/rate_limit_configs/GuildRateLimitConfig';
 import {GuildRosterRateLimitConfigs} from '@app/api/rate_limit_configs/GuildRosterRateLimitConfig';
+import {GuildVisitRateLimitConfigs} from '@app/api/rate_limit_configs/GuildVisitRateLimitConfig';
 import {IntegrationRateLimitConfigs} from '@app/api/rate_limit_configs/IntegrationRateLimitConfig';
 import {InviteRateLimitConfigs} from '@app/api/rate_limit_configs/InviteRateLimitConfig';
 import {MessageComponentRateLimitConfigs} from '@app/api/rate_limit_configs/MessageComponentRateLimitConfig';
 import {MicupBotRateLimitConfigs} from '@app/api/rate_limit_configs/MicupBotRateLimitConfig';
 import {MiscRateLimitConfigs} from '@app/api/rate_limit_configs/MiscRateLimitConfig';
 import {OAuthRateLimitConfigs} from '@app/api/rate_limit_configs/OAuthRateLimitConfig';
+import {OperatorPassRateLimitConfigs} from '@app/api/rate_limit_configs/OperatorPassRateLimitConfig';
 import {PremiumTrialRateLimitConfigs} from '@app/api/rate_limit_configs/PremiumTrialRateLimitConfig';
 import type {RateLimitSection} from '@app/api/rate_limit_configs/RateLimitHelpers';
 import {mergeRateLimitSections} from '@app/api/rate_limit_configs/RateLimitHelpers';
@@ -35,7 +37,9 @@ const rateLimitSections = [
 	ChannelRateLimitConfigs,
 	DiscoveryRateLimitConfigs,
 	DonationRateLimitConfigs,
+	OperatorPassRateLimitConfigs,
 	GuildRateLimitConfigs,
+	GuildVisitRateLimitConfigs,
 	InviteRateLimitConfigs,
 	WebhookRateLimitConfigs,
 	IntegrationRateLimitConfigs,

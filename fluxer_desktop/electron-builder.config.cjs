@@ -70,13 +70,16 @@ const platformArguments = new Set(process.argv.map((argument) => argument.split(
 const linuxRequested = ['--linux', '-l'].some((selector) => platformArguments.has(selector));
 const macRequested = ['--mac', '--macos', '-m', '-o'].some((selector) => platformArguments.has(selector));
 const windowsRequested = ['--win', '--windows', '-w'].some((selector) => platformArguments.has(selector));
-const targetPlatform = linuxRequested
-	? 'linux'
-	: macRequested
-		? 'darwin'
-		: windowsRequested
-			? 'win32'
-			: process.platform;
+let targetPlatform;
+if (linuxRequested) {
+	targetPlatform = 'linux';
+} else if (macRequested) {
+	targetPlatform = 'darwin';
+} else if (windowsRequested) {
+	targetPlatform = 'win32';
+} else {
+	targetPlatform = process.platform;
+}
 const isLinuxBuild = targetPlatform === 'linux';
 const customLinuxElectron =
 	isLinuxBuild && process.env.FLUXER_ELECTRON_DIST?.trim() ? require('./scripts/custom-electron.cjs') : null;

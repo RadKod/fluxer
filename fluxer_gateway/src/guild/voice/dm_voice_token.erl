@@ -4,7 +4,6 @@
 -typing([eqwalizer]).
 
 -export([get_dm_voice_token_and_create_state/1, get_voice_token/6]).
--export([join_or_create_call/6]).
 -export([maybe_spawn_join_call/6, dispatch_to_session/4]).
 
 -export_type([
@@ -451,58 +450,4 @@ cast_force_disconnect(ChannelId, ConnectionId, SessionPid) when
 ->
     gen_server:cast(SessionPid, {call_force_disconnect, ChannelId, ConnectionId});
 cast_force_disconnect(ChannelId, _ConnectionId, SessionPid) when is_pid(SessionPid) ->
-    gen_server:cast(SessionPid, {call_force_disconnect, ChannelId, undefined});
-cast_force_disconnect(_ChannelId, _ConnectionId, _SessionPid) ->
-    ok.
-
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
-
-do_join_call_dead_pid_exhausts_without_crash_test() ->
-    DeadPid = spawn(fun() -> ok end),
-    Ref = monitor(process, DeadPid),
-    receive
-        {'DOWN', Ref, process, DeadPid, _Reason} -> ok
-    after 1000 ->
-        ?assert(false, call_pid_did_not_exit)
-    end,
-    VoiceState = #{<<"connection_id">> => <<"connection">>},
-    ?assertEqual(
-        ok,
-        do_join_call(
-            DeadPid, 1234, 42, VoiceState, <<"session">>, self(), <<"connection">>, undefined, 1
-        )
-    ),
-    receive
-        {'$gen_cast', {call_monitor, 1234, DeadPid}} ->
-            ?assert(false, stale_call_monitor_cast)
-    after 50 ->
-        ok
-    end.
-
-exhausted_retries_casts_force_disconnect_test() ->
-    VoiceState = #{<<"connection_id">> => <<"conn-x">>},
-    ?assertEqual(
-        ok,
-        join_or_create_call(1234, 42, VoiceState, <<"session">>, self(), undefined, 0)
-    ),
-    receive
-        {'$gen_cast', {call_force_disconnect, 1234, <<"conn-x">>}} ->
-            ok
-    after 100 ->
-        ?assert(false, missing_force_disconnect_cast)
-    end.
-
-exhausted_retries_without_connection_id_casts_undefined_test() ->
-    ?assertEqual(
-        ok,
-        join_or_create_call(1234, 42, #{}, <<"session">>, self(), undefined, 0)
-    ),
-    receive
-        {'$gen_cast', {call_force_disconnect, 1234, undefined}} ->
-            ok
-    after 100 ->
-        ?assert(false, missing_force_disconnect_cast)
-    end.
-
--endif.
+    gen_server:cast(SessionPid, {call_force_disconnect, ChannelId, undefined}).

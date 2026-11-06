@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import assert from 'node:assert/strict';
 import type {ChannelID, GuildID, UserID} from '@app/api/BrandedTypes';
 import type {AuthenticatedChannel} from '@app/api/channel/services/AuthenticatedChannel';
 import {assertThreadAllowed} from '@app/api/channel/services/thread/ThreadDenials';
@@ -26,6 +27,7 @@ import type {
 	ActiveThreadsResponse,
 	ArchivedThreadsResponse,
 } from '@fluxer/schema/src/domains/channel/ThreadRequestSchemas';
+import {compareSnowflakes} from '@fluxer/snowflake/src/SnowflakeComparison';
 
 const ADMIN_PAGE_CONCURRENCY = 10;
 const ADMIN_PAGE_MAX_PENDING = 100;
@@ -86,7 +88,7 @@ export class ThreadListService {
 		);
 		const visible = candidates
 			.filter((state) => !state.isPrivate || memberships.has(state.threadId) || moderatedParents.has(state.parentId))
-			.sort((a, b) => (a.threadId > b.threadId ? -1 : a.threadId < b.threadId ? 1 : 0));
+			.sort((a, b) => compareSnowflakes(b.threadId, a.threadId));
 		return this.respond(visible, memberships, userId);
 	}
 
@@ -116,7 +118,7 @@ export class ThreadListService {
 		before?: Date;
 		limit: number;
 	}): Promise<ArchivedThreadsResponse> {
-		const auth = await this.authorizeParent(params.viewer, params.userId, params.channelId, false);
+		const auth = await this.authorizeParent(params.viewer, params.userId, params.channelId, {privateThreads: false});
 		const page = await this.ctx.channelRepository.threads.listArchivedThreads(auth.channel.id, false, {
 			before: params.before,
 			limit: params.limit,
@@ -131,7 +133,7 @@ export class ThreadListService {
 		before?: Date;
 		limit: number;
 	}): Promise<ArchivedThreadsResponse> {
-		const auth = await this.authorizeParent(params.viewer, params.userId, params.channelId, true);
+		const auth = await this.authorizeParent(params.viewer, params.userId, params.channelId, {privateThreads: true});
 		const page = await this.ctx.channelRepository.threads.listArchivedThreads(auth.channel.id, true, {
 			before: params.before,
 			limit: params.limit,
@@ -146,10 +148,15 @@ export class ThreadListService {
 		before?: ChannelID;
 		limit: number;
 	}): Promise<ArchivedThreadsResponse> {
-		const auth = await this.authorizeParent(params.viewer, params.userId, params.channelId, false, true);
+		const auth = await this.authorizeParent(params.viewer, params.userId, params.channelId, {
+			privateThreads: false,
+			textOnly: true,
+		});
+		const guildId = auth.channel.guildId;
+		assert(guildId !== null);
 		const page = await this.ctx.channelRepository.threads.listJoinedPrivateArchivedThreads(
 			params.userId,
-			auth.channel.guildId!,
+			guildId,
 			auth.channel.id,
 			{before: params.before, limit: params.limit},
 		);
@@ -160,18 +167,20 @@ export class ThreadListService {
 		viewer: ThreadViewer,
 		userId: UserID,
 		channelId: ChannelID,
-		privateThreads: boolean,
-		textOnly = privateThreads,
+		{privateThreads, textOnly = privateThreads}: {privateThreads: boolean; textOnly?: boolean},
 	): Promise<AuthenticatedChannel> {
 		const auth = await this.ctx.channelAuth.getChannelAuthenticated({
 			userId,
 			channelId,
 			viewer,
 			skipNsfwValidation: true,
+			access: privateThreads || textOnly ? 'member' : 'visitor_read',
 		});
 		const {channel} = auth;
 		const allowed = textOnly ? channel.type === ChannelTypes.GUILD_TEXT : THREAD_PARENT_CHANNEL_TYPES.has(channel.type);
-		if (!auth.guild || !allowed) throw new InvalidChannelTypeError();
+		if (!auth.guild || !allowed) {
+			throw new InvalidChannelTypeError();
+		}
 		assertThreadAllowed(canListArchivedThreads(await this.ctx.parentActor(auth, userId), {privateThreads}));
 		return auth;
 	}

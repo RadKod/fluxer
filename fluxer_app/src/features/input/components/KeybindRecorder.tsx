@@ -31,15 +31,15 @@ import type React from 'react';
 import {useCallback, useEffect, useRef, useState} from 'react';
 
 const RECORD_SHORTCUT_DESCRIPTOR = msg({
-	message: 'Record shortcut',
+	message: 'Record keybind',
 	comment: 'Short label in the keyboard shortcuts keybind recorder. Keep it concise.',
 });
 const EDIT_KEYBOARD_SHORTCUT_DESCRIPTOR = msg({
-	message: 'Edit keyboard shortcut',
+	message: 'Edit keybind',
 	comment: 'Button or menu action label in the keyboard shortcuts keybind recorder. Keep it concise.',
 });
 const NO_SHORTCUT_SET_DESCRIPTOR = msg({
-	message: 'No shortcut set',
+	message: 'No keybind set',
 	comment: 'Empty-state text in the keyboard shortcuts keybind recorder.',
 });
 
@@ -206,12 +206,7 @@ const KeybindEditorPopout: React.FC<KeybindEditorPopoutProps> = ({
 			sawNonModifier = true;
 			commit(combo);
 		};
-		const handleKeyUp = (event: KeyboardEvent) => {
-			if (!isKeybindModifierKey(event.key)) return;
-			if (sawNonModifier) return;
-			heldModifierCodes.delete(event.code);
-			if (heldModifierCodes.size > 0) return;
-			const combo = lastModifierCombo ?? modifierOnlyCombo(event);
+		const commitModifierRelease = (combo: KeyCombo) => {
 			if (!combo.key && !combo.code) return;
 			const modifierFlagCount =
 				(combo.shift ? 1 : 0) +
@@ -228,6 +223,13 @@ const KeybindEditorPopout: React.FC<KeybindEditorPopoutProps> = ({
 				}
 			}
 			commit(combo);
+		};
+		const handleKeyUp = (event: KeyboardEvent) => {
+			if (!isKeybindModifierKey(event.key)) return;
+			if (sawNonModifier) return;
+			heldModifierCodes.delete(event.code);
+			if (heldModifierCodes.size > 0) return;
+			commitModifierRelease(lastModifierCombo ?? modifierOnlyCombo(event));
 		};
 		const handleGlobalKey = (type: 'keydown' | 'keyup', baseCombo: KeyCombo) => {
 			if (committed) return;
@@ -259,23 +261,7 @@ const KeybindEditorPopout: React.FC<KeybindEditorPopoutProps> = ({
 			if (sawNonModifier) return;
 			heldModifierCodes.delete(comboCode);
 			if (heldModifierCodes.size > 0) return;
-			const combo = lastModifierCombo ?? {...baseCombo, modifierOnly: true};
-			if (!combo.key && !combo.code) return;
-			const modifierFlagCount =
-				(combo.shift ? 1 : 0) +
-				(combo.ctrl ? 1 : 0) +
-				(combo.alt ? 1 : 0) +
-				(combo.meta ? 1 : 0) +
-				(combo.ctrlOrMeta ? 1 : 0);
-			if (modifierFlagCount === 1) {
-				for (const [leftCode, rightCode] of MODIFIER_BOTH_SIDES_PAIRS) {
-					if (seenModifierCodes.has(leftCode) && seenModifierCodes.has(rightCode)) {
-						commit({...combo, code: leftCode, bothSides: true});
-						return;
-					}
-				}
-			}
-			commit(combo);
+			commitModifierRelease(lastModifierCombo ?? {...baseCombo, modifierOnly: true});
 		};
 		const handleGlobalKeyEvent = (event: GlobalKeyEvent) => {
 			const baseCombo = globalKeyEventToCombo(event);
@@ -344,11 +330,12 @@ const KeybindEditorPopout: React.FC<KeybindEditorPopoutProps> = ({
 		};
 		rafId = requestAnimationFrame(pollGamepads);
 		const globalShortcutsApi = getGlobalShortcutsApi();
-		const cancelGlobalCapture = globalShortcutsApi
-			? canCaptureFromHook(globalShortcutsApi)
-				? beginShortcutCapture(globalShortcutsApi, handleCaptureEvent)
-				: null
-			: beginGlobalKeyCapture(getElectronAPI(), handleGlobalKeyEvent);
+		let cancelGlobalCapture: (() => void) | null = null;
+		if (!globalShortcutsApi) {
+			cancelGlobalCapture = beginGlobalKeyCapture(getElectronAPI(), handleGlobalKeyEvent);
+		} else if (canCaptureFromHook(globalShortcutsApi)) {
+			cancelGlobalCapture = beginShortcutCapture(globalShortcutsApi, handleCaptureEvent);
+		}
 		window.addEventListener('keydown', handleKeyDown, true);
 		window.addEventListener('keyup', handleKeyUp, true);
 		window.addEventListener('mousedown', handleMouseDown, true);
@@ -370,11 +357,19 @@ const KeybindEditorPopout: React.FC<KeybindEditorPopoutProps> = ({
 		setPreviewCombo(null);
 		onReset?.();
 	};
+	let recorderText: React.ReactNode;
+	if (recording) {
+		recorderText = <Trans>Press a keybind…</Trans>;
+	} else if (currentHasValue) {
+		recorderText = displayValue;
+	} else {
+		recorderText = <Trans>Click to record</Trans>;
+	}
 	return (
 		<div className={styles.popout} data-flx="input.keybind-recorder.keybind-editor-popout.popout">
 			<div className={styles.popoutHeader} data-flx="input.keybind-recorder.keybind-editor-popout.popout-header">
 				<span className={styles.popoutTitle} data-flx="input.keybind-recorder.keybind-editor-popout.popout-title">
-					<Trans>Edit shortcut</Trans>
+					<Trans>Edit keybind</Trans>
 				</span>
 				<span className={styles.popoutHint} data-flx="input.keybind-recorder.keybind-editor-popout.popout-hint">
 					<Trans>Press a key, mouse button, or gamepad button to bind. Escape cancels.</Trans>
@@ -402,13 +397,7 @@ const KeybindEditorPopout: React.FC<KeybindEditorPopoutProps> = ({
 						data-flx="input.keybind-recorder.keybind-editor-popout.recorder-icon"
 					/>
 					<span className={styles.recorderText} data-flx="input.keybind-recorder.keybind-editor-popout.recorder-text">
-						{recording ? (
-							<Trans>Press a shortcut…</Trans>
-						) : currentHasValue ? (
-							displayValue
-						) : (
-							<Trans>Click to record</Trans>
-						)}
+						{recorderText}
 					</span>
 				</div>
 			</FocusRing>

@@ -20,6 +20,20 @@ pub struct AuthContext {
     pub branding: Option<PremiumBranding>,
 }
 
+impl AuthContext {
+    pub fn acls(&self) -> &[String] {
+        self.admin_user
+            .as_ref()
+            .map_or(&[], |user| user.acls.as_slice())
+    }
+
+    pub fn discovery_enabled(&self) -> bool {
+        self.branding
+            .as_ref()
+            .is_none_or(|branding| branding.discovery_enabled)
+    }
+}
+
 pub async fn require_auth(
     State(state): State<AppState>,
     mut request: Request,
@@ -28,7 +42,14 @@ pub async fn require_auth(
     let config = state.config();
     let session = extract_session(&request, &config.secret_key_base);
     let Some(session) = session else {
-        return Redirect::to(&format!("{}/auth/start", config.base_path)).into_response();
+        let entry = if config.sso.as_ref().is_some_and(|sso| sso.only) {
+            "sso/start"
+        } else if config.sso.is_some() {
+            "login"
+        } else {
+            "auth/start"
+        };
+        return Redirect::to(&format!("{}/{entry}", config.base_path)).into_response();
     };
     let (admin_user, pending_registration_count) =
         match fetch_admin_user(state.http_client(), config, &session).await {

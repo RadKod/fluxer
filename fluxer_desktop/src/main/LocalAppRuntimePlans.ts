@@ -11,8 +11,9 @@ import {parseInstanceDiscoveryDocument} from '@fluxer/instance_bootstrap/src/Dis
 const RUNTIME_PLAN_CACHE_MAX_ENTRIES = 256;
 const ROUTE_CACHE_KEY_PREFIX = 'route:';
 
-export interface LocalAppRuntimeEndpoints {
+interface LocalAppRuntimeEndpoints {
 	readonly apiEndpoint: string;
+	readonly apiTransportEndpoint: string | null;
 	readonly apiPublicEndpoint: string | null;
 	readonly webAppEndpoint: string | null;
 	readonly mediaEndpoint: string | null;
@@ -55,7 +56,7 @@ class LocalAppRuntimePlanCacheInvariantError extends Error {
 	}
 }
 
-export function localAppRuntimeInstanceKey(apiEndpoint: string): string | null {
+function localAppRuntimeInstanceKey(apiEndpoint: string): string | null {
 	let url: URL;
 	try {
 		url = new URL(apiEndpoint.trim());
@@ -132,6 +133,7 @@ export function runtimePlanTrustedHTTPOrigins(plan: LocalAppRuntimePlan): Array<
 	const endpoints = plan.endpoints;
 	const httpEndpoints: ReadonlyArray<string | null> = [
 		endpoints.apiEndpoint,
+		endpoints.apiTransportEndpoint,
 		endpoints.apiPublicEndpoint,
 		endpoints.mediaEndpoint,
 		endpoints.uploadRelayEndpoint,
@@ -211,6 +213,7 @@ function runtimeEndpointsFromDiscovery(discovery: ClientRuntimeDiscovery): Local
 	const endpoints = discovery.endpoints;
 	return {
 		apiEndpoint: endpoints.apiEndpoint,
+		apiTransportEndpoint: endpoints.apiTransportEndpoint,
 		apiPublicEndpoint: endpoints.apiPublicEndpoint,
 		webAppEndpoint: endpoints.webAppEndpoint,
 		mediaEndpoint: endpoints.mediaEndpoint,

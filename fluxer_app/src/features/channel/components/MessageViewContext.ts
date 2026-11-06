@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {Channel} from '@app/features/channel/models/Channel';
+import type {GuildRole} from '@app/features/guild/models/GuildRole';
 import type {Message} from '@app/features/messaging/models/MessagingMessage';
 import type {User} from '@app/features/user/models/User';
 import type {MessagePreviewContext} from '@fluxer/constants/src/ChannelConstants';
@@ -11,6 +12,7 @@ export interface MessagePreviewOverrides {
 	displayName?: string;
 	// Micup: a preview draws this user as the author, not the stored one (the shop shows an item as if worn).
 	author?: User;
+	iconRole?: GuildRole | null;
 }
 
 export interface MessageViewContextValue {

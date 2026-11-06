@@ -77,7 +77,7 @@ const OPEN_USER_MENU_FOR_DESCRIPTOR = msg({
 });
 const VOICE_CONNECTION_HEIGHT_VARIABLE = '--layout-voice-connection-height';
 
-function getResizeObserverEntryBlockSize(entry: ResizeObserverEntry): number {
+export function getResizeObserverEntryBlockSize(entry: ResizeObserverEntry): number {
 	const borderBoxSize = entry.borderBoxSize;
 	const firstBorderBoxSize = Array.isArray(borderBoxSize) ? borderBoxSize[0] : borderBoxSize;
 	return firstBorderBoxSize?.blockSize ?? entry.contentRect.height;
@@ -361,7 +361,7 @@ const UserAreaInner = observer(
 										onClick={isMuteToggleLocked ? undefined : () => VoiceStateCommands.toggleSelfMute(null)}
 										onContextMenu={handleMicContextMenu}
 										disabled={isMuteToggleLocked}
-										data-flx="app.user-area.user-area-inner.control-button.undefined"
+										data-flx="app.user-area.user-area-inner.control-button.mute"
 									>
 										{effectiveMuted ? (
 											<MicrophoneSlashIcon
@@ -411,7 +411,7 @@ const UserAreaInner = observer(
 										onClick={isGuildDeafened ? undefined : () => VoiceStateCommands.toggleSelfDeaf(null)}
 										onContextMenu={handleSpeakerContextMenu}
 										disabled={isGuildDeafened}
-										data-flx="app.user-area.user-area-inner.control-button.undefined--2"
+										data-flx="app.user-area.user-area-inner.control-button.deafen"
 									>
 										{isDeafened || isGuildDeafened ? (
 											<SpeakerSlashIcon

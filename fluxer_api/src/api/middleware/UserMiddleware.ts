@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {isOperatorPath, isOperatorRequest} from '@app/api/admin/operator/OperatorRequests';
 import * as AuthSession from '@app/api/auth/AuthSession';
+import {SYSTEM_USER_ID} from '@app/api/constants/Core';
 import {Logger} from '@app/api/Logger';
 import {hashRequestToken, recordAuthFailure} from '@app/api/middleware/RequestErrorTelemetry';
 import type {User} from '@app/api/models/User';
@@ -20,7 +22,11 @@ interface ParsedAuthHeader {
 
 const SKIP_PATHS = new Set([
 	'/_health',
+	'/admin/sso/sign-in',
 	'/webhooks/livekit',
+	'/voice/join/preview',
+	'/voice/join',
+	'/voice/node',
 	'/webhooks/sweego',
 	'/webhooks/app-store',
 	'/webhooks/google-play',
@@ -89,6 +95,18 @@ export const UserMiddleware = createMiddleware<HonoEnv>(async (ctx, next) => {
 	ctx.set('oauthBearerAllowed', false);
 	ctx.set('oauthBearerScopes', undefined);
 	ctx.set('authToken', undefined);
+	ctx.set('adminApiKeyId', null);
+	if (isOperatorRequest(ctx.req.raw)) {
+		if (isOperatorPath(path)) {
+			const operator = await ctx.get('apiContext').services.users.findUnique(SYSTEM_USER_ID);
+			if (operator) {
+				ctx.set('authTokenType', 'operator');
+				setUserInContext(ctx, operator, false);
+			}
+		}
+		await next();
+		return;
+	}
 	if (!parsed) {
 		if (rawAuthHeader) {
 			recordAuthFailure(resolvedClientIp, hashRequestToken(rawAuthHeader));
@@ -104,7 +122,7 @@ export const UserMiddleware = createMiddleware<HonoEnv>(async (ctx, next) => {
 		if (authSession) {
 			const user = await apiContext.services.users.findUnique(authSession.userId);
 			if (user && !isSignInRefused(user)) {
-				void AuthSession.updateAuthSessionLastUsed(apiContext, authSession.sessionIdHash);
+				void AuthSession.updateAuthSessionLastUsed(apiContext, authSession.sessionIdHash, ctx.req.raw);
 				ctx.set('authSession', authSession);
 				ctx.set('authTokenType', 'session');
 				setUserInContext(ctx, user, true);
@@ -168,6 +186,7 @@ export const UserMiddleware = createMiddleware<HonoEnv>(async (ctx, next) => {
 			if (user) {
 				ctx.set('authTokenType', 'admin_api_key');
 				ctx.set('adminApiKeyAcls', apiKey.acls);
+				ctx.set('adminApiKeyId', apiKey.keyId);
 				setUserInContext(ctx, user, false);
 			}
 		} else {

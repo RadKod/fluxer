@@ -40,6 +40,7 @@ import {Spinner} from '@app/features/ui/components/Spinner';
 import {StatusAwareAvatar} from '@app/features/ui/components/StatusAwareAvatar';
 import * as Sheet from '@app/features/ui/sheet/Sheet';
 import * as UserProfileCommands from '@app/features/user/commands/UserProfileCommands';
+import {openProfileBadgeSettings} from '@app/features/user/commands/UserSettingsModalCommands';
 import {MutualItemsSheet} from '@app/features/user/components/modals/MutualItemsSheet';
 import {NoteEditSheet} from '@app/features/user/components/modals/NoteEditSheet';
 import {UserProfileActionsSheet} from '@app/features/user/components/modals/UserProfileActionsSheet';
@@ -69,20 +70,23 @@ import UserNote from '@app/features/user/state/UserNote';
 import UserProfile from '@app/features/user/state/UserProfile';
 import UserProfileMobile from '@app/features/user/state/UserProfileMobile';
 import Users from '@app/features/user/state/Users';
+import {canPerform} from '@app/features/user/utils/AccountGates';
 import {blockedDmConfirmModal, openDMChannelOrShowError} from '@app/features/user/utils/DMActionUtils';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
 import * as ProfileDisplayUtils from '@app/features/user/utils/ProfileDisplayUtils';
 import {nameReadsOnProfileTheme, profileThemeColors} from '@app/features/user/utils/ProfileGradient';
+import {canEditOwnProfileBadges, canOpenProfileEditor} from '@app/features/user/utils/ProfileEditAccess';
 import {
 	getProfileMembershipDisplayName,
 	resolveProfileGuildMembership,
 	toProfileDisplayContext,
 } from '@app/features/user/utils/ProfileGuildMembership';
-import {createMockProfile} from '@app/features/user/utils/ProfileUtils';
+import {createMockProfile, getProfileDisplayBadges} from '@app/features/user/utils/ProfileUtils';
 import {SEND_FRIEND_REQUEST_DESCRIPTOR, UNBLOCK_USER_DESCRIPTOR} from '@app/features/user/utils/UserMessageDescriptors';
 import {shouldShowDiscriminator} from '@app/features/user/utils/UserTagUtils';
 import * as CallUtils from '@app/features/voice/utils/CallUtils';
 import {hasActiveDirectCallWithUser} from '@app/features/voice/utils/PrivateCallMenuUtils';
+import {TierGatedActions} from '@fluxer/constants/src/AccountTierConstants';
 import {ME} from '@fluxer/constants/src/AppConstants';
 import {Permissions} from '@fluxer/constants/src/ChannelConstants';
 import {
@@ -260,7 +264,8 @@ const UserProfileMobileSheetContent: React.FC<UserProfileMobileSheetContentProps
 		const relationshipType = relationship?.type;
 		const isBlocked = relationshipType === RelationshipTypes.BLOCKED;
 		const hasActiveDirectCall = hasActiveDirectCallWithUser(user.id);
-		const currentUserUnclaimed = !(Users.currentUser?.isClaimed() ?? true);
+		const canSendFriendRequest = canPerform(Users.currentUser, TierGatedActions.FRIEND_REQUEST).allowed;
+		const showEditProfile = canOpenProfileEditor(Users.currentUser);
 		const profileMembership = resolveProfileGuildMembership(profile, {
 			fallbackGuildId: guildId,
 			userId: user.id,
@@ -419,7 +424,7 @@ const UserProfileMobileSheetContent: React.FC<UserProfileMobileSheetContentProps
 		const renderRelationshipButton = () => {
 			const isFriendlyBot = user.bot && (user.flags & PublicUserFlags.FRIENDLY_BOT) === PublicUserFlags.FRIENDLY_BOT;
 			if (isCurrentUser || (user.bot && !isFriendlyBot)) return null;
-			if (RuntimeConfig.directMessagesDisabled && relationshipType !== RelationshipTypes.BLOCKED) {
+			if (RuntimeConfig.friendsDisabled && relationshipType !== RelationshipTypes.BLOCKED) {
 				return null;
 			}
 			if (relationshipType === RelationshipTypes.FRIEND) {
@@ -486,7 +491,7 @@ const UserProfileMobileSheetContent: React.FC<UserProfileMobileSheetContentProps
 					</button>
 				);
 			}
-			if (relationshipType === undefined && !currentUserUnclaimed && Users.currentUser?.verified !== false) {
+			if (relationshipType === undefined && canSendFriendRequest) {
 				return (
 					<button
 						type="button"
@@ -653,18 +658,6 @@ const UserProfileMobileSheetContent: React.FC<UserProfileMobileSheetContentProps
 													)}
 												</div>
 												<div
-													className={styles.badgesWrapper}
-													data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.badges-wrapper"
-												>
-													<UserProfileBadges
-														user={user}
-														profile={profile}
-														isModal={true}
-														isMobile={true}
-														data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.user-profile-badges"
-													/>
-												</div>
-												<div
 													className={styles.tagBadgeRow}
 													data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.tag-badge-row"
 												>
@@ -676,6 +669,20 @@ const UserProfileMobileSheetContent: React.FC<UserProfileMobileSheetContentProps
 															{NicknameUtils.formatTagForStreamerMode(user.tag)}
 														</span>
 													)}
+													<div
+														className={styles.badgesWrapper}
+														data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.badges-wrapper"
+													>
+														<UserProfileBadges
+															badges={getProfileDisplayBadges(profile)}
+															isModal={true}
+															isMobile={true}
+															onEditBadges={
+																canEditOwnProfileBadges(user.id, profile) ? openProfileBadgeSettings : undefined
+															}
+															data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.user-profile-badges"
+														/>
+													</div>
 
 													<ProfileFollowActions
 														userId={user.id}
@@ -704,7 +711,7 @@ const UserProfileMobileSheetContent: React.FC<UserProfileMobileSheetContentProps
 											</div>
 											<GameActivityDisplay userId={user.id} />
 											{isCurrentUser ? (
-												!currentUserUnclaimed && (
+												showEditProfile && (
 													<div
 														className={styles.actionButtonsContainer}
 														data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.action-buttons-container"

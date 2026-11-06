@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {requireEmailVerified} from '@app/api/auth/EmailVerificationUtils';
 import {
 	createChannelID,
 	createRoleID,
@@ -10,8 +9,9 @@ import {
 	type UserID,
 } from '@app/api/BrandedTypes';
 import type {ChannelService} from '@app/api/channel/services/ChannelService';
-import {assertMutableUserId} from '@app/api/constants/Core';
+import {assertMutableUserId, SYSTEM_USER_ID} from '@app/api/constants/Core';
 import type {GuildMemberRow} from '@app/api/database/types/GuildTypes';
+import type {UserGuildSettingsRow} from '@app/api/database/types/UserTypes';
 import type {GuildAuditLogService} from '@app/api/guild/GuildAuditLogService';
 import {resolveMaxGuildMembersLimit} from '@app/api/guild/GuildMemberLimitUtils';
 import {mapGuildMemberToResponse} from '@app/api/guild/GuildModel';
@@ -21,6 +21,8 @@ import {getGuildAuth} from '@app/api/guild/services/GuildMfaEnforcement';
 import type {GuildMemberEventService} from '@app/api/guild/services/member/GuildMemberEventService';
 import type {GuildMemberSearchIndexService} from '@app/api/guild/services/member/GuildMemberSearchIndexService';
 import type {GuildMemberValidationService} from '@app/api/guild/services/member/GuildMemberValidationService';
+import {endGuildVisit} from '@app/api/guild/visits/GuildVisitLifecycle';
+import {guildVisitRepository} from '@app/api/guild/visits/GuildVisitorAccess';
 import {emitActivity} from '@app/api/infrastructure/activity/ActivityEvents';
 import type {JoinSource} from '@app/api/infrastructure/activity/Contract.generated';
 import {emitGuildMemberRemoved} from '@app/api/infrastructure/activity/GuildEvents';
@@ -44,12 +46,16 @@ import type {GuildMember} from '@app/api/models/GuildMember';
 import type {User} from '@app/api/models/User';
 import type {UserGuildSettings} from '@app/api/models/UserGuildSettings';
 import type {UserSettings} from '@app/api/models/UserSettings';
+import {resolveOperatorPassJoinRoleIds} from '@app/api/operator_pass/OperatorPassLabsRole';
 import {assertAccountNotLimited} from '@app/api/user/AccountLimit';
+import type {TierContext} from '@app/api/user/AccountTier';
+import {assertTierAllows, NO_TIER_CONTEXT} from '@app/api/user/AccountTier';
 import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {dispatchUserGuildSettingsUpdate} from '@app/api/user/UserGuildSettingsThreadView';
 import {isProfileSubstringExempt} from '@app/api/user/UserHelpers';
 import {mapUserSettingsToResponse} from '@app/api/user/UserMappers';
 import {addGuildToUncategorizedFolder, removeGuildFromUserFolders} from '@app/api/user/utils/GuildFolderUtils';
+import {TierGatedActions} from '@fluxer/constants/src/AccountTierConstants';
 import {AuditLogActionType} from '@fluxer/constants/src/AuditLogActionType';
 import {Permissions} from '@fluxer/constants/src/ChannelConstants';
 import {
@@ -58,6 +64,7 @@ import {
 	JoinSourceTypes,
 	SystemChannelFlags,
 } from '@fluxer/constants/src/GuildConstants';
+import {GuildVisitEndReasons} from '@fluxer/constants/src/GuildVisitConstants';
 import {
 	DEFAULT_GUILD_FOLDER_ICON,
 	type MentionReplyPreference,
@@ -85,7 +92,7 @@ function isMemberCurrentlyTimedOut(member: GuildMember): boolean {
 	return member.communicationDisabledUntil !== null && member.communicationDisabledUntil.getTime() > Date.now();
 }
 
-const EMAIL_VERIFICATION_REQUIRED_SELF_PROFILE_FIELDS = [
+const SELF_PROFILE_CUSTOMIZATION_FIELDS = [
 	'nick',
 	'avatar',
 	'banner',
@@ -134,7 +141,7 @@ function buildVoiceAuditLogMetadata(params: VoiceAuditLogMetadataParams): Record
 function hasSelfProfileCustomizationUpdate(
 	data: GuildMemberUpdateRequest | Omit<GuildMemberUpdateRequest, 'roles'>,
 ): boolean {
-	return EMAIL_VERIFICATION_REQUIRED_SELF_PROFILE_FIELDS.some((field) => data[field] !== undefined);
+	return SELF_PROFILE_CUSTOMIZATION_FIELDS.some((field) => data[field] !== undefined);
 }
 
 function joinSourceName(type: JoinSourceType): JoinSource {
@@ -384,10 +391,24 @@ export class GuildMemberOperationsService {
 			throw new UnknownGuildMemberError();
 		}
 		await checkTargetMember(targetId);
+		await this.deleteKickedMember(targetMember, userId);
+	}
+
+	async removeMemberAsSystem({targetId, guildId}: {targetId: UserID; guildId: GuildID}): Promise<void> {
+		const guild = await this.guildRepository.findUnique(guildId);
+		if (!guild) throw new UnknownGuildError();
+		const targetMember = await this.guildRepository.getMember(guildId, targetId);
+		if (!targetMember) throw new UnknownGuildMemberError();
+		if (guild.ownerId === targetId) throw new MissingPermissionsError();
+		await this.deleteKickedMember(targetMember, SYSTEM_USER_ID);
+	}
+
+	private async deleteKickedMember(targetMember: GuildMember, actorId: UserID): Promise<void> {
+		const {guildId, userId: targetId} = targetMember;
 		await this.snapshotMembershipMetadata(targetMember);
 		await removeGuildMemberCounted(this.guildRepository, guildId, targetId);
 		await this.gatewayService.leaveGuild({userId: targetId, guildId});
-		await emitGuildMemberRemoved({guildId, userId: targetId, actorId: userId, kind: 'kicked'});
+		await emitGuildMemberRemoved({guildId, userId: targetId, actorId, kind: 'kicked'});
 	}
 
 	async addUserToGuild(
@@ -404,143 +425,150 @@ export class GuildMemberOperationsService {
 			inviterId?: UserID;
 			requestCache: RequestCache;
 			initiatorId?: UserID;
+			tierContext?: TierContext;
+			mentionsOnlyNotifications?: boolean;
 		},
 		eventService: GuildMemberEventService,
 	): Promise<GuildMember> {
-		let succeeded = false;
-		try {
-			const {
-				userId,
-				guildId,
-				sendJoinMessage = true,
-				skipGuildLimitCheck = false,
-				skipBanCheck = false,
-				skipAccountLimitCheck = false,
-				isTemporary = false,
-				joinSourceType = JoinSourceTypes.INSTANT_INVITE,
-				sourceInviteCode = null,
-				inviterId = null,
-				requestCache,
-			} = params;
-			const initiatorId = params.initiatorId ?? userId;
-			const guild = await this.guildRepository.findUnique(guildId);
-			if (!guild) throw new UnknownGuildError();
-			const existingMember = await this.guildRepository.getMember(guildId, userId);
-			if (existingMember) return existingMember;
-			assertMutableUserId(userId);
-			const user = await this.userRepository.findUnique(userId);
-			if (!user) throw new UnknownGuildError();
-			const initiator = initiatorId === userId ? user : await this.userRepository.findUnique(initiatorId);
-			if (initiator) getUsernameSelectionGate().assertMayAct(initiator, user.isBot ? 'bot_add' : 'guild_join');
-			if (!skipAccountLimitCheck) {
-				assertAccountNotLimited(user);
-			}
-			if (!skipBanCheck) {
-				await this.validationService.checkUserBanStatus({userId, guildId});
-			}
-			const userGuildsCount = await this.guildRepository.countUserGuilds(userId);
-			if (!skipGuildLimitCheck) {
-				await this.enforceGuildLimit(user, userGuildsCount);
-			}
-			const maxGuildMembers = resolveMaxGuildMembersLimit({
-				guildFeatures: guild.features,
-				snapshot: this.limitConfigService.getConfigSnapshot(),
-			});
-			const metadata = await this.guildRepository.getMembershipMetadata(guildId, userId);
-			const restoredTimeout =
-				metadata?.communication_disabled_until && metadata.communication_disabled_until.getTime() > Date.now()
-					? metadata.communication_disabled_until
-					: null;
-			const memberRow: GuildMemberRow = {
-				guild_id: guildId,
-				user_id: userId,
-				joined_at: new Date(),
-				nick: null,
-				avatar_hash: null,
-				banner_hash: null,
-				bio: null,
-				pronouns: null,
-				accent_color: null,
-				join_source_type: joinSourceType,
-				source_invite_code: sourceInviteCode,
-				inviter_id: inviterId,
-				deaf: false,
-				mute: false,
-				communication_disabled_until: restoredTimeout,
-				role_ids: null,
-				is_premium_sanitized: null,
-				temporary: isTemporary,
-				profile_flags: null,
-				mention_flags: null,
-				version: 1,
-			};
-			const memberCounter = getKVCounterService();
-			const memberCountId = guildId.toString();
-			const joined = await memberCounter.withSubjectLock(
-				GUILD_MEMBER_COUNT_COUNTER,
-				memberCountId,
-				userId.toString(),
-				async () => {
-					const racedMember = await this.guildRepository.getMember(guildId, userId);
-					if (racedMember) {
-						return {member: racedMember, created: false};
-					}
-					if ((await memberCounter.add(GUILD_MEMBER_COUNT_COUNTER, memberCountId, 1)) > maxGuildMembers) {
-						await memberCounter.add(GUILD_MEMBER_COUNT_COUNTER, memberCountId, -1);
-						throw new MaxGuildMembersError(maxGuildMembers);
-					}
-					try {
-						return {member: await this.guildRepository.upsertMember(memberRow), created: true};
-					} catch (error) {
-						const applied = await this.guildRepository.getMember(guildId, userId).catch(() => null);
-						if (!applied) {
-							await memberCounter.add(GUILD_MEMBER_COUNT_COUNTER, memberCountId, -1);
-						}
-						throw error;
-					}
-				},
-			);
-			if (!joined.created) {
-				return joined.member;
-			}
-			const guildMember = joined.member;
-			await this.applyJoinUserSettings({userId, guildId, user});
-			await eventService.dispatchGuildMemberAdd({member: guildMember, requestCache});
-			await this.gatewayService.joinGuild({userId, guildId});
-			const includeDefault = guild.membersIndexedAt != null;
-			if (includeDefault) {
-				void this.searchIndexService.indexMember(guildMember, user, {includeDefault});
-			}
-			if (sendJoinMessage && !(guild.systemChannelFlags & SystemChannelFlags.SUPPRESS_JOIN_NOTIFICATIONS)) {
-				await this.channelService.messages.system.sendJoinSystemMessage({guildId, userId, requestCache});
-			}
-			notifyMicupBotMemberJoin({guild, userId, user, isTemporary});
-			void emitActivity('guild_joined', userId.toString(), {
-				user_id: userId.toString(),
-				guild_id: guildId.toString(),
-				member_count: guild.memberCount + 1,
-				discoverable: guild.features.has(GuildFeatures.DISCOVERABLE),
-				invite_code: sourceInviteCode,
-				inviter_id: inviterId ? inviterId.toString() : null,
-				join_source: joinSourceName(joinSourceType),
-			});
-			if (user.isBot) {
-				await this.guildAuditLogService.record({
-					guildId,
-					userId: initiatorId,
-					action: AuditLogActionType.BOT_ADD,
-					targetId: userId,
-					metadata: {
-						temporary: isTemporary ? 'true' : 'false',
-					},
-				});
-			}
-			succeeded = true;
-			return guildMember;
-		} finally {
-			if (!succeeded) {
-			}
+		const {
+			userId,
+			guildId,
+			sendJoinMessage = true,
+			skipGuildLimitCheck = false,
+			skipBanCheck = false,
+			skipAccountLimitCheck = false,
+			isTemporary = false,
+			joinSourceType = JoinSourceTypes.INSTANT_INVITE,
+			sourceInviteCode = null,
+			inviterId = null,
+			requestCache,
+			mentionsOnlyNotifications = false,
+		} = params;
+		const initiatorId = params.initiatorId ?? userId;
+		const guild = await this.guildRepository.findUnique(guildId);
+		if (!guild) throw new UnknownGuildError();
+		const existingMember = await this.guildRepository.getMember(guildId, userId);
+		if (existingMember) return existingMember;
+		assertMutableUserId(userId);
+		const user = await this.userRepository.findUnique(userId);
+		if (!user) throw new UnknownGuildError();
+		const initiator = initiatorId === userId ? user : await this.userRepository.findUnique(initiatorId);
+		if (initiator) getUsernameSelectionGate().assertMayAct(initiator, user.isBot ? 'bot_add' : 'guild_join');
+		if (!skipAccountLimitCheck) {
+			assertAccountNotLimited(user);
 		}
+		if (params.tierContext) {
+			assertTierAllows(user, TierGatedActions.GUILD_JOIN, params.tierContext);
+		}
+		if (!skipBanCheck) {
+			await assertNotBannedFromGuild(this.guildRepository, this.userRepository, {userId, guildId});
+		}
+		const userGuildsCount = await this.guildRepository.countUserGuilds(userId);
+		if (!skipGuildLimitCheck) {
+			await this.enforceGuildLimit(user, userGuildsCount);
+		}
+		const maxGuildMembers = resolveMaxGuildMembersLimit({
+			guildFeatures: guild.features,
+			snapshot: this.limitConfigService.getConfigSnapshot(),
+		});
+		const visit = await guildVisitRepository().get(userId, guildId);
+		const metadata = await this.guildRepository.getMembershipMetadata(guildId, userId);
+		const restoredTimeout =
+			metadata?.communication_disabled_until && metadata.communication_disabled_until.getTime() > Date.now()
+				? metadata.communication_disabled_until
+				: null;
+		const joinRoleIds = await resolveOperatorPassJoinRoleIds(guildId, user, this.guildRepository);
+		const memberRow: GuildMemberRow = {
+			guild_id: guildId,
+			user_id: userId,
+			joined_at: new Date(),
+			nick: null,
+			avatar_hash: null,
+			banner_hash: null,
+			bio: null,
+			pronouns: null,
+			accent_color: null,
+			join_source_type: joinSourceType,
+			source_invite_code: sourceInviteCode,
+			inviter_id: inviterId,
+			deaf: false,
+			mute: false,
+			communication_disabled_until: restoredTimeout,
+			role_ids: joinRoleIds,
+			is_premium_sanitized: null,
+			temporary: isTemporary,
+			profile_flags: null,
+			mention_flags: null,
+			version: 1,
+		};
+		// Micup: the member count lives in a KV counter; the subject lock serialises joins of the same user, and the
+		// counter reserves the seat before the row is written, so concurrent joins cannot pass the member limit.
+		const memberCounter = getKVCounterService();
+		const memberCountId = guildId.toString();
+		const joined = await memberCounter.withSubjectLock(
+			GUILD_MEMBER_COUNT_COUNTER,
+			memberCountId,
+			userId.toString(),
+			async () => {
+				const racedMember = await this.guildRepository.getMember(guildId, userId);
+				if (racedMember) {
+					return {member: racedMember, created: false};
+				}
+				if ((await memberCounter.add(GUILD_MEMBER_COUNT_COUNTER, memberCountId, 1)) > maxGuildMembers) {
+					await memberCounter.add(GUILD_MEMBER_COUNT_COUNTER, memberCountId, -1);
+					throw new MaxGuildMembersError(maxGuildMembers);
+				}
+				try {
+					return {member: await this.guildRepository.upsertMember(memberRow), created: true};
+				} catch (error) {
+					const applied = await this.guildRepository.getMember(guildId, userId).catch(() => null);
+					if (!applied) {
+						await memberCounter.add(GUILD_MEMBER_COUNT_COUNTER, memberCountId, -1);
+					}
+					throw error;
+				}
+			},
+		);
+		if (!joined.created) {
+			return joined.member;
+		}
+		const guildMember = joined.member;
+		if (visit) {
+			await endGuildVisit({userId, guildId, reason: GuildVisitEndReasons.JOINED, notify: false});
+		}
+		await this.applyJoinUserSettings({userId, guildId, user, mentionsOnlyNotifications});
+		await eventService.dispatchGuildMemberAdd({member: guildMember, requestCache});
+		await this.gatewayService.joinGuild({userId, guildId});
+		const includeDefault = guild.membersIndexedAt != null;
+		if (includeDefault) {
+			void this.searchIndexService.indexMember(guildMember, user, {includeDefault});
+		}
+		if (sendJoinMessage && !(guild.systemChannelFlags & SystemChannelFlags.SUPPRESS_JOIN_NOTIFICATIONS)) {
+			await this.channelService.messages.system.sendJoinSystemMessage({guildId, userId});
+		}
+		notifyMicupBotMemberJoin({guild, userId, user, isTemporary});
+		void emitActivity('guild_joined', userId.toString(), {
+			user_id: userId.toString(),
+			guild_id: guildId.toString(),
+			member_count: guild.memberCount + 1,
+			discoverable: guild.features.has(GuildFeatures.DISCOVERABLE),
+			invite_code: sourceInviteCode,
+			inviter_id: inviterId ? inviterId.toString() : null,
+			join_source: joinSourceName(joinSourceType),
+			from_visit: visit !== null,
+		});
+		if (user.isBot) {
+			await this.guildAuditLogService.record({
+				guildId,
+				userId: initiatorId,
+				action: AuditLogActionType.BOT_ADD,
+				targetId: userId,
+				metadata: {
+					temporary: isTemporary ? 'true' : 'false',
+				},
+			});
+		}
+		return guildMember;
 	}
 
 	async leaveGuild(params: {userId: UserID; guildId: GuildID}): Promise<void> {
@@ -646,61 +674,76 @@ export class GuildMemberOperationsService {
 		if (currentGuildCount >= maxGuilds) throw new MaxGuildsError(maxGuilds);
 	}
 
-	private async applyJoinUserSettings(params: {userId: UserID; guildId: GuildID; user: User}): Promise<void> {
-		const {userId, guildId, user} = params;
+	private async applyJoinUserSettings(params: {
+		userId: UserID;
+		guildId: GuildID;
+		user: User;
+		mentionsOnlyNotifications: boolean;
+	}): Promise<void> {
+		const {userId, guildId, user, mentionsOnlyNotifications} = params;
 		const userSettings = await this.userRepository.findSettings(userId);
-		if (!userSettings) {
-			return;
-		}
-		let needsUpdate = false;
-		const settingsRow = userSettings.toRow();
-		if (user.isBot && userSettings.botDefaultGuildsRestricted) {
-			const updatedBotRestrictedGuilds = new Set(userSettings.botRestrictedGuilds);
-			updatedBotRestrictedGuilds.add(guildId);
-			settingsRow.bot_restricted_guilds = updatedBotRestrictedGuilds;
-			needsUpdate = true;
-		} else if (!user.isBot && userSettings.defaultGuildsRestricted) {
-			const updatedRestrictedGuilds = new Set(userSettings.restrictedGuilds);
-			updatedRestrictedGuilds.add(guildId);
-			settingsRow.restricted_guilds = updatedRestrictedGuilds;
-			needsUpdate = true;
-		}
-		if (!user.isBot) {
-			const {folders: nextFolders, modified} = addGuildToUncategorizedFolder({
-				folders: settingsRow.guild_folders ?? [],
-				guildId,
-				defaultIcon: DEFAULT_GUILD_FOLDER_ICON,
-			});
-			if (modified) {
-				settingsRow.guild_folders = nextFolders;
+		if (userSettings) {
+			let needsUpdate = false;
+			const settingsRow = userSettings.toRow();
+			if (user.isBot && userSettings.botDefaultGuildsRestricted) {
+				const updatedBotRestrictedGuilds = new Set(userSettings.botRestrictedGuilds);
+				updatedBotRestrictedGuilds.add(guildId);
+				settingsRow.bot_restricted_guilds = updatedBotRestrictedGuilds;
+				needsUpdate = true;
+			} else if (!user.isBot && userSettings.defaultGuildsRestricted) {
+				const updatedRestrictedGuilds = new Set(userSettings.restrictedGuilds);
+				updatedRestrictedGuilds.add(guildId);
+				settingsRow.restricted_guilds = updatedRestrictedGuilds;
 				needsUpdate = true;
 			}
+			if (!user.isBot) {
+				const {folders: nextFolders, modified} = addGuildToUncategorizedFolder({
+					folders: settingsRow.guild_folders ?? [],
+					guildId,
+					defaultIcon: DEFAULT_GUILD_FOLDER_ICON,
+				});
+				if (modified) {
+					settingsRow.guild_folders = nextFolders;
+					needsUpdate = true;
+				}
+			}
+			if (needsUpdate) {
+				const updatedSettings = await this.userRepository.upsertSettings(settingsRow, userSettings.toRow());
+				await this.dispatchUserSettingsUpdate({userId, settings: updatedSettings, user});
+			}
 		}
-		if (needsUpdate) {
-			const updatedSettings = await this.userRepository.upsertSettings(settingsRow);
-			await this.dispatchUserSettingsUpdate({userId, settings: updatedSettings, user});
+		if (user.isBot) {
+			return;
 		}
-		if (!user.isBot && userSettings.defaultHideMutedChannels) {
-			const existingGuildSettings = await this.userRepository.findGuildSettings(userId, guildId);
-			const guildSettingsRow = existingGuildSettings
-				? {...existingGuildSettings.toRow(), hide_muted_channels: true}
-				: {
-						user_id: userId,
-						guild_id: guildId,
-						message_notifications: UserNotificationSettings.INHERIT,
-						muted: false,
-						mute_config: null,
-						mobile_push: true,
-						suppress_everyone: false,
-						suppress_roles: false,
-						hide_muted_channels: true,
-						channel_overrides: null,
-						unread_badges: null,
-						version: 1,
-					};
-			const updatedGuildSettings = await this.userRepository.upsertGuildSettings(guildSettingsRow);
-			await this.dispatchUserGuildSettingsUpdate({userId, settings: updatedGuildSettings});
+		const hideMutedChannels = userSettings?.defaultHideMutedChannels === true;
+		if (!hideMutedChannels && !mentionsOnlyNotifications) {
+			return;
 		}
+		const existingGuildSettings = await this.userRepository.findGuildSettings(userId, guildId);
+		const guildSettingsRow: UserGuildSettingsRow = existingGuildSettings
+			? existingGuildSettings.toRow()
+			: {
+					user_id: userId,
+					guild_id: guildId,
+					message_notifications: UserNotificationSettings.INHERIT,
+					muted: false,
+					mute_config: null,
+					mobile_push: true,
+					suppress_everyone: false,
+					suppress_roles: false,
+					hide_muted_channels: false,
+					channel_overrides: null,
+					unread_badges: null,
+					version: 1,
+				};
+		if (hideMutedChannels) {
+			guildSettingsRow.hide_muted_channels = true;
+		}
+		if (mentionsOnlyNotifications && guildSettingsRow.message_notifications === UserNotificationSettings.INHERIT) {
+			guildSettingsRow.message_notifications = UserNotificationSettings.ONLY_MENTIONS;
+		}
+		const updatedGuildSettings = await this.userRepository.upsertGuildSettings(guildSettingsRow);
+		await this.dispatchUserGuildSettingsUpdate({userId, settings: updatedGuildSettings});
 	}
 
 	private async updateSelfProfile(params: {
@@ -715,7 +758,7 @@ export class GuildMemberOperationsService {
 	}): Promise<void> {
 		const {targetId, guildId, targetUser, targetMember, data, updateData, preparedAssets} = params;
 		if (hasSelfProfileCustomizationUpdate(data)) {
-			requireEmailVerified(targetUser, 'profile');
+			assertTierAllows(targetUser, TierGatedActions.PROFILE_CUSTOMIZE, NO_TIER_CONTEXT);
 			assertAccountNotLimited(targetUser);
 		}
 		const ctx = createLimitMatchContext({user: targetUser});
@@ -763,6 +806,7 @@ export class GuildMemberOperationsService {
 				previousHash: targetMember.avatarHash,
 				base64Image: data.avatar,
 				errorPath: 'avatar',
+				uploader: targetUser,
 			});
 			preparedAssets.avatar = prepared;
 			if (prepared.newHash !== targetMember.avatarHash) {
@@ -787,6 +831,7 @@ export class GuildMemberOperationsService {
 				previousHash: targetMember.bannerHash,
 				base64Image: data.banner,
 				errorPath: 'banner',
+				uploader: targetUser,
 			});
 			preparedAssets.banner = prepared;
 			if (prepared.newHash !== targetMember.bannerHash) {

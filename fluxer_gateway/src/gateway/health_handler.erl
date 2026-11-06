@@ -3,7 +3,7 @@
 -module(health_handler).
 -typing([eqwalizer]).
 
--export([init/2]).
+-export([init/2, is_loopback_request/1]).
 
 -type mode() :: liveness | readiness | drain | undrain.
 
@@ -41,34 +41,16 @@ readiness_response(Req) ->
         false ->
             {403, <<"FORBIDDEN">>};
         true ->
-            readiness_status(
-                gateway_node_router:is_ready() andalso cluster_rpc_ready()
-            )
+            readiness_status(gateway_node_router:is_ready(), gateway_nats_rpc:nats_ready())
     end.
 
--spec cluster_rpc_ready() -> boolean().
-cluster_rpc_ready() ->
-    case fluxer_gateway_env:get(cluster_enabled) of
-        true ->
-            gateway_cluster_membership:rpc_ready() andalso
-                role_subscriptions_ready(fluxer_gateway_sup:current_role()) andalso
-                gateway_cluster_membership:rpc_ready();
-        _ ->
-            true
-    end.
-
--spec role_subscriptions_ready(atom()) -> boolean().
-role_subscriptions_ready(Role) ->
-    case gateway_nats_rpc:rpc_subjects_for_role(Role) of
-        [] -> true;
-        _ -> gateway_nats_rpc:rpc_ready() andalso gateway_nats_pool:rpc_ready()
-    end.
-
--spec readiness_status(boolean()) -> {200 | 503, binary()}.
-readiness_status(true) ->
-    {200, <<"OK">>};
-readiness_status(false) ->
-    {503, <<"DRAINING">>}.
+-spec readiness_status(boolean(), boolean()) -> {200 | 503, binary()}.
+readiness_status(false, _NatsReady) ->
+    {503, <<"DRAINING">>};
+readiness_status(true, false) ->
+    {503, <<"NATS_UNAVAILABLE">>};
+readiness_status(true, true) ->
+    {200, <<"OK">>}.
 
 -spec drain_response(cowboy_req:req()) -> {200 | 403, binary()}.
 drain_response(Req) ->

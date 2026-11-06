@@ -19,6 +19,7 @@ interface GenerateDiscriminatorParams {
 	username: string;
 	requestedDiscriminator?: number;
 	user?: User | null;
+	adminOverride?: boolean;
 }
 
 interface GenerateDiscriminatorResult {
@@ -39,7 +40,7 @@ interface ResolveUsernameChangeResult {
 	discriminator: number;
 }
 
-export class UsernameNotAvailableError extends BadRequestError {
+class UsernameNotAvailableError extends BadRequestError {
 	constructor() {
 		super({code: APIErrorCodes.USERNAME_NOT_AVAILABLE});
 		this.name = 'UsernameNotAvailableError';
@@ -76,7 +77,7 @@ export class DiscriminatorService {
 	}
 
 	async generateDiscriminator(params: GenerateDiscriminatorParams): Promise<GenerateDiscriminatorResult> {
-		const {username, requestedDiscriminator, user} = params;
+		const {username, requestedDiscriminator, user, adminOverride} = params;
 		if (requestedDiscriminator === 0 && !user?.isBot) return {discriminator: 0, available: false};
 		const usernameLower = username.toLowerCase();
 		const lockKey = `discrim-lock:${usernameLower}`;
@@ -85,7 +86,7 @@ export class DiscriminatorService {
 			return {discriminator: -1, available: false};
 		}
 		try {
-			const allowCustomDiscriminator = await this.canUseCustomDiscriminator(user);
+			const allowCustomDiscriminator = adminOverride === true || (await this.canUseCustomDiscriminator(user));
 			if (allowCustomDiscriminator && requestedDiscriminator !== undefined) {
 				const isAvailable = await this.isDiscriminatorAvailable(usernameLower, requestedDiscriminator);
 				if (isAvailable) {

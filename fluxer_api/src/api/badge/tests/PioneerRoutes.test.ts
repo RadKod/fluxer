@@ -63,7 +63,7 @@ describe('Öncü badge', () => {
 			AdminACLs.ENFORCEMENT_VIEW,
 		]);
 		badge = await createBuilder<BadgeResponse>(harness, admin.token)
-			.post('/admin/badges')
+			.post('/admin/badge-catalog')
 			.body({icon: getPngDataUrl(), description: TEXT})
 			.expect(HTTP_STATUS.OK)
 			.execute();
@@ -293,7 +293,7 @@ describe('Öncü badge', () => {
 			.expect(HTTP_STATUS.NO_CONTENT)
 			.execute();
 		const other = await createBuilder<BadgeResponse>(harness, admin.token)
-			.post('/admin/badges')
+			.post('/admin/badge-catalog')
 			.body({icon: getPngDataUrl(), description: 'Second #{n}'})
 			.expect(HTTP_STATUS.OK)
 			.execute();
@@ -427,7 +427,7 @@ describe('Öncü badge', () => {
 			expect.objectContaining({description: shown(1)}),
 		]);
 		await createBuilder(harness, admin.token)
-			.patch(`/admin/badges/${badge.id}`)
+			.patch(`/admin/badge-catalog/${badge.id}`)
 			.body({description: 'Öncü no. {n}'})
 			.expect(200)
 			.execute();
@@ -437,7 +437,7 @@ describe('Öncü badge', () => {
 	it('refuses a badge without {n}, an unknown badge, an unverified first account, a second start and a second dry run', async () => {
 		const epha = await createTestAccount(harness);
 		const plain = await createBuilder<BadgeResponse>(harness, admin.token)
-			.post('/admin/badges')
+			.post('/admin/badge-catalog')
 			.body({icon: getPngDataUrl(), description: 'Early supporter'})
 			.expect(HTTP_STATUS.OK)
 			.execute();

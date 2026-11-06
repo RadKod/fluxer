@@ -16,10 +16,15 @@ import backfillEarlyPlusBadges from '@app/api/worker/tasks/BackfillEarlyPlusBadg
 import backfillFeedSuggestionRanking from '@app/api/worker/tasks/BackfillFeedSuggestionRanking';
 import backfillPioneerBadges from '@app/api/worker/tasks/BackfillPioneerBadges';
 import backfillReferralTier from '@app/api/worker/tasks/BackfillReferralTier';
+import backfillDeletedUsers from '@app/api/worker/tasks/BackfillDeletedUsers';
+import backfillHiddenProfileBadges from '@app/api/worker/tasks/BackfillHiddenProfileBadges';
+import backfillPasskeyTrait from '@app/api/worker/tasks/BackfillPasskeyTrait';
+import backfillUserAclIndex from '@app/api/worker/tasks/BackfillUserAclIndex';
 import batchGuildAuditLogMessageDeletes from '@app/api/worker/tasks/BatchGuildAuditLogMessageDeletes';
 import bulkDeleteSelfMessagesImmediate from '@app/api/worker/tasks/BulkDeleteSelfMessagesImmediate';
 import bulkDeleteUserMessages from '@app/api/worker/tasks/BulkDeleteUserMessages';
 import clearAuthenticatedReporterEmails from '@app/api/worker/tasks/ClearAuthenticatedReporterEmails';
+import closePaymentDisputeAccounts from '@app/api/worker/tasks/ClosePaymentDisputeAccounts';
 import crosspostMessage from '@app/api/worker/tasks/CrosspostMessage';
 import crosspostMessageChunk from '@app/api/worker/tasks/CrosspostMessageChunk';
 import deleteFeedVideo from '@app/api/worker/tasks/DeleteFeedVideo';
@@ -42,17 +47,34 @@ import flushMicupBotXpSlice from '@app/api/worker/tasks/FlushMicupBotXpSlice';
 import flushUserActivityBuffer from '@app/api/worker/tasks/FlushUserActivityBuffer';
 import grantReferralRewards from '@app/api/worker/tasks/GrantReferralRewards';
 import guildProcessDeletion from '@app/api/worker/tasks/GuildProcessDeletion';
+import {
+	endGuildVisitsForCodeTask,
+	endUnassignedGuildVisitsTask,
+	pruneGuildVisitsTask,
+} from '@app/api/worker/tasks/GuildVisitTasks';
 import handleMentionChunk from '@app/api/worker/tasks/HandleMentionChunk';
 import handleMentions from '@app/api/worker/tasks/HandleMentions';
 import handleMicupBotLevelUp from '@app/api/worker/tasks/HandleMicupBotLevelUp';
 import handleMicupBotMemberEvent from '@app/api/worker/tasks/HandleMicupBotMemberEvent';
 import harvestGuildData from '@app/api/worker/tasks/HarvestGuildData';
 import harvestUserData from '@app/api/worker/tasks/HarvestUserData';
+import importLegacyBillingDocuments from '@app/api/worker/tasks/ImportLegacyBillingDocuments';
 import indexChannelMessages from '@app/api/worker/tasks/IndexChannelMessages';
 import indexGuildMembers from '@app/api/worker/tasks/IndexGuildMembers';
 import keepFeedVideoEvidence from '@app/api/worker/tasks/KeepFeedVideoEvidence';
+import joinSingleCommunityMembers from '@app/api/worker/tasks/JoinSingleCommunityMembers';
 import liftExpiredGuildInvitePauses from '@app/api/worker/tasks/LiftExpiredGuildInvitePauses';
 import messageShred from '@app/api/worker/tasks/MessageShred';
+import notifyRegistrationApprovers from '@app/api/worker/tasks/NotifyRegistrationApprovers';
+import operatorPassConsentRetention from '@app/api/worker/tasks/OperatorPassConsentRetention';
+import operatorPassFulfilmentSweep from '@app/api/worker/tasks/OperatorPassFulfilmentSweep';
+import operatorPassLabsDelivery from '@app/api/worker/tasks/OperatorPassLabsDelivery';
+import operatorPassLabsGreeting from '@app/api/worker/tasks/OperatorPassLabsGreeting';
+import operatorPassLabsVisionaryRoleSync from '@app/api/worker/tasks/OperatorPassLabsVisionaryRoleSync';
+import operatorPassOfferCompletion from '@app/api/worker/tasks/OperatorPassOfferCompletion';
+import operatorPassRemovalExpiry from '@app/api/worker/tasks/OperatorPassRemovalExpiry';
+import operatorPassWaitlistCleanup from '@app/api/worker/tasks/OperatorPassWaitlistCleanup';
+import operatorPassWallRetention from '@app/api/worker/tasks/OperatorPassWallRetention';
 import pollAppStoreNotificationHistory from '@app/api/worker/tasks/PollAppStoreNotificationHistory';
 import pollGooglePlayVoidedPurchases from '@app/api/worker/tasks/PollGooglePlayVoidedPurchases';
 import processAppStoreNotification from '@app/api/worker/tasks/ProcessAppStoreNotification';
@@ -85,6 +107,7 @@ import reconcileShopOrders from '@app/api/worker/tasks/ReconcileShopOrders';
 import reconcileUserPayments from '@app/api/worker/tasks/ReconcileUserPayments';
 import refreshFeedDiscover from '@app/api/worker/tasks/RefreshFeedDiscover';
 import refreshFeedSuggestions from '@app/api/worker/tasks/RefreshFeedSuggestions';
+import recordOperatorPassDelivery from '@app/api/worker/tasks/RecordOperatorPassDelivery';
 import refreshSearchIndex from '@app/api/worker/tasks/RefreshSearchIndex';
 import refreshStorePurchase from '@app/api/worker/tasks/RefreshStorePurchase';
 import reindexUserGuildMembers from '@app/api/worker/tasks/ReindexUserGuildMembers';
@@ -97,7 +120,10 @@ import runGuildRosterSlots from '@app/api/worker/tasks/RunGuildRosterSlots';
 import runMicupBotCommand from '@app/api/worker/tasks/RunMicupBotCommand';
 import runMicupBotVoiceSlots from '@app/api/worker/tasks/RunMicupBotVoiceSlots';
 import scanFeedVideo from '@app/api/worker/tasks/ScanFeedVideo';
+import scanBillingNotices from '@app/api/worker/tasks/ScanBillingNotices';
 import seedThreadPermissions from '@app/api/worker/tasks/SeedThreadPermissions';
+import sendBillingEmail from '@app/api/worker/tasks/SendBillingEmail';
+import sendOperatorPassWithdrawalReceipt from '@app/api/worker/tasks/SendOperatorPassWithdrawalReceipt';
 import {sendSystemDm} from '@app/api/worker/tasks/SendSystemDm';
 import syncCrosspostCopies from '@app/api/worker/tasks/SyncCrosspostCopies';
 import syncCrosspostedMessage from '@app/api/worker/tasks/SyncCrosspostedMessage';
@@ -140,6 +166,10 @@ export const workerTasks: Record<WorkerTaskName, WorkerTaskHandler> = {
 	repairThreadIndexes,
 	syncThreadSearchDocument,
 	backfillThreadSearch,
+	backfillDeletedUsers,
+	backfillHiddenProfileBadges,
+	backfillPasskeyTrait,
+	backfillUserAclIndex,
 	batchGuildAuditLogMessageDeletes,
 	bulkAddGuildMembers: bulkAddGuildMembers,
 	bulkBanFileShas: bulkBanFileShas,
@@ -151,11 +181,14 @@ export const workerTasks: Record<WorkerTaskName, WorkerTaskHandler> = {
 	backfillGuildBoosts,
 	bulkUpdateUserFlags: bulkUpdateUserFlags,
 	clearAuthenticatedReporterEmails,
+	closePaymentDisputeAccounts,
 	crosspostMessage,
 	crosspostMessageChunk,
 	deleteUserMessagesInGuildByTime,
 	ensureUserPremium,
 	drainActivitySpool,
+	endGuildVisitsForCode: endGuildVisitsForCodeTask,
+	endUnassignedGuildVisits: endUnassignedGuildVisitsTask,
 	expireAttachments,
 	expireReportSnapshots,
 	expireStaleJobs,
@@ -169,8 +202,19 @@ export const workerTasks: Record<WorkerTaskName, WorkerTaskHandler> = {
 	harvestUserData,
 	indexChannelMessages,
 	indexGuildMembers,
+	joinSingleCommunityMembers,
 	liftExpiredGuildInvitePauses,
 	messageShred,
+	notifyRegistrationApprovers,
+	operatorPassOfferCompletion,
+	operatorPassRemovalExpiry,
+	operatorPassWallRetention,
+	operatorPassConsentRetention,
+	operatorPassFulfilmentSweep,
+	operatorPassLabsDelivery,
+	operatorPassLabsGreeting,
+	operatorPassLabsVisionaryRoleSync,
+	operatorPassWaitlistCleanup,
 	processAssetDeletionQueue,
 	processCachePurgeQueue,
 	processStripeWebhook,
@@ -195,10 +239,16 @@ export const workerTasks: Record<WorkerTaskName, WorkerTaskHandler> = {
 	pollGooglePlayVoidedPurchases,
 	pollAppStoreNotificationHistory,
 	prunePostgresKvTtl,
+	pruneGuildVisits: pruneGuildVisitsTask,
 	refreshSearchIndex,
 	seedThreadPermissions,
+	scanBillingNotices,
+	importLegacyBillingDocuments,
+	sendBillingEmail,
 	removeChannelFollowers,
 	sendSystemDm,
+	sendOperatorPassWithdrawalReceipt,
+	recordOperatorPassDelivery,
 	syncStripeCustomerEmail,
 	syncFileShaBlocklists,
 	syncUrlBlocklists,

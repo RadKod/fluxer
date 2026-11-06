@@ -41,25 +41,6 @@ export class MessagePinService {
 		private readonly guildAuditLogService: GuildAuditLogService,
 	) {}
 
-	private async assertMessageHistoryAccess({
-		authChannel,
-		messageId,
-	}: {
-		authChannel: AuthenticatedChannel;
-		messageId: MessageID;
-	}): Promise<void> {
-		if (!authChannel.guild) {
-			return;
-		}
-		if (await authChannel.hasPermission(Permissions.READ_MESSAGE_HISTORY)) {
-			return;
-		}
-		const cutoff = authChannel.guild.message_history_cutoff;
-		if (!cutoff || snowflakeToDate(messageId).getTime() < new Date(cutoff).getTime()) {
-			throw new UnknownMessageError();
-		}
-	}
-
 	async getChannelPins({
 		authChannel,
 		userId,
@@ -68,7 +49,6 @@ export class MessagePinService {
 	}: {
 		authChannel: AuthenticatedChannel;
 		userId: UserID;
-		requestCache: RequestCache;
 		beforeTimestamp?: Date;
 		limit?: number;
 	}): Promise<{
@@ -152,19 +132,8 @@ export class MessagePinService {
 		requestCache: RequestCache;
 		auditLogReason?: string | null;
 	}): Promise<void> {
-		const {channel, guild, checkPermission} = authChannel;
-		if (guild) {
-			await checkPermission(Permissions.PIN_MESSAGES);
-			if (isOperationDisabled(guild, GuildOperations.SEND_MESSAGE)) {
-				throw new FeatureTemporarilyDisabledError();
-			}
-		}
-		ensureTextChannel(channel);
-		assertThreadInteractionAllowed(authChannel, 'pin');
-		await this.assertMessageHistoryAccess({authChannel, messageId});
-		const message = await this.channelRepository.messages.getMessage(channel.id, messageId);
-		if (!message) throw new UnknownMessageError();
-		this.validateMessagePinnable(message);
+		const {channel} = authChannel;
+		const message = await this.loadPinnableMessage(authChannel, messageId);
 		if (message.pinnedTimestamp) return;
 		const now = new Date();
 		const updatedMessageData = {...message.toRow(), pinned_timestamp: now};
@@ -179,18 +148,7 @@ export class MessagePinService {
 			channel,
 			message: updatedMessage,
 		});
-		if (channel.guildId) {
-			await this.guildAuditLogService
-				.createBuilder(channel.guildId, userId)
-				.withAction(AuditLogActionType.MESSAGE_PIN, messageId.toString())
-				.withMetadata({
-					channel_id: channel.id.toString(),
-					message_id: messageId.toString(),
-				})
-				.withThreadScope(channel.isThread())
-				.withReason(auditLogReason ?? null)
-				.commit();
-		}
+		await this.recordPinAudit(AuditLogActionType.MESSAGE_PIN, channel, messageId, userId, auditLogReason);
 	}
 
 	async unpinMessage({
@@ -202,22 +160,10 @@ export class MessagePinService {
 		authChannel: AuthenticatedChannel;
 		messageId: MessageID;
 		userId: UserID;
-		requestCache: RequestCache;
 		auditLogReason?: string | null;
 	}): Promise<void> {
-		const {channel, guild, checkPermission} = authChannel;
-		if (guild) {
-			await checkPermission(Permissions.PIN_MESSAGES);
-			if (isOperationDisabled(guild, GuildOperations.SEND_MESSAGE)) {
-				throw new FeatureTemporarilyDisabledError();
-			}
-		}
-		ensureTextChannel(channel);
-		assertThreadInteractionAllowed(authChannel, 'pin');
-		await this.assertMessageHistoryAccess({authChannel, messageId});
-		const message = await this.channelRepository.messages.getMessage(channel.id, messageId);
-		if (!message) throw new UnknownMessageError();
-		this.validateMessagePinnable(message);
+		const {channel} = authChannel;
+		const message = await this.loadPinnableMessage(authChannel, messageId);
 		if (!message.pinnedTimestamp) return;
 		const updatedMessageData = {...message.toRow(), pinned_timestamp: null};
 		const updatedMessage = await this.channelRepository.messages.upsertMessage(updatedMessageData, message.toRow());
@@ -228,18 +174,43 @@ export class MessagePinService {
 			channel,
 			message: updatedMessage,
 		});
-		if (channel.guildId) {
-			await this.guildAuditLogService
-				.createBuilder(channel.guildId, userId)
-				.withAction(AuditLogActionType.MESSAGE_UNPIN, messageId.toString())
-				.withMetadata({
-					channel_id: channel.id.toString(),
-					message_id: messageId.toString(),
-				})
-				.withThreadScope(channel.isThread())
-				.withReason(auditLogReason ?? null)
-				.commit();
+		await this.recordPinAudit(AuditLogActionType.MESSAGE_UNPIN, channel, messageId, userId, auditLogReason);
+	}
+
+	private async loadPinnableMessage(authChannel: AuthenticatedChannel, messageId: MessageID): Promise<Message> {
+		const {channel, guild, checkPermission} = authChannel;
+		if (guild) {
+			await checkPermission(Permissions.PIN_MESSAGES);
+			if (isOperationDisabled(guild, GuildOperations.SEND_MESSAGE)) {
+				throw new FeatureTemporarilyDisabledError();
+			}
 		}
+		ensureTextChannel(channel);
+		assertThreadInteractionAllowed(authChannel, 'pin');
+		const message = await this.channelRepository.messages.getMessage(channel.id, messageId);
+		if (!message) throw new UnknownMessageError();
+		this.validateMessagePinnable(message);
+		return message;
+	}
+
+	private async recordPinAudit(
+		action: AuditLogActionType,
+		channel: Channel,
+		messageId: MessageID,
+		userId: UserID,
+		auditLogReason?: string | null,
+	): Promise<void> {
+		if (!channel.guildId) return;
+		await this.guildAuditLogService
+			.createBuilder(channel.guildId, userId)
+			.withAction(action, messageId.toString())
+			.withMetadata({
+				channel_id: channel.id.toString(),
+				message_id: messageId.toString(),
+			})
+			.withThreadScope(channel.isThread())
+			.withReason(auditLogReason ?? null)
+			.commit();
 	}
 
 	private validateMessagePinnable(message: Message): void {

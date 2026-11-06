@@ -8,19 +8,28 @@ import type {IAssetDeletionQueue, QueuedAssetReference} from '@app/api/infrastru
 import type {IMediaService, MediaProxyMetadataResponse} from '@app/api/infrastructure/IMediaService';
 import {decodeValidatedImage, resolveAssetSizeLimit} from '@app/api/infrastructure/ImageUploadValidation';
 import type {IStorageService} from '@app/api/infrastructure/IStorageService';
-import {stripNonJpegImageMetadata} from '@app/api/infrastructure/StorageObjectHelpers';
 import {Logger} from '@app/api/Logger';
 import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
+import type {User} from '@app/api/models/User';
 import {awaitAll} from '@app/api/utils/ConcurrencyUtils';
-import {type AssetKind, COSMETIC_ASSET_POLICY} from '@fluxer/constants/src/AssetFormatPolicy';
+import {type AssetKind, COSMETIC_ASSET_POLICY, getPolicy} from '@fluxer/constants/src/AssetFormatPolicy';
 import {AVATAR_MAX_SIZE} from '@fluxer/constants/src/LimitConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
 import {ms} from 'itty-time';
 import sharp from 'sharp';
 
-type AssetType = 'avatar' | 'banner' | 'icon' | 'splash' | 'embed_splash' | 'branding';
-type EntityType = 'user' | 'guild' | 'guild_member' | 'instance';
+type AssetType =
+	| 'avatar'
+	| 'banner'
+	| 'icon'
+	| 'splash'
+	| 'embed_splash'
+	| 'branding'
+	| 'branding_backdrop'
+	| 'custom_badge'
+	| 'role_icon';
+type EntityType = 'user' | 'guild' | 'guild_member' | 'instance' | 'role';
 // Micup: a cosmetic catalog image is a branding asset whose owner key names the item. The media proxy serves any
 // branding/<owner>/<hash> with an owner key of [A-Za-z0-9_-]{1,128}, so no new asset type or prefix is needed.
 export type CosmeticAssetOwnerKey = `cosmetic-${string}-${bigint}`;
@@ -38,6 +47,9 @@ const ASSET_TYPE_TO_PREFIX: Record<AssetType, string> = {
 	splash: 'splashes',
 	embed_splash: 'embed-splashes',
 	branding: 'branding',
+	branding_backdrop: 'branding-backdrops',
+	custom_badge: 'custom-badges',
+	role_icon: 'role-icons',
 };
 
 function normalizeContentType(contentType: string | null | undefined): string {
@@ -48,6 +60,19 @@ function isSvgMetadata(metadata: MediaProxyMetadataResponse): boolean {
 	const format = metadata.format.toLowerCase();
 	const contentType = normalizeContentType(metadata.content_type);
 	return format === 'svg' || contentType === 'image/svg+xml' || contentType === 'image/svg';
+}
+
+function requireDimensionsWithinPolicy(metadata: MediaProxyMetadataResponse, kind: AssetKind, errorPath: string): void {
+	const dims = getPolicy(kind).dims;
+	if (!dims) return;
+	const {width, height} = metadata;
+	const inRange = (value: number | null | undefined) => value != null && value >= dims.min && value <= dims.max;
+	if (!inRange(width) || !inRange(height)) {
+		throw InputValidationError.fromCode(errorPath, ValidationErrorCodes.IMAGE_DIMENSIONS_OUT_OF_RANGE, {
+			min: dims.min,
+			max: dims.max,
+		});
+	}
 }
 
 export interface PreparedAssetUpload {
@@ -64,6 +89,7 @@ export interface PreparedAssetUpload {
 	format?: string | null;
 	contentType?: string | null;
 	previousReference: QueuedAssetReference | null;
+	newReference: QueuedAssetReference | null;
 	_uploaded: boolean;
 }
 
@@ -77,6 +103,7 @@ interface PrepareAssetUploadOptions {
 	errorPath: string;
 	cosmeticMaxBytes?: number;
 	cosmeticShape?: CosmeticImageShape;
+	uploader?: User | null;
 }
 
 type LimitConfigSnapshotProvider = Pick<LimitConfigService, 'getConfigSnapshot'>;
@@ -94,6 +121,8 @@ export class EntityAssetService {
 			case 'avatar':
 				return 'avatar';
 			case 'icon':
+			case 'branding':
+			case 'custom_badge':
 				return 'guild_icon';
 			case 'banner':
 				return 'banner';
@@ -101,8 +130,10 @@ export class EntityAssetService {
 				return 'splash';
 			case 'embed_splash':
 				return 'embed_splash';
-			case 'branding':
-				return 'guild_icon';
+			case 'branding_backdrop':
+				return 'sign_in_backdrop';
+			case 'role_icon':
+				return 'role_icon';
 		}
 	}
 
@@ -129,7 +160,7 @@ export class EntityAssetService {
 	}
 
 	async prepareAssetUpload(options: PrepareAssetUploadOptions): Promise<PreparedAssetUpload> {
-		const {assetType, entityType, entityId, guildId, previousHash, base64Image, errorPath} = options;
+		const {assetType, entityType, entityId, guildId, previousHash, base64Image, errorPath, uploader} = options;
 		const cosmetic = typeof entityId === 'string';
 		if (cosmetic && assetType !== 'branding') {
 			throw new Error('Only branding assets take a cosmetic owner key');
@@ -151,6 +182,7 @@ export class EntityAssetService {
 				newCdnUrl: null,
 				previousCdnUrl,
 				previousReference,
+				newReference: null,
 				_uploaded: false,
 				format: null,
 				contentType: null,
@@ -167,6 +199,7 @@ export class EntityAssetService {
 			base64Image,
 			errorPath,
 			assetType,
+			uploader ?? null,
 			cosmetic,
 			options.cosmeticMaxBytes,
 			options.cosmeticShape,
@@ -185,6 +218,7 @@ export class EntityAssetService {
 			newCdnUrl,
 			previousCdnUrl,
 			previousReference,
+			newReference: this.buildQueuedAssetReference(assetType, entityType, entityId, newHash, guildId),
 			height,
 			width,
 			_uploaded: false,
@@ -193,12 +227,17 @@ export class EntityAssetService {
 			contentType,
 		};
 		if (newHash === previousHash) return prepared;
-		let uploadBuffer = imageBuffer;
+		let uploadBuffer: Uint8Array = imageBuffer;
 		try {
 			const isJpeg = format === 'jpg' || format === 'jpeg';
-			uploadBuffer = isJpeg
+			const stripped = isJpeg
 				? await sharp(imageBuffer).jpeg({quality: 100}).toBuffer()
-				: await stripNonJpegImageMetadata(imageBuffer);
+				: await this.mediaService.stripImageMetadata(imageBuffer);
+			if (stripped) {
+				uploadBuffer = stripped;
+			} else {
+				Logger.error({assetType, entityType}, 'Failed to strip metadata from entity asset, uploading original');
+			}
 		} catch (error) {
 			Logger.error({error, assetType, entityType}, 'Failed to strip metadata from entity asset, uploading original');
 		}
@@ -209,6 +248,49 @@ export class EntityAssetService {
 				{newS3Key, assetType, entityType},
 				'Asset upload verification failed - object does not exist after upload with retries',
 			);
+			throw InputValidationError.fromCode(errorPath, ValidationErrorCodes.FAILED_TO_UPLOAD_IMAGE);
+		}
+		prepared._uploaded = true;
+		return prepared;
+	}
+
+	async prepareAssetCopy(options: {
+		assetType: AssetType;
+		entityType: EntityType;
+		sourceEntityId: bigint;
+		entityId: bigint;
+		guildId?: bigint;
+		hash: string;
+		errorPath: string;
+	}): Promise<PreparedAssetUpload | null> {
+		const {assetType, entityType, sourceEntityId, entityId, guildId, hash, errorPath} = options;
+		const objectName = stripAnimationPrefix(hash);
+		const sourceS3Key = `${this.buildS3KeyBase(assetType, entityType, sourceEntityId, guildId)}/${objectName}`;
+		if ((await this.storageService.getObjectMetadata(Config.s3.buckets.cdn, sourceS3Key)) === null) {
+			Logger.warn({sourceS3Key, assetType, entityType}, 'Asset to copy does not exist, leaving the copy without it');
+			return null;
+		}
+		const s3KeyBase = this.buildS3KeyBase(assetType, entityType, entityId, guildId);
+		const newS3Key = `${s3KeyBase}/${objectName}`;
+		const prepared: PreparedAssetUpload = {
+			newHash: hash,
+			previousHash: null,
+			isAnimated: hash.startsWith('a_'),
+			newS3Key,
+			previousS3Key: null,
+			newCdnUrl: `${Config.endpoints.media}/${s3KeyBase}/${hash}`,
+			previousCdnUrl: null,
+			previousReference: null,
+			newReference: this.buildQueuedAssetReference(assetType, entityType, entityId, hash, guildId),
+			_uploaded: false,
+		};
+		await this.storageService.copyObject({
+			sourceBucket: Config.s3.buckets.cdn,
+			sourceKey: sourceS3Key,
+			destinationBucket: Config.s3.buckets.cdn,
+			destinationKey: newS3Key,
+		});
+		if (!(await this.verifyAssetExistsWithRetry(assetType, entityType, newS3Key))) {
 			throw InputValidationError.fromCode(errorPath, ValidationErrorCodes.FAILED_TO_UPLOAD_IMAGE);
 		}
 		prepared._uploaded = true;
@@ -229,6 +311,18 @@ export class EntityAssetService {
 			{previousS3Key: prepared.previousS3Key, previousCdnUrl: prepared.previousCdnUrl},
 			'Queued old asset for deferred deletion',
 		);
+	}
+
+	async queueUploadForStaleCheck(prepared: PreparedAssetUpload): Promise<void> {
+		if (!prepared._uploaded || !prepared.newS3Key || !prepared.newReference) {
+			return;
+		}
+		await this.assetDeletionQueue.queueDeletion({
+			s3Key: prepared.newS3Key,
+			cdnUrl: null,
+			reason: 'asset_upload_stale_check',
+			staleReference: prepared.newReference,
+		});
 	}
 
 	async commitAssetChanges(preparedAssets: ReadonlyArray<PreparedAssetUpload | null>): Promise<void> {
@@ -313,6 +407,7 @@ export class EntityAssetService {
 		base64Image: string,
 		errorPath: string,
 		assetType: AssetType,
+		uploader: User | null,
 		cosmetic: boolean,
 		cosmeticMaxBytes?: number,
 		cosmeticShape?: CosmeticImageShape,
@@ -324,6 +419,7 @@ export class EntityAssetService {
 		contentType: string | null;
 		animated: boolean;
 	}> {
+		const kind = this.mapAssetTypeToAssetKind(assetType);
 		const {imageBuffer, metadata} = cosmetic
 			? await this.decodeCosmeticImage(
 					base64Image,
@@ -334,9 +430,15 @@ export class EntityAssetService {
 			: await decodeValidatedImage(this.mediaService, {
 					base64Image,
 					errorPath,
-					kind: this.mapAssetTypeToAssetKind(assetType),
-					maxSize: resolveAssetSizeLimit(this.limitConfigService, 'avatar_max_size', AVATAR_MAX_SIZE),
+					kind,
+					maxSize:
+						kind === 'sign_in_backdrop' || kind === 'role_icon'
+							? getPolicy(kind).maxBytes
+							: resolveAssetSizeLimit(this.limitConfigService, 'avatar_max_size', AVATAR_MAX_SIZE, null, uploader),
 				});
+		if (!cosmetic && kind === 'role_icon') {
+			requireDimensionsWithinPolicy(metadata, kind, errorPath);
+		}
 		const isAnimatedImage = metadata.animated ?? false;
 		const keepDimensions = !isSvgMetadata(metadata);
 		return {

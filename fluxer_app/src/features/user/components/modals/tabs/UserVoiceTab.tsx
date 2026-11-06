@@ -99,7 +99,7 @@ const CUSTOM_DESCRIPTOR = msg({
 	comment: 'Voice input processing profile where the user configures processing manually.',
 });
 const CUSTOM_PROFILE_DESCRIPTION_DESCRIPTOR = msg({
-	message: 'Adjust each setting yourself: noise suppression, echo cancellation, and gain.',
+	message: 'Adjust noise suppression, echo cancellation, and gain yourself.',
 	comment: 'Description for the custom profile option in the voice tab.',
 });
 const PUSH_TO_TALK_LIMITED_DESCRIPTOR = msg({
@@ -345,12 +345,12 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings}) => {
 				<div className={styles.pttSettings} data-flx="user.voice-tab.render-ptt-controls.ptt-settings">
 					<p className={styles.pttSettingDescription} data-flx="user.voice-tab.render-ptt-controls.ptt-mute-note">
 						<Trans>
-							While push-to-talk is on, your shortcut controls your microphone, so the mute button is disabled.
+							While push-to-talk is on, your keybind controls your microphone, so the mute button is disabled.
 						</Trans>
 					</p>
 					<div className={styles.pttSettingRow} data-flx="user.voice-tab.render-ptt-controls.ptt-setting-row">
 						<KeybindRecorder
-							label={<Trans>Shortcut</Trans>}
+							label={<Trans>Keybind</Trans>}
 							labelPlacement="inline"
 							action="voice_push_to_talk"
 							value={pttCombo}
@@ -518,49 +518,64 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings}) => {
 			{renderAutoGainControlSwitch()}
 		</div>
 	);
+	const devicesSectionTitle = i18n._(INPUT_AND_OUTPUT_DESCRIPTOR);
+	let deviceNotice: React.ReactNode = null;
+	if (inputDevices.length === 0 && permissionStatus !== 'loading') {
+		const noticeClassName = styles.deviceNotice;
+		const noticeTextClassName = styles.deviceNoticeText;
+		const noticeTitle = (
+			<div className={styles.deviceNoticeTitle} data-flx="user.voice-tab.device-notice-title">
+				<Trans>No microphone found</Trans>
+			</div>
+		);
+		const descriptionClassName = styles.deviceNoticeDescription;
+		let noticeDescription: React.ReactNode;
+		if (permissionStatus === 'denied' && isNativeDesktop) {
+			noticeDescription = (
+				<Trans comment="Shown in voice settings on the macOS app when microphone access is denied. {ph({PRODUCT_NAME: RuntimeConfig.productName})} is the app name. Keep 'System Settings', 'Privacy & Security' and the permission name as macOS shows them in this language.">
+					Allow {ph({PRODUCT_NAME: RuntimeConfig.productName})} to access your microphone in System Settings → Privacy &
+					Security → Microphone.
+				</Trans>
+			);
+		} else if (permissionStatus === 'denied') {
+			noticeDescription = (
+				<Trans>
+					Allow {ph({PRODUCT_NAME: RuntimeConfig.productName})} to access your microphone. Check your browser's address
+					bar or settings.
+				</Trans>
+			);
+		} else if (permissionStatus === 'granted') {
+			noticeDescription = <Trans>Connect a microphone and try again.</Trans>;
+		} else {
+			noticeDescription = i18n._(PRODUCT_NEEDS_MICROPHONE_ACCESS_DESCRIPTOR, {productName: RuntimeConfig.productName});
+		}
+		deviceNotice = (
+			<div className={noticeClassName} data-flx="user.voice-tab.device-notice">
+				<div className={noticeTextClassName} data-flx="user.voice-tab.device-notice-text">
+					{noticeTitle}
+					<p className={descriptionClassName} data-flx="user.voice-tab.device-notice-description">
+						{noticeDescription}
+					</p>
+				</div>
+				{permissionStatus !== 'granted' ? (
+					<Button
+						variant="secondary"
+						small={true}
+						onClick={() => {
+							void requestPermission();
+						}}
+						data-flx="user.voice-tab.button"
+					>
+						<Trans>Allow microphone</Trans>
+					</Button>
+				) : null}
+			</div>
+		);
+	}
 	return (
 		<>
-			<SettingsTabSection title={i18n._(INPUT_AND_OUTPUT_DESCRIPTOR)} data-flx="user.voice-tab.devices-section">
-				{inputDevices.length === 0 && permissionStatus !== 'loading' ? (
-					<div className={styles.deviceNotice} data-flx="user.voice-tab.device-notice">
-						<div className={styles.deviceNoticeText} data-flx="user.voice-tab.device-notice-text">
-							<div className={styles.deviceNoticeTitle} data-flx="user.voice-tab.device-notice-title">
-								<Trans>No microphone found</Trans>
-							</div>
-							<p className={styles.deviceNoticeDescription} data-flx="user.voice-tab.device-notice-description">
-								{permissionStatus === 'denied' ? (
-									isNativeDesktop ? (
-										<Trans comment="Shown in voice settings on the macOS app when microphone access is denied. {ph({PRODUCT_NAME: RuntimeConfig.productName})} is the app name. Keep 'System Settings', 'Privacy & Security' and the permission name as macOS shows them in this language.">
-											Allow {ph({PRODUCT_NAME: RuntimeConfig.productName})} to access your microphone in System Settings
-											→ Privacy & Security → Microphone.
-										</Trans>
-									) : (
-										<Trans>
-											Allow {ph({PRODUCT_NAME: RuntimeConfig.productName})} to access your microphone. Check your
-											browser's address bar or settings.
-										</Trans>
-									)
-								) : permissionStatus === 'granted' ? (
-									<Trans>Connect a microphone and try again.</Trans>
-								) : (
-									i18n._(PRODUCT_NEEDS_MICROPHONE_ACCESS_DESCRIPTOR, {productName: RuntimeConfig.productName})
-								)}
-							</p>
-						</div>
-						{permissionStatus !== 'granted' ? (
-							<Button
-								variant="secondary"
-								small={true}
-								onClick={() => {
-									void requestPermission();
-								}}
-								data-flx="user.voice-tab.button"
-							>
-								<Trans>Allow microphone</Trans>
-							</Button>
-						) : null}
-					</div>
-				) : null}
+			<SettingsTabSection title={devicesSectionTitle} data-flx="user.voice-tab.devices-section">
+				{deviceNotice}
 				<CompactComboboxRow
 					label={i18n._(VOICE_INPUT_DEVICE_DESCRIPTOR)}
 					value={effectiveInputDeviceId}
@@ -724,6 +739,20 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings}) => {
 				data-flx="user.voice-tab.entrance-sound-section-wrapper"
 			>
 				<EntranceSoundSection data-flx="user.voice-tab.entrance-sound-section" />
+			</SettingsTabSection>
+			<SettingsTabSection title={<Trans>Voice channels</Trans>} data-flx="user.voice-tab.voice-channels-section">
+				<Switch
+					label={<Trans>Show connection IDs</Trans>}
+					description={
+						<Trans>
+							Show the ID of each voice connection next to people in calls and in voice channels. With it off, each
+							device shows its type.
+						</Trans>
+					}
+					value={voiceSettings.showVoiceConnectionId}
+					onChange={(value) => VoiceSettingsCommands.update({showVoiceConnectionId: value})}
+					data-flx="user.voice-tab.voice-channels-section.switch.show-connection-ids"
+				/>
 			</SettingsTabSection>
 		</>
 	);

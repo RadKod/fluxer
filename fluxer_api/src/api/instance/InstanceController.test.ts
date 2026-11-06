@@ -1,5 +1,6 @@
-﻿// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {createAuthHarness} from '@app/api/auth/tests/AuthTestUtils';
 import type {SsoService} from '@app/api/auth/services/SsoService';
 import {createApplicationID, createUserID} from '@app/api/BrandedTypes';
 import {Config} from '@app/api/Config';
@@ -10,21 +11,101 @@ import {ROSTER_BOT_INVITE_PERMISSIONS} from '@app/api/guild/roster/GuildRosterCo
 import {INSTANCE_CONFIG_REFRESH_CHANNEL, InstanceConfigRepository} from '@app/api/instance/InstanceConfigRepository';
 import {InstanceController} from '@app/api/instance/InstanceController';
 import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
+import {getInstanceConfigRepository} from '@app/api/middleware/ServiceSingletons';
 import {ApplicationRepository} from '@app/api/oauth/repositories/ApplicationRepository';
 import {PremiumTrialService} from '@app/api/premium/trial/PremiumTrialService';
 import {Applications} from '@app/api/Tables';
+import type {ApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {InMemoryCassandraQueryExecutor} from '@app/api/test/InMemoryCassandraQueryExecutor';
+import {createBuilderWithoutAuth} from '@app/api/test/TestRequestBuilder';
 import type {HonoEnv} from '@app/api/types/HonoEnv';
 import {DEFAULT_DOMAIN_MIGRATION_CONFIG} from '@fluxer/schema/src/domains/admin/DomainMigrationSchemas';
 import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {Hono} from 'hono';
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
+import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
-interface DiscoveryCaptcha {
-	provider: string;
+interface DiscoveryResponse {
+	captcha: {provider: string};
+	features: {discovery_enabled?: boolean};
+	domain_migration: unknown;
 }
 
-describe('InstanceController discovery captcha', () => {
+describe('InstanceController discovery', () => {
+	let harness: ApiTestHarness;
+	let repository: InstanceConfigRepository;
+	const previousDiscoveryEnabled = Config.discovery.enabled;
+
+	beforeAll(async () => {
+		harness = await createAuthHarness();
+	});
+	beforeEach(async () => {
+		await harness.reset();
+		repository = getInstanceConfigRepository();
+	});
+	afterEach(() => {
+		Config.discovery.enabled = previousDiscoveryEnabled;
+		repository.clearCacheForTesting();
+	});
+	afterAll(async () => {
+		await harness?.shutdown();
+	});
+
+	async function fetchDiscovery() {
+		const result = await createBuilderWithoutAuth<DiscoveryResponse>(harness).get('/.well-known/fluxer').executeRaw();
+		expect(result.response.status).toBe(200);
+		return result;
+	}
+
+	it('advertises altcha by default', async () => {
+		expect((await fetchDiscovery()).json.captcha).toEqual({provider: 'altcha'});
+	});
+
+	it('advertises no provider once an admin turns the captcha off', async () => {
+		await repository.updateCaptchaConfig({enabled: false});
+
+		expect((await fetchDiscovery()).json.captcha).toEqual({provider: 'none'});
+	});
+
+	it('publishes whether discovery is enabled', async () => {
+		Config.discovery.enabled = false;
+		expect((await fetchDiscovery()).json.features.discovery_enabled).toBe(false);
+
+		Config.discovery.enabled = true;
+		expect((await fetchDiscovery()).json.features.discovery_enabled).toBe(true);
+	});
+
+	it('publishes the domain migration kill switch and anonymous rollout without the targeting lists', async () => {
+		const initial = await fetchDiscovery();
+		expect(initial.json.domain_migration).toEqual({
+			enabled: false,
+			anonymous_rollout_basis_points: 0,
+			rollout_salt: 'domain-migration-v1',
+			standalone_forwarding: false,
+		});
+
+		await repository.setDomainMigrationConfig({
+			...DEFAULT_DOMAIN_MIGRATION_CONFIG,
+			enabled: true,
+			config_version: 2,
+			rollout_basis_points: 100,
+			anonymous_rollout_basis_points: 1500,
+			included_user_ids: ['1400000000000000001'],
+			standalone_forwarding: true,
+		});
+
+		const updated = await fetchDiscovery();
+		expect(updated.response.headers.get('etag')).not.toBe(initial.response.headers.get('etag'));
+		expect(updated.json.domain_migration).toEqual({
+			enabled: true,
+			anonymous_rollout_basis_points: 1500,
+			rollout_salt: 'domain-migration-v1',
+			standalone_forwarding: true,
+		});
+	});
+});
+
+// sanalyer (Micup): official apps and premium features, read through a repository of their own.
+describe('InstanceController discovery (sanalyer)', () => {
 	const repositories: Array<InstanceConfigRepository> = [];
 	let provider: MockKVProvider;
 	let executor: InMemoryCassandraQueryExecutor;
@@ -90,12 +171,6 @@ describe('InstanceController discovery captcha', () => {
 		});
 		InstanceController(app);
 		return app;
-	}
-
-	async function readCaptcha(repository: InstanceConfigRepository): Promise<DiscoveryCaptcha> {
-		const response = await createApp(repository).request('http://localhost/.well-known/fluxer');
-		expect(response.status).toBe(200);
-		return ((await response.json()) as {captcha: DiscoveryCaptcha}).captcha;
 	}
 
 	describe('official apps', () => {
@@ -270,49 +345,6 @@ describe('InstanceController discovery captcha', () => {
 					? [{application_id: '223456789012345678', invite_permissions: ROSTER_BOT_INVITE_PERMISSIONS.toString()}]
 					: []),
 			]);
-		});
-	});
-
-	it('advertises altcha by default', async () => {
-		await expect(readCaptcha(createRepository())).resolves.toEqual({provider: 'altcha'});
-	});
-
-	it('advertises no provider once an admin turns the captcha off', async () => {
-		const repository = createRepository();
-		await repository.updateCaptchaConfig({enabled: false});
-
-		await expect(readCaptcha(repository)).resolves.toEqual({provider: 'none'});
-	});
-
-	it('publishes the domain migration kill switch and anonymous rollout without the targeting lists', async () => {
-		const repository = createRepository();
-		const app = createApp(repository);
-
-		const initial = await app.request('http://localhost/.well-known/fluxer');
-		expect(((await initial.json()) as {domain_migration: unknown}).domain_migration).toEqual({
-			enabled: false,
-			anonymous_rollout_basis_points: 0,
-			rollout_salt: 'domain-migration-v1',
-			standalone_forwarding: false,
-		});
-
-		await repository.setDomainMigrationConfig({
-			...DEFAULT_DOMAIN_MIGRATION_CONFIG,
-			enabled: true,
-			config_version: 2,
-			rollout_basis_points: 100,
-			anonymous_rollout_basis_points: 1500,
-			included_user_ids: ['1400000000000000001'],
-			standalone_forwarding: true,
-		});
-
-		const updated = await app.request('http://localhost/.well-known/fluxer');
-		expect(updated.headers.get('etag')).not.toBe(initial.headers.get('etag'));
-		expect(((await updated.json()) as {domain_migration: unknown}).domain_migration).toEqual({
-			enabled: true,
-			anonymous_rollout_basis_points: 1500,
-			rollout_salt: 'domain-migration-v1',
-			standalone_forwarding: true,
 		});
 	});
 

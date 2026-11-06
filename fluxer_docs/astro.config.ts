@@ -8,23 +8,14 @@ import node from '@astrojs/node';
 import starlight from '@astrojs/starlight';
 import {defineConfig} from 'astro/config';
 import type {Root, RootContent} from 'hast';
-import {remarkDocsBranding} from './src/branding/DocsBranding';
 import {jetBrainsMonoFont, notoSansFont, radioCanadaBigFont} from './src/fonts/Fonts';
-import {
-	docsBaseDomain,
-	docsListenHost,
-	docsListenPort,
-	docsProductName,
-	docsPublicEndpoint,
-} from './src/server/DocsConfig';
+import {docsBaseDomain, docsListenHost, docsListenPort, docsPublicEndpoint} from './src/server/DocsConfig';
 import {resolveViteDevWebSocket} from './src/server/ViteDevWebSocket';
 import {fluxerDarkCodeTheme, fluxerLightCodeTheme} from './src/styles/CodeTheme';
 import {rehypeTableColumnWidths} from './src/table/RehypeTableColumns.ts';
 
 const docsEndpoint = new URL(docsPublicEndpoint());
 const staticDirectory = fileURLToPath(new URL('../fluxer_static/', import.meta.url));
-const productName = docsProductName();
-const branded = productName !== 'Fluxer';
 
 const resolveDocsBasePath = (endpoint: URL): string => {
 	if (endpoint.pathname === '/') {
@@ -104,7 +95,7 @@ export default defineConfig({
 				'./src/styles/content.css',
 				'./src/styles/route-header.css',
 			],
-			description: `${productName} external API and protocol reference.`,
+			description: 'Fluxer external API and protocol reference.',
 			expressiveCode: {
 				styleOverrides: {
 					borderColor: 'var(--flx-code-border)',
@@ -158,57 +149,38 @@ export default defineConfig({
 				},
 				themes: [fluxerDarkCodeTheme, fluxerLightCodeTheme],
 			},
-			favicon: branded ? '/sanalyer-docs-icon.svg' : '/favicon-32x32.png',
-			head: branded
-				? [
-						{
-							tag: 'meta',
-							attrs: {
-								property: 'og:image',
-								content: new URL('og-image-default.png', `${docsEndpoint.href.replace(/\/?$/u, '')}/`).href,
-							},
-						},
-					]
-				: [],
-			logo: branded
-				? {
-						dark: './src/assets/sanalyer/logo-beyaz.svg',
-						light: './src/assets/sanalyer/logo.svg',
-						replacesTitle: true,
-					}
-				: {
-						replacesTitle: true,
-						src: path.join(staticDirectory, 'marketing/branding/logo-color.svg'),
-					},
+			favicon: '/favicon-32x32.png',
+			logo: {
+				replacesTitle: true,
+				src: path.join(staticDirectory, 'marketing/branding/logo-color.svg'),
+			},
 			sidebar: [
 				{
 					label: 'Reference',
 					items: [{label: 'Introduction', link: '/'}, 'authentication', 'snowflakes'],
 				},
-				// sanalyer: the upstream self-hosting guide is withheld (tools/brand/docs-marka.mjs marks it draft).
-				...(branded
-					? []
-					: [
-							{
-								label: 'Self-hosting',
-								items: [
-									'operator/get-started',
-									'operator/sign-in',
-									'operator/configuration',
-									'operator/reverse-proxy',
-									'operator/upgrading',
-									'operator/kubernetes',
-								],
-							},
-						]),
-				...(branded ? [{label: 'Bots', items: ['bots/hizli-baslangic']}] : []),
+				{
+					label: 'Self-hosting',
+					items: [
+						'operator',
+						'operator/running',
+						'operator/voice-servers',
+						'operator/reverse-proxy',
+						'operator/upload-limits',
+						'operator/sign-in',
+						'operator/kubernetes',
+						'operator/docker-compose',
+						'operator/voice-compose',
+						'operator/environment',
+						'operator/rexctl',
+					],
+				},
 				{
 					label: 'Topics',
 					items: [
 						'http-api/errors',
 						'topics/rate-limits',
-						// TEMPORARY: withheld while announcement channels are closed, as CLOSED_DOCS_PAGES in DocsBranding.ts.
-						...(branded ? [] : ['topics/announcement-channels']),
+						'topics/announcement-channels',
 						'http-api/permissions',
 						'topics/captcha',
 						'topics/uploads',
@@ -238,7 +210,6 @@ export default defineConfig({
 						'http-api/users/email-and-password',
 						'http-api/users/mfa',
 						'http-api/users/relationships',
-						'http-api/users/follows',
 						'http-api/users/notes',
 						'http-api/users/private-channels',
 						'http-api/users/push-notifications',
@@ -268,8 +239,6 @@ export default defineConfig({
 						'http-api/guild-channels',
 						'http-api/guild-members',
 						'http-api/guild-member-search',
-						'http-api/guild-roster-events',
-						'http-api/guild-micupbot',
 						'http-api/guild-moderation',
 						'http-api/guild-emojis',
 						'http-api/guild-stickers',
@@ -279,21 +248,11 @@ export default defineConfig({
 				},
 				{
 					label: 'Discovery and content',
-					items: ['http-api/discovery', 'http-api/feed', 'http-api/invites', 'http-api/search', 'http-api/unfurl'],
+					items: ['http-api/discovery', 'http-api/invites', 'http-api/search', 'http-api/unfurl'],
 				},
 				{
 					label: 'Commerce',
-					// sanalyer: upstream payment pages (billing, in-app purchases, donations) are withheld.
-					items: [
-						...(branded ? [] : ['http-api/billing']),
-						'http-api/premium',
-						...(branded ? [] : ['http-api/in-app-purchases']),
-						'http-api/gifts',
-						...(branded ? [] : ['http-api/donations']),
-						'http-api/cosmetics',
-						'http-api/shop',
-						'http-api/referral',
-					],
+					items: ['http-api/billing', 'http-api/premium', 'http-api/gifts'],
 				},
 				{
 					label: 'Client surfaces',
@@ -317,9 +276,7 @@ export default defineConfig({
 				},
 				{
 					label: 'Downloads',
-					items: branded
-						? ['downloads/overview']
-						: ['downloads/overview', 'downloads/desktop', 'downloads/linux-repositories'],
+					items: ['downloads/overview', 'downloads/desktop', 'downloads/linux-repositories'],
 				},
 				{
 					label: 'Media proxy',
@@ -339,8 +296,6 @@ export default defineConfig({
 						'http-api/peer-to-peer-voice',
 						'http-api/streams',
 						'http-api/entrance-sounds',
-						'http-api/voice-seats',
-						'http-api/table-games',
 					],
 				},
 				{
@@ -350,21 +305,17 @@ export default defineConfig({
 						'admin-api/api-keys',
 						'admin-api/users',
 						'admin-api/guilds',
+						'admin-api/badges',
 						'admin-api/threads',
 						'admin-api/applications',
 						'admin-api/reports',
 						'admin-api/enforcement',
 						'admin-api/messages',
-						'admin-api/feed',
 						'admin-api/blocklists',
 						'admin-api/discovery',
 						'admin-api/system-dms',
 						'admin-api/instance',
 						'admin-api/gift-codes',
-						'admin-api/badges',
-						'admin-api/cosmetics',
-						'admin-api/shop',
-						'admin-api/referral',
 						'admin-api/gateway',
 						'admin-api/voice',
 						'admin-api/jobs',
@@ -374,27 +325,39 @@ export default defineConfig({
 					],
 				},
 			],
-			social: branded
-				? []
-				: [
-						{
-							href: 'https://github.com/fluxerapp/fluxer',
-							icon: 'github',
-							label: 'GitHub',
-						},
-					],
+			social: [
+				{
+					href: 'https://github.com/fluxerapp/fluxer',
+					icon: 'github',
+					label: 'GitHub',
+				},
+			],
 			tableOfContents: {maxHeadingLevel: 2, minHeadingLevel: 2},
-			title: `${productName} API`,
+			title: 'Fluxer API',
 		}),
 		mdx(),
 	],
 	markdown: {
+		smartypants: false,
 		processor: unified({
-			remarkPlugins: [remarkDocsBranding],
 			rehypePlugins: [rehypeRootRelativeLinkPrefix(basePath), rehypeTableColumnWidths()],
 		}),
 	},
 	output: 'server',
+	redirects: {
+		'/admin-api/operator-pass': '/admin-api/',
+		'/admin-api/payment-disputes': '/admin-api/',
+		'/api-reference': '/http-api/',
+		'/api-reference/[...path]': '/http-api/',
+		'/http-api/donations': '/http-api/billing/',
+		'/http-api/in-app-purchases': '/http-api/premium/',
+		'/http-api/operator-pass': '/http-api/premium/',
+		'/http-api/operator-pass-waitlist': '/http-api/premium/',
+		'/operator/configuration': '/operator/running/',
+		'/operator/get-started': '/operator/',
+		'/operator/operator-pass': '/operator/',
+		'/operator/upgrading': '/operator/running/',
+	},
 	publicDir: path.join(staticDirectory, 'web'),
 	site: docsEndpoint.origin,
 	server: {

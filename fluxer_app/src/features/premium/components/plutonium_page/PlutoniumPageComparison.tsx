@@ -36,7 +36,7 @@ import {
 	isBooleanTierPerk,
 	isNumericTierPerk,
 	LIMIT_TIER_PERKS,
-	type LimitTierPerk,
+	type NumericTierPerk,
 } from '@fluxer/constants/src/LimitTierPerks';
 import type {MessageDescriptor} from '@lingui/core';
 import {useLingui} from '@lingui/react/macro';
@@ -62,7 +62,7 @@ interface PerkDefinition {
 
 const PERK_DEFINITIONS: ReadonlyArray<PerkDefinition> = [
 	{perkId: 'per_guild_profiles', icon: 'userCircle', label: PERK_PER_COMMUNITY_PROFILES_DESCRIPTOR},
-	{perkId: 'profile_badge', icon: 'fluxerPremium', label: PERK_PROFILE_BADGE_DESCRIPTOR},
+	{perkId: 'profile_badge', icon: 'atom', label: PERK_PROFILE_BADGE_DESCRIPTOR},
 	{perkId: 'custom_video_backgrounds', icon: 'image', label: PERK_VIDEO_BACKGROUNDS_DESCRIPTOR},
 	{perkId: 'max_guilds', icon: 'usersThree', label: PERK_COMMUNITIES_DESCRIPTOR},
 	{perkId: 'max_message_length', icon: 'chatCenteredText', label: PERK_MESSAGE_CHARACTERS_DESCRIPTOR},
@@ -99,13 +99,12 @@ export function resolveUploadSizes(locale: string): {free: string; premium: stri
 	};
 }
 
-function resolveNumericValue(perk: LimitTierPerk, value: number, premium: boolean, locale: string): string {
-	if (!isNumericTierPerk(perk)) return String(value);
-	const resolved = perk.limitKey
-		? premium
-			? Limits.getStockValue(perk.limitKey, value)
-			: Limits.getRestrictedValue(perk.limitKey, value)
-		: value;
+function resolveNumericValue(perk: NumericTierPerk, value: number, tier: 'free' | 'premium', locale: string): string {
+	let resolved = value;
+	if (perk.limitKey) {
+		resolved =
+			tier === 'premium' ? Limits.getStockValue(perk.limitKey, value) : Limits.getRestrictedValue(perk.limitKey, value);
+	}
 	if (perk.unit === 'bytes') {
 		return formatMegabytes(locale, resolved);
 	}
@@ -140,8 +139,8 @@ function buildRows(locale: string, translate: (descriptor: MessageDescriptor) =>
 				id: perk.id,
 				icon: definition.icon,
 				label: definition.label,
-				free: {kind: 'text', value: resolveNumericValue(perk, perk.restrictedValue, false, locale)},
-				premium: {kind: 'text', value: resolveNumericValue(perk, perk.stockValue, true, locale)},
+				free: {kind: 'text', value: resolveNumericValue(perk, perk.restrictedValue, 'free', locale)},
+				premium: {kind: 'text', value: resolveNumericValue(perk, perk.stockValue, 'premium', locale)},
 			});
 			continue;
 		}
@@ -170,6 +169,12 @@ function buildRows(locale: string, translate: (descriptor: MessageDescriptor) =>
 
 function BooleanValue({available, highlighted}: {available: boolean; highlighted: boolean}) {
 	const {i18n} = useLingui();
+	let iconClass: 'booleanIconMissing' | 'booleanIconHighlighted' | 'booleanIconMuted';
+	if (!available) {
+		iconClass = 'booleanIconMissing';
+	} else {
+		iconClass = highlighted ? 'booleanIconHighlighted' : 'booleanIconMuted';
+	}
 	return (
 		<>
 			<span className={styles.srOnly} data-flx="premium.plutonium-page.plutonium-page-comparison.boolean-value.sr-only">
@@ -177,14 +182,7 @@ function BooleanValue({available, highlighted}: {available: boolean; highlighted
 			</span>
 			<PlutoniumPageIcon
 				name={available ? 'check' : 'cross'}
-				className={clsx(
-					styles.booleanIcon,
-					!available
-						? styles.booleanIconMissing
-						: highlighted
-							? styles.booleanIconHighlighted
-							: styles.booleanIconMuted,
-				)}
+				className={clsx(styles.booleanIcon, styles[iconClass])}
 				data-flx="premium.plutonium-page.plutonium-page-comparison.boolean-value.boolean-icon"
 			/>
 		</>
@@ -217,7 +215,7 @@ export const PlutoniumPageComparison = observer(({actions}: PlutoniumPageCompari
 	);
 	return (
 		<section
-			className={clsx(styles.glassPanel, styles.comparison)}
+			className={clsx(styles.board, styles.comparison)}
 			aria-labelledby="plutonium-page-compare-heading"
 			data-flx="premium.plutonium-page.comparison"
 		>

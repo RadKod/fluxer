@@ -15,9 +15,10 @@ import {mapGiftCodeToMetadataResponse, mapGiftCodeToResponse} from '@app/api/str
 import {assertGiftCodesAvailable} from '@app/api/stripe/services/StripeGiftService';
 import type {HonoApp, HonoEnv} from '@app/api/types/HonoEnv';
 import {assertAccountNotLimited} from '@app/api/user/AccountLimit';
+import {assertTierAllows, NO_TIER_CONTEXT, tierContextFrom} from '@app/api/user/AccountTier';
 import {lookupGeoip} from '@app/api/utils/IpUtils';
 import {Validator} from '@app/api/Validator';
-import {AppNotFoundHandler} from '@fluxer/errors/src/domains/core/ErrorHandlers';
+import {TierGatedActions} from '@fluxer/constants/src/AccountTierConstants';
 import {StripeWebhookNotAvailableError} from '@fluxer/errors/src/domains/payment/StripeWebhookNotAvailableError';
 import {StripeWebhookSignatureInvalidError} from '@fluxer/errors/src/domains/payment/StripeWebhookSignatureInvalidError';
 import {StripeWebhookSignatureMissingError} from '@fluxer/errors/src/domains/payment/StripeWebhookSignatureMissingError';
@@ -30,6 +31,9 @@ import {
 import {
 	ChangeSubscriptionRequest,
 	CurrentSubscriptionPriceResponse,
+	PlutoniumWithdrawalIdParam,
+	PlutoniumWithdrawalListResponse,
+	PlutoniumWithdrawRequest,
 	PriceIdsQueryRequest,
 	PriceIdsResponse,
 	SelfServeRefundEligibilityResponse,
@@ -95,6 +99,7 @@ export function GiftCodeRoutes(app: HonoApp) {
 			assertGiftCodesAvailable();
 			const {code} = ctx.req.valid('param');
 			const userId = ctx.get('user').id;
+			assertTierAllows(ctx.get('user'), TierGatedActions.GIFT_REDEEM, NO_TIER_CONTEXT);
 			await ctx.get('stripeService').gifts.redeemGiftCode(userId, code);
 			return ctx.body(null, 204);
 		},
@@ -181,6 +186,7 @@ export function StripeController(app: HonoApp) {
 				eu_withdrawal_waiver_accepted,
 				payment_method,
 				is_business,
+				cnpj,
 			} = ctx.req.valid('json');
 			const userId = ctx.get('user').id;
 			const checkoutUrl = await ctx.get('stripeService').createCheckoutSession({
@@ -193,6 +199,7 @@ export function StripeController(app: HonoApp) {
 				euWithdrawalWaiverAccepted: eu_withdrawal_waiver_accepted,
 				paymentMethod: payment_method,
 				isBusiness: is_business,
+				cnpj,
 			});
 			return ctx.json({url: checkoutUrl});
 		},
@@ -215,7 +222,7 @@ export function StripeController(app: HonoApp) {
 		Validator('json', CreateCheckoutSessionRequest),
 		async (ctx) => {
 			assertAccountNotLimited(ctx.get('user'));
-			const {price_id, country_code, client_geoip_country_code, eu_withdrawal_waiver_accepted, is_business} =
+			const {price_id, country_code, client_geoip_country_code, eu_withdrawal_waiver_accepted, is_business, cnpj} =
 				ctx.req.valid('json');
 			const userId = ctx.get('user').id;
 			const checkoutUrl = await ctx.get('stripeService').createCheckoutSession({
@@ -227,6 +234,7 @@ export function StripeController(app: HonoApp) {
 				purchaseGeoipCountryCode: await getPurchaseGeoipCountryCode(ctx.req.raw),
 				euWithdrawalWaiverAccepted: eu_withdrawal_waiver_accepted,
 				isBusiness: is_business,
+				cnpj,
 			});
 			return ctx.json({url: checkoutUrl});
 		},
@@ -351,33 +359,6 @@ export function StripeController(app: HonoApp) {
 			return ctx.json({success: true as const});
 		},
 	);
-	app.post(
-		'/users/@me/age-verification',
-		HostedOnlyRoute,
-		RateLimitMiddleware(RateLimitConfigs.AGE_VERIFICATION),
-		LoginRequired,
-		DefaultUserOnly,
-		OpenAPI({
-			operationId: 'create_age_verification_session',
-			summary: 'Create age verification session',
-			description:
-				'Creates a Stripe checkout session in setup mode to verify the user holds a credit card for UK adult age verification.',
-			responseSchema: UrlResponse,
-			statusCode: 200,
-			security: ['bearerToken', 'sessionToken'],
-			tags: 'Billing',
-		}),
-		async (ctx) => {
-			assertAccountNotLimited(ctx.get('user'));
-			const ageVerificationService = ctx.get('ageVerificationService');
-			if (!ageVerificationService) {
-				return AppNotFoundHandler(ctx);
-			}
-			const userId = ctx.get('user').id;
-			const url = await ageVerificationService.createVerificationSession(userId);
-			return ctx.json({url});
-		},
-	);
 	app.get(
 		'/premium/refund-eligibility',
 		HostedOnlyRoute,
@@ -388,7 +369,7 @@ export function StripeController(app: HonoApp) {
 			operationId: 'get_self_serve_refund_eligibility',
 			summary: 'Get self-serve refund eligibility',
 			description:
-				'Returns whether the authenticated user can self-serve refund their most recent purchase, including the refund window and cooldown timestamps.',
+				'Returns whether the authenticated user can self-serve refund their recent purchases, including the refund window and cooldown timestamps. The amount covers every payment made in the last 3 days.',
 			responseSchema: SelfServeRefundEligibilityResponse,
 			statusCode: 200,
 			security: ['bearerToken', 'sessionToken'],
@@ -408,9 +389,9 @@ export function StripeController(app: HonoApp) {
 		DefaultUserOnly,
 		OpenAPI({
 			operationId: 'self_serve_refund_latest_purchase',
-			summary: 'Refund latest purchase',
+			summary: 'Refund recent purchases',
 			description:
-				"Refunds the authenticated user's most recent paid invoice if it is within 3 days and the user is not in a 30-day cooldown. If the invoice was tied to a subscription, the subscription is cancelled immediately.",
+				'Refunds every payment the authenticated user made in the last 3 days, when the most recent one is within that window and the user is not in a 30-day cooldown. A Plutonium upgrade paid shortly after the first payment is refunded together with it. If a refunded payment was tied to a subscription, the subscription is cancelled immediately. A Google Play purchase is refunded on its own. Fluxer issues a credit note for each refunded payment.',
 			responseSchema: SelfServeRefundResponse,
 			statusCode: 200,
 			security: ['bearerToken', 'sessionToken'],
@@ -419,7 +400,57 @@ export function StripeController(app: HonoApp) {
 		async (ctx) => {
 			assertAccountNotLimited(ctx.get('user'));
 			const userId = ctx.get('user').id;
-			const result = await ctx.get('stripeService').refunds.refundLatestPurchase(userId);
+			const result = await ctx.get('stripeService').refunds.refundRecentPurchases(userId);
+			return ctx.json(result);
+		},
+	);
+	app.get(
+		'/premium/withdrawals',
+		HostedOnlyRoute,
+		RateLimitMiddleware(RateLimitConfigs.STRIPE_REFUND_ELIGIBILITY),
+		LoginRequired,
+		DefaultUserOnly,
+		OpenAPI({
+			operationId: 'list_plutonium_withdrawals',
+			summary: 'List Plutonium purchases open for withdrawal',
+			description:
+				'Lists the Plutonium subscriptions and gifts paid through Stripe that the authenticated user can withdraw from right now, with the amount a withdrawal refunds and when the withdrawal period ends. Consumers in the EU, the EEA and the UK get 14 days from the first payment of a subscription, a plan switch or a renewal at a new price. In the EU and the EEA the period is extended past weekends and Swedish public holidays, and in the UK it ends at midnight UK time. A purchase made with the immediate-start consent (checkout metadata withdrawal_pro_rata) refunds the payments less the share for the days of Plutonium used. An EU or EEA subscription bought without that consent also gets a new period on each renewal and a full refund, and a UK purchase without it is refunded in full. Brazilian consumers get 7 days from the first payment of a subscription or a plan switch, not from a renewal, ending at 23:59 UTC-5, with a full refund. A business purchase is not listed, and in Brazil only one made with a CNPJ.',
+			responseSchema: PlutoniumWithdrawalListResponse,
+			statusCode: 200,
+			security: ['bearerToken', 'sessionToken'],
+			tags: 'Billing',
+		}),
+		async (ctx) => {
+			return ctx.json(await ctx.get('stripeService').refunds.getWithdrawals(ctx.get('user').id));
+		},
+	);
+	app.post(
+		'/premium/withdrawals/:purchase_id',
+		HostedOnlyRoute,
+		RateLimitMiddleware(RateLimitConfigs.STRIPE_REFUND_LATEST),
+		LoginRequired,
+		DefaultUserOnly,
+		OpenAPI({
+			operationId: 'withdraw_plutonium_purchase',
+			summary: 'Withdraw from a Plutonium purchase',
+			description:
+				'Withdraws from a Plutonium subscription or gift paid through Stripe while its withdrawal period lasts, as the withdrawals list describes. Refunds the payments made since the withdrawal period started to the original payment method: less the share for the days of Plutonium used for a purchase made with the immediate-start consent (the amount quoted at quoted_at when it is at most one day old), and in full otherwise, including every Brazilian withdrawal. Ends a subscription immediately and emails a receipt with the time the withdrawal was received. The 3-day self-serve refund window and its 30-day cooldown do not apply. Fluxer issues a credit note for each refunded payment.',
+			responseSchema: SelfServeRefundResponse,
+			statusCode: 200,
+			security: ['bearerToken', 'sessionToken'],
+			tags: 'Billing',
+		}),
+		Validator('param', PlutoniumWithdrawalIdParam),
+		Validator('json', PlutoniumWithdrawRequest),
+		async (ctx) => {
+			const {name, quoted_at} = ctx.req.valid('json');
+			const result = await ctx.get('stripeService').refunds.withdraw({
+				userId: ctx.get('user').id,
+				purchaseId: ctx.req.valid('param').purchase_id,
+				name,
+				receivedAt: new Date(),
+				quotedAt: quoted_at ? new Date(quoted_at) : null,
+			});
 			return ctx.json(result);
 		},
 	);
@@ -441,7 +472,7 @@ export function StripeController(app: HonoApp) {
 		async (ctx) => {
 			assertAccountNotLimited(ctx.get('user'));
 			const userId = ctx.get('user').id;
-			await ctx.get('stripeService').subscriptions.cancelSubscriptionAtPeriodEnd(userId);
+			await ctx.get('stripeService').subscriptions.cancelSubscriptionAtPeriodEnd(userId, 'customer_request');
 			return ctx.body(null, 204);
 		},
 	);
@@ -556,7 +587,7 @@ export function StripeController(app: HonoApp) {
 		async (ctx) => {
 			assertAccountNotLimited(ctx.get('user'));
 			const userId = ctx.get('user').id;
-			await ctx.get('stripeService').premium.rejoinVisionariesGuild(userId);
+			await ctx.get('stripeService').premium.rejoinVisionariesGuild(userId, tierContextFrom(ctx));
 			return ctx.body(null, 204);
 		},
 	);

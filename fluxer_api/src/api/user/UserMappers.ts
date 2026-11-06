@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {createGuildID, type UserID} from '@app/api/BrandedTypes';
+import {Config} from '@app/api/Config';
 import {stripAvatarForUser, stripBannerForUser} from '@app/api/infrastructure/AssetEntitlementUtils';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
+import {resolveEffectiveUserTraits} from '@app/api/limits/EffectiveUserTraits';
 import type {GuildChannelOverride} from '@app/api/models/GuildChannelOverride';
 import type {GuildMember} from '@app/api/models/GuildMember';
 import type {MuteConfiguration} from '@app/api/models/MuteConfiguration';
@@ -12,6 +14,13 @@ import type {UserGuildSettings} from '@app/api/models/UserGuildSettings';
 import type {UserSettings} from '@app/api/models/UserSettings';
 import type {WebAuthnCredential} from '@app/api/models/WebAuthnCredential';
 import {isMicupAccountLimited} from '@app/api/user/AccountLimit';
+import {
+	canReachOthers,
+	getAccountTier,
+	getVerificationNeed,
+	isInteractionTierEnforced,
+} from '@app/api/user/AccountTier';
+import {isDateOfBirthMissing} from '@app/api/user/DateOfBirth';
 import {hiddenUserPartial, isProfileHidden} from '@app/api/user/ProfileVisibility';
 import {canHavePublicProfile} from '@app/api/user/profile/ProfilePrivacy';
 import {
@@ -20,7 +29,9 @@ import {
 	isGameActivityDefaultPending,
 	isGameActivityEligible,
 } from '@app/api/user/services/GameActivityPolicyService';
+import {deprecatedBadgeHideFields} from '@app/api/user/profile_badges/HiddenProfileBadges';
 import {canUserAccessNsfwContent} from '@app/api/utils/AgeUtils';
+import {AccountTiers} from '@fluxer/constants/src/AccountTierConstants';
 import type {ChannelMessageNotifications} from '@fluxer/constants/src/NotificationConstants';
 import {
 	DEFAULT_GUILD_FOLDER_ICON,
@@ -31,6 +42,7 @@ import {
 	PremiumFlags,
 	PUBLIC_USER_FLAGS,
 	PublicUserFlags,
+	stripHiddenProfileBadgeFlags,
 	UNCATEGORIZED_FOLDER_ID,
 	type UserAuthenticatorType,
 	UserAuthenticatorTypes,
@@ -48,12 +60,6 @@ import type {
 	UserProfileResponse,
 	UserSettingsResponse,
 } from '@fluxer/schema/src/domains/user/UserResponseSchemas';
-
-const PUBLIC_USER_FLAGS_WITHOUT_STAFF = PUBLIC_USER_FLAGS & ~UserFlags.STAFF;
-
-function getVisiblePublicUserFlags(userFlags: bigint): bigint {
-	return (userFlags & UserFlags.STAFF_HIDDEN) !== 0n ? PUBLIC_USER_FLAGS_WITHOUT_STAFF : PUBLIC_USER_FLAGS;
-}
 
 // Micup: the name style and the profile theme stay stored when Plus ends and show only while it lasts: the premium
 // badge rule without BADGE_HIDDEN. The Rust twin is fluxer_users to_api_partial and
@@ -94,12 +100,11 @@ function isSameNameStyle(left?: NameStyle | null, right?: NameStyle | null): boo
 }
 
 function mapUserFlagsToPublicBitfield(user: User): number {
-	const flags = user.flags ?? 0n;
-	const publicFlags = Number(flags & getVisiblePublicUserFlags(flags));
+	const publicFlags = Number(stripHiddenProfileBadgeFlags(user.flags ?? 0n, user.hiddenProfileBadges) & PUBLIC_USER_FLAGS);
 	return showsPremiumBadge(user) ? publicFlags | PublicUserFlags.PREMIUM_BADGE : publicFlags;
 }
 
-function getActiveAuthenticatorTypes(user: User): Array<UserAuthenticatorType> {
+export function getActiveAuthenticatorTypes(user: User): Array<UserAuthenticatorType> {
 	return Array.from(user.authenticatorTypes ?? []).filter(
 		(type): type is UserAuthenticatorType =>
 			type === UserAuthenticatorTypes.TOTP || type === UserAuthenticatorTypes.WEBAUTHN,
@@ -132,7 +137,12 @@ function isSameCosmetic(left?: CosmeticAssetDataResponse | null, right?: Cosmeti
 
 export function mapUserToPartialResponse(user: User): UserPartialResponse {
 	const partial = mapUserToOwnPartialResponse(user);
-	return isProfileHidden(user) && !isDeletedForDisplay(user) ? hiddenUserPartial(partial) : partial;
+	if (isProfileHidden(user) && !isDeletedForDisplay(user)) return hiddenUserPartial(partial);
+	return isProfileRestricted(user) ? {...partial, global_name: null, avatar: null} : partial;
+}
+
+function isProfileRestricted(user: User): boolean {
+	return isInteractionTierEnforced() && !canReachOthers(user);
 }
 
 function isDeletedForDisplay(user: User): boolean {
@@ -205,17 +215,10 @@ export function mapUserToPrivateResponse(user: User): UserPrivateResponse {
 	const isStaff = (user.flags & UserFlags.STAFF) !== 0n;
 	const partialResponse = mapUserToOwnPartialResponse(user);
 	const isActuallyPremium = user.isPremium();
-	const traitSet = new Set<string>();
-	for (const trait of user.traits ?? []) {
-		if (trait && trait !== 'premium') {
-			traitSet.add(trait);
-		}
-	}
-	if (isActuallyPremium) {
-		traitSet.add('premium');
-	}
-	const traits = Array.from(traitSet).sort();
+	const traits = Array.from(resolveEffectiveUserTraits(user.traits, isActuallyPremium)).sort();
 	const authenticatorTypes = getActiveAuthenticatorTypes(user);
+	const accountTier = getAccountTier(user);
+	const deprecatedHideFields = deprecatedBadgeHideFields(user, Config.instance.selfHosted);
 	return {
 		...partialResponse,
 		username_state: user.usernameState ?? 'legacy',
@@ -245,10 +248,11 @@ export function mapUserToPrivateResponse(user: User): UserPrivateResponse {
 		premium_lifetime_sequence: user.premiumLifetimeSequence ?? null,
 		premium_grace_ends_at: user.premiumGraceEndsAt?.toISOString() ?? null,
 		premium_discriminator: !!(user.premiumFlags & PremiumFlags.DISCRIMINATOR),
-		premium_badge_hidden: !!(user.premiumFlags & PremiumFlags.BADGE_HIDDEN),
+		hidden_profile_badges: [...user.hiddenProfileBadges].sort(),
+		premium_badge_hidden: deprecatedHideFields.premium_badge_hidden,
 		premium_badge_masked: !!(user.premiumFlags & PremiumFlags.BADGE_MASKED),
 		premium_badge_timestamp_hidden: !!(user.premiumFlags & PremiumFlags.BADGE_TIMESTAMP_HIDDEN),
-		premium_badge_sequence_hidden: !!(user.premiumFlags & PremiumFlags.BADGE_SEQUENCE_HIDDEN),
+		premium_badge_sequence_hidden: deprecatedHideFields.premium_badge_sequence_hidden,
 		premium_purchase_disabled: !!(user.premiumFlags & PremiumFlags.PURCHASE_DISABLED),
 		premium_enabled_override: !!(user.premiumFlags & PremiumFlags.ENABLED_OVERRIDE),
 		premium_perks_disabled: !!(user.premiumFlags & PremiumFlags.PERKS_DISABLED),
@@ -268,6 +272,12 @@ export function mapUserToPrivateResponse(user: User): UserPrivateResponse {
 		age_verified_adult: !!(user.flags & UserFlags.AGE_VERIFIED_ADULT) || undefined,
 		terms_agreed_at: user.termsAgreedAt?.toISOString() ?? null,
 		privacy_agreed_at: user.privacyAgreedAt?.toISOString() ?? null,
+		claimed: accountTier !== AccountTiers.UNCLAIMED,
+		account_tier: accountTier,
+		verification_need: getVerificationNeed(user),
+		has_password: user.passwordHash !== null,
+		date_of_birth_required: isDateOfBirthMissing(user),
+		profile_restricted: isProfileRestricted(user),
 		pending_bulk_message_deletion:
 			user.pendingBulkMessageDeletionAt != null
 				? {
@@ -279,8 +289,11 @@ export function mapUserToPrivateResponse(user: User): UserPrivateResponse {
 	};
 }
 
-export function mapUserToProfileResponse(user: User, options?: {restrictProfile?: boolean}): UserProfileResponse {
-	if (isProfileHidden(user)) {
+export function mapUserToProfileResponse(
+	user: User,
+	options?: {restrictProfile?: boolean; viewerIsSelf?: boolean},
+): UserProfileResponse {
+	if (isProfileHidden(user) || (isProfileRestricted(user) && !options?.viewerIsSelf)) {
 		return {bio: null, pronouns: null, banner: null, banner_color: null, accent_color: null, theme_colors: null};
 	}
 	if (options?.restrictProfile) {

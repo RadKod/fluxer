@@ -3,7 +3,7 @@
 import type {ChannelID, GuildID, UserID} from '@app/api/BrandedTypes';
 import type {VoiceRegionMetadata, VoiceServerRecord} from '@app/api/voice/VoiceModel';
 
-interface CreateTokenParams {
+export interface CreateTokenParams {
 	userId: UserID;
 	guildId?: GuildID;
 	channelId: ChannelID;
@@ -18,7 +18,7 @@ interface CreateTokenParams {
 	canVideo?: boolean;
 }
 
-interface UpdateParticipantParams {
+export interface UpdateParticipantParams {
 	userId: UserID;
 	guildId?: GuildID;
 	channelId: ChannelID;
@@ -32,7 +32,7 @@ interface UpdateParticipantParams {
 	canVideo?: boolean;
 }
 
-interface MuteMicrophoneTrackParams {
+export interface MuteMicrophoneTrackParams {
 	userId: UserID;
 	guildId?: GuildID;
 	channelId: ChannelID;
@@ -42,7 +42,7 @@ interface MuteMicrophoneTrackParams {
 	trackSid: string;
 }
 
-interface UpdateParticipantPermissionsParams {
+export interface UpdateParticipantPermissionsParams {
 	userId: UserID;
 	guildId?: GuildID;
 	channelId: ChannelID;
@@ -55,7 +55,7 @@ interface UpdateParticipantPermissionsParams {
 	deaf?: boolean;
 }
 
-interface DisconnectParticipantParams {
+export interface DisconnectParticipantParams {
 	userId: UserID;
 	guildId?: GuildID;
 	channelId: ChannelID;
@@ -82,7 +82,7 @@ export interface UpdateRoomMetadataParams {
 	entries: Record<string, unknown>; // merged into the room metadata JSON object; null removes the key
 }
 
-interface ListParticipantsParams {
+export interface ListParticipantsParams {
 	guildId?: GuildID;
 	channelId: ChannelID;
 	regionId: string;

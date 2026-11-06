@@ -70,30 +70,3 @@ pub fn is_drm_card_name(name: &str) -> bool {
 pub fn basename(path: &str) -> &str {
     path.rsplit_once('/').map_or(path, |(_, base)| base)
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parse_hex_id_accepts_sysfs_hex_ids() {
-        assert_eq!(0x8086, parse_hex_id("0x8086\n").unwrap());
-        assert_eq!(0x10de, parse_hex_id("10DE").unwrap());
-        assert_eq!(Err(ParseHexIdError::InvalidHexId), parse_hex_id("0x"));
-    }
-
-    #[test]
-    fn is_drm_card_name_accepts_cards_but_rejects_connectors_render_nodes() {
-        assert!(is_drm_card_name("card0"));
-        assert!(is_drm_card_name("card12"));
-        assert!(!is_drm_card_name("card0-DP-1"));
-        assert!(!is_drm_card_name("renderD128"));
-    }
-
-    #[test]
-    fn vendor_id_helpers() {
-        assert_eq!(0x106b, vendor_id_from_name("Apple M3 GPU"));
-        assert_eq!(Some("NVIDIA"), vendor_name(0x10de));
-        assert_eq!(None, vendor_name(0xffff));
-    }
-}

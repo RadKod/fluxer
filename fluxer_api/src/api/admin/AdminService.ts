@@ -5,6 +5,7 @@ import type {AdminRepository} from '@app/api/admin/AdminRepository';
 import {AdminApplicationService} from '@app/api/admin/services/AdminApplicationService';
 import {AdminAssetPurgeService} from '@app/api/admin/services/AdminAssetPurgeService';
 import {AdminAuditService} from '@app/api/admin/services/AdminAuditService';
+import {AdminBadgeService} from '@app/api/admin/services/AdminBadgeService';
 import {AdminBanManagementService} from '@app/api/admin/services/AdminBanManagementService';
 import {AdminCodeGenerationService} from '@app/api/admin/services/AdminCodeGenerationService';
 import {AdminGuildService} from '@app/api/admin/services/AdminGuildService';
@@ -35,16 +36,28 @@ import type {InviteRepository} from '@app/api/invite/InviteRepository';
 import {JobAdminService} from '@app/api/jobs/JobAdminService';
 import type {JobLedgerRepository} from '@app/api/jobs/JobLedgerRepository';
 import {
+	getCustomBadgeCatalog,
 	getEnforcementDecisionRepository,
 	getGuildDiscoveryRepository,
+	getInstanceConfigRepository,
 	getKVAccountDeletionQueue,
+	getOAuth2TokenRepository,
+	getPaymentDisputeRepository,
 	getReportRepository,
 } from '@app/api/middleware/ServiceSingletons';
 import type {ApplicationRepository} from '@app/api/oauth/repositories/ApplicationRepository';
+import type {OperatorPassDisputeServices} from '@app/api/operator_pass/OperatorPassDisputeBar';
+import {
+	PaymentDisputeEnforcementService,
+	queuePaymentDisputeClosures,
+} from '@app/api/payment_disputes/PaymentDisputeEnforcement';
 import type {ReportService} from '@app/api/report/ReportService';
 import type {StoreEntitlementService} from '@app/api/store_billing/StoreEntitlementService';
+import {systemDmsHidden} from '@app/api/user/services/SystemDmMessage';
 import type {UserService} from '@app/api/user/services/UserService';
+import {VoiceJoinTokenRepository} from '@app/api/voice/VoiceJoinTokenRepository';
 import type {VoiceRepository} from '@app/api/voice/VoiceRepository';
+import {DirectMessagesDisabledError} from '@fluxer/errors/src/domains/channel/DirectMessagesDisabledError';
 import type {SendSystemDmResponse} from '@fluxer/schema/src/domains/admin/AdminSchemas';
 import type Stripe from 'stripe';
 
@@ -60,12 +73,14 @@ export class AdminService {
 	readonly enforcementService: EnforcementDecisionService;
 	readonly banService: AdminUserBanService;
 	readonly voiceService: AdminVoiceService;
+	readonly badgeService: AdminBadgeService;
 	readonly searchService: AdminSearchService;
 	readonly codeGenerationService: AdminCodeGenerationService;
 	readonly assetPurgeService: AdminAssetPurgeService;
 	readonly applicationService: AdminApplicationService;
 	readonly jobAdminService: JobAdminService;
 	readonly relationshipService: AdminUserRelationshipService;
+	readonly paymentDisputeEnforcement: PaymentDisputeEnforcementService;
 
 	constructor(
 		private readonly apiContext: ApiContext,
@@ -88,6 +103,7 @@ export class AdminService {
 		private readonly stripe: Stripe | null = null,
 		private readonly jobLedger: JobLedgerRepository,
 		private readonly storeEntitlementService: StoreEntitlementService,
+		private readonly operatorPassServices: OperatorPassDisputeServices | null = null,
 	) {
 		const {users, gateway, worker, snowflake} = this.apiContext.services;
 		this.auditService = new AdminAuditService(this.adminRepository, snowflake, {
@@ -152,6 +168,7 @@ export class AdminService {
 			guildRepository: this.guildRepository,
 			reportService: this.reportService,
 			adminReportService: this.reportServiceAggregate,
+			onClosureEnded: queuePaymentDisputeClosures,
 		});
 		this.guildServiceAggregate = new AdminGuildService({
 			guildRepository: this.guildRepository,
@@ -164,9 +181,11 @@ export class AdminService {
 			auditService: this.auditService,
 			discoveryRepository: getGuildDiscoveryRepository(),
 			enforcement: this.enforcementService,
+			customBadgeCatalog: getCustomBadgeCatalog(),
 		});
 		this.messageShredService = new AdminMessageShredService({
 			apiContext: this.apiContext,
+			channelRepository: this.channelRepository,
 			auditService: this.auditService,
 			enforcement: this.enforcementService,
 		});
@@ -175,6 +194,20 @@ export class AdminService {
 			channelRepository: this.channelRepository,
 			auditService: this.auditService,
 			enforcement: this.enforcementService,
+		});
+		this.paymentDisputeEnforcement = new PaymentDisputeEnforcementService({
+			repository: getPaymentDisputeRepository(),
+			userRepository: users,
+			userCacheService: this.userCacheService,
+			emailService: this.apiContext.services.email,
+			cacheService: this.apiContext.services.cache,
+			gatewayService: gateway,
+			auditService: this.auditService,
+			kvDeletionQueue: getKVAccountDeletionQueue(),
+			oauth2Tokens: getOAuth2TokenRepository(),
+			systemDm,
+			enforcement: this.enforcementService,
+			operatorPass: this.operatorPassServices,
 		});
 		this.userService = new AdminUserService({
 			apiContext: this.apiContext,
@@ -205,14 +238,25 @@ export class AdminService {
 		this.voiceService = new AdminVoiceService({
 			apiContext: this.apiContext,
 			voiceRepository: this.voiceRepository,
+			joinTokenRepository: new VoiceJoinTokenRepository(),
+			snowflakeService: snowflake,
 			auditService: this.auditService,
+		});
+		this.badgeService = new AdminBadgeService({
+			instanceConfigRepository: getInstanceConfigRepository(),
+			catalog: getCustomBadgeCatalog(),
+			entityAssetService: this.entityAssetService,
+			assetDeletionQueue: this.assetDeletionQueue,
+			snowflakeService: snowflake,
+			userRepository: users,
+			cacheService: this.apiContext.services.cache,
 		});
 		this.searchService = new AdminSearchService({
 			apiContext: this.apiContext,
 			guildRepository: this.guildRepository,
 			auditService: this.auditService,
 		});
-		this.codeGenerationService = new AdminCodeGenerationService(users);
+		this.codeGenerationService = new AdminCodeGenerationService(users, this.apiContext.services.cache);
 		this.applicationService = new AdminApplicationService({
 			apiContext: this.apiContext,
 			applicationRepository: this.applicationRepository,
@@ -223,6 +267,7 @@ export class AdminService {
 		this.relationshipService = new AdminUserRelationshipService({
 			apiContext: this.apiContext,
 			auditService: this.auditService,
+			userRelationshipService: this.runtimeUserService.relationshipService,
 		});
 	}
 
@@ -231,6 +276,9 @@ export class AdminService {
 		adminUserId: UserID,
 		auditLogReason: string | null,
 	): Promise<SendSystemDmResponse> {
+		if (await systemDmsHidden()) {
+			throw new DirectMessagesDisabledError();
+		}
 		const recipientCount = data.recipients.kind === 'all' ? null : data.recipients.userIds.length;
 		await this.apiContext.services.worker.addJob(
 			'sendSystemDm',

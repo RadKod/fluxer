@@ -264,6 +264,7 @@ export async function createRole(
 	options?: {
 		color?: number;
 		permissions?: bigint;
+		iconSourceRoleId?: string;
 		colorSecondary?: number | null;
 		iconEmojiId?: string | null;
 		unicodeEmoji?: string | null;
@@ -274,6 +275,7 @@ export async function createRole(
 			name: string;
 			color?: number;
 			permissions?: string;
+			icon_source_role_id?: string;
 			color_secondary?: number | null;
 			icon_emoji_id?: string | null;
 			unicode_emoji?: string | null;
@@ -283,6 +285,7 @@ export async function createRole(
 		if (options?.iconEmojiId !== undefined) body.icon_emoji_id = options.iconEmojiId;
 		if (options?.unicodeEmoji !== undefined) body.unicode_emoji = options.unicodeEmoji;
 		if (options?.permissions !== undefined) body.permissions = options.permissions.toString();
+		if (options?.iconSourceRoleId !== undefined) body.icon_source_role_id = options.iconSourceRoleId;
 		const response = await http.post<GuildRole>(Endpoints.GUILD_ROLES(guildId), {body});
 		logger.debug(`Created role "${name}" in guild ${guildId}`);
 		return response.body;

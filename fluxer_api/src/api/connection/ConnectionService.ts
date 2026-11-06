@@ -17,9 +17,9 @@ import {ConnectionInvalidTypeError} from '@app/api/connection/errors/ConnectionI
 import {ConnectionLimitReachedError} from '@app/api/connection/errors/ConnectionLimitReachedError';
 import {ConnectionNotFoundError} from '@app/api/connection/errors/ConnectionNotFoundError';
 import {ConnectionVerificationFailedError} from '@app/api/connection/errors/ConnectionVerificationFailedError';
-import {DomainConnectionVerifier} from '@app/api/connection/verification/DomainConnectionVerifier';
 import type {RevisionedUserConnectionRow, UserConnectionRow} from '@app/api/database/types/ConnectionTypes';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
+import type {IUnfurlerService} from '@app/api/infrastructure/IUnfurlerService';
 import {getProfileAccessCache} from '@app/api/middleware/ServiceSingletons';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {
@@ -36,6 +36,7 @@ export class ConnectionService {
 	constructor(
 		private readonly repository: ConnectionRepository,
 		private readonly gateway: IGatewayService,
+		private readonly unfurler: IUnfurlerService,
 	) {}
 
 	async getConnectionsForUser(userId: UserID): Promise<Array<UserConnectionRow>> {
@@ -138,7 +139,7 @@ export class ConnectionService {
 		visibilityFlags: number,
 	): Promise<UserConnectionRow> {
 		await this.requireConnectionCreationAllowed(userId, type, identifier);
-		const isValid = await new DomainConnectionVerifier().verify({identifier, verification_token: verificationCode});
+		const isValid = await this.unfurler.verifyDomain(identifier, verificationCode);
 		if (!isValid) {
 			throw new ConnectionVerificationFailedError();
 		}

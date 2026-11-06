@@ -38,6 +38,7 @@ import {
 } from '@app/features/voice/components/popout/PoppedOutSurfaceStateMachine';
 import {usePoppedOutTransition} from '@app/features/voice/components/popout/usePoppedOutTransition';
 import {useVoiceCallAppFullscreen} from '@app/features/voice/components/useVoiceCallAppFullscreen';
+import {useVoiceCallCornerLift} from '@app/features/voice/components/useVoiceCallCornerLift';
 import {useVoiceCallTracksAndLayout} from '@app/features/voice/components/useVoiceCallTracksAndLayout';
 import {useVoiceEngineConnectionState} from '@app/features/voice/components/useVoiceEngineConnectionState';
 import {VoiceCallCornerControls} from '@app/features/voice/components/VoiceCallCornerControls';
@@ -103,6 +104,7 @@ export const CompactVoiceCallViewInner: React.FC<CompactVoiceCallViewProps> = ob
 			exitFullscreen: exitVoiceCallAppFullscreen,
 			toggleFullscreen: toggleVoiceCallAppFullscreen,
 		} = useVoiceCallAppFullscreen({containerRef});
+		const cornerLift = useVoiceCallCornerLift(containerRef);
 		const [expandedUserIds, setExpandedUserIds] = useState<Set<string>>(() => new Set());
 		const handleExpandUser = useCallback((userId: string) => {
 			setExpandedUserIds((previous) => {
@@ -364,10 +366,11 @@ export const CompactVoiceCallViewInner: React.FC<CompactVoiceCallViewProps> = ob
 			const measuredWidth = compactCallMetrics?.width ?? 0;
 			const measuredHeight = compactCallMetrics?.height ?? 0;
 			const measuredContentHeight = compactCallMetrics?.contentHeight ?? 0;
-			const measuredControlBarHeight = compactCallMetrics?.controlBarHeight ?? 0;
+			const measuredControlBarHeight = (compactCallMetrics?.controlBarHeight ?? 0) + cornerLift;
 			const compactCallHeight = isResizable && compactHeight != null ? compactHeight : measuredHeight;
 			const nextStyle: CompactVoiceCallContainerStyle = {
 				'--compact-call-participant-count': `${participantCount}`,
+				'--voice-call-corner-lift': `${cornerLift}px`,
 			};
 			if (measuredWidth > 0) {
 				nextStyle['--compact-call-width'] = `${Math.round(measuredWidth)}px`;
@@ -404,6 +407,7 @@ export const CompactVoiceCallViewInner: React.FC<CompactVoiceCallViewProps> = ob
 			compactCallMetrics?.width,
 			compactHeight,
 			compactHeightMin,
+			cornerLift,
 			hasControlBar,
 			isResizable,
 			maxHeight,
@@ -531,7 +535,8 @@ export const CompactVoiceCallViewInner: React.FC<CompactVoiceCallViewProps> = ob
 					data-audio-only={shouldShowAvatarFallback ? 'true' : undefined}
 					data-flx="voice.compact-voice-call-view.compact-voice-call-view-inner.content-area"
 				>
-					{shouldRenderCallLayout ? layoutNode : shouldShowAvatarFallback ? avatarFallbackNode : null}
+					{shouldRenderCallLayout ? layoutNode : null}
+					{!shouldRenderCallLayout && shouldShowAvatarFallback ? avatarFallbackNode : null}
 				</div>
 				{controlBarNode}
 				<CompactCallHeightToggleButton
@@ -541,7 +546,7 @@ export const CompactVoiceCallViewInner: React.FC<CompactVoiceCallViewProps> = ob
 				/>
 				<VoiceCallCornerControls
 					wrapClassName={clsx(styles.fullscreenButtonWrap, voiceCallStyles.voiceChrome)}
-					showPopout={isVoicePopoutSupported()}
+					showPopout={!isMobile && isVoicePopoutSupported()}
 					onPopOut={handlePopOutCall}
 					showFullscreen={supportsVoiceCallAppFullscreen}
 					isFullscreen={isVoiceCallAppFullscreen}

@@ -3,7 +3,7 @@
 -module(user_utils).
 -typing([eqwalizer]).
 
--export([normalize_user/1, partial_user_fields/0, merge_user/2]).
+-export([normalize_user/1, partial_user_fields/0, merge_user/2, profile_restricted/1]).
 
 -spec partial_user_fields() -> [binary()].
 partial_user_fields() ->
@@ -66,13 +66,23 @@ decimal_identity_version(_, _Acc) ->
 
 -spec normalize_user(map() | term()) -> map().
 normalize_user(User) when is_map(User) ->
-    lists:foldl(
+    Normalized = lists:foldl(
         fun(Key, Acc) -> add_normalized_field(Key, User, Acc) end,
         #{},
         partial_user_fields()
-    );
+    ),
+    case profile_restricted(User) of
+        true -> Normalized#{<<"global_name">> => null, <<"avatar">> => null};
+        false -> Normalized
+    end;
 normalize_user(_) ->
     #{}.
+
+-spec profile_restricted(map() | term()) -> boolean().
+profile_restricted(User) when is_map(User) ->
+    type_conv:is_true(maps:get(<<"profile_restricted">>, User, false));
+profile_restricted(_) ->
+    false.
 
 -spec normalize_field(binary(), term()) -> term() | undefined.
 normalize_field(<<"id">>, Value) ->

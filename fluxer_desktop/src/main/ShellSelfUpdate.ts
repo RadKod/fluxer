@@ -24,10 +24,10 @@ import type {UpdateInfo, VelopackAsset} from 'velopack';
 const requireModule = createRequire(import.meta.url);
 const logger = createChildLogger('ShellSelfUpdate');
 
-export const SHELL_SELF_UPDATE_CHECK_TIMEOUT_MS = 30_000;
-export const SHELL_SELF_UPDATE_TOTAL_TIMEOUT_MS = 600_000;
+const SHELL_SELF_UPDATE_CHECK_TIMEOUT_MS = 30_000;
+const SHELL_SELF_UPDATE_TOTAL_TIMEOUT_MS = 600_000;
 
-export function getElectronUpdateFeedUrl(): string {
+function getElectronUpdateFeedUrl(): string {
 	return `${getUpdateBaseUrl()}/RELEASES.json`;
 }
 

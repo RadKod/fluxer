@@ -17,19 +17,30 @@
 
 -spec start_link() -> {ok, pid()} | {error, term()}.
 start_link() ->
-    normalize_start_link(gen_server:start_link({local, ?MODULE}, ?MODULE, [], [])).
+    shard_utils:normalize_start_link(gen_server:start_link({local, ?MODULE}, ?MODULE, [], [])).
 
 -spec subscribe(integer()) -> ok.
 subscribe(UserId) when is_integer(UserId) ->
-    safe_call({subscribe, UserId, self()}).
+    send_request({subscribe, UserId, self()}).
 
 -spec unsubscribe(integer()) -> ok.
 unsubscribe(UserId) when is_integer(UserId) ->
-    safe_call({unsubscribe, UserId, self()}).
+    send_request({unsubscribe, UserId, self()}).
 
 -spec publish(integer(), term()) -> ok.
 publish(UserId, Payload) when is_integer(UserId) ->
-    safe_call({publish, UserId, Payload}).
+    send_request({publish, UserId, Payload}).
+
+-spec send_request(term()) -> ok.
+send_request(Request) ->
+    case async_enabled() of
+        true -> gen_server:cast(?MODULE, {async, Request});
+        false -> safe_call(Request)
+    end.
+
+-spec async_enabled() -> boolean().
+async_enabled() ->
+    application:get_env(fluxer_gateway, presence_bus_async, true) =:= true.
 
 -spec diagnostic_info() -> #{atom() => non_neg_integer()}.
 diagnostic_info() ->
@@ -85,6 +96,16 @@ merge_shard_diagnostic(Pid, Acc) ->
     end.
 
 -spec handle_cast(term(), state()) -> {noreply, state()}.
+handle_cast({async, {subscribe, UserId, Pid} = Request}, State) when
+    is_integer(UserId), is_pid(Pid)
+->
+    {noreply, forward_cast(UserId, Request, State)};
+handle_cast({async, {unsubscribe, UserId, Pid} = Request}, State) when
+    is_integer(UserId), is_pid(Pid)
+->
+    {noreply, forward_cast(UserId, Request, State)};
+handle_cast({async, {publish, UserId, _Payload} = Request}, State) when is_integer(UserId) ->
+    {noreply, forward_cast(UserId, Request, State)};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -169,6 +190,13 @@ dummy_shard() ->
         ok
     end.
 
+-spec forward_cast(term(), term(), state()) -> state().
+forward_cast(Key, Request, State) ->
+    {Index, State1} = ensure_shard(Key, State),
+    Shard = maps:get(Index, maps:get(shards, State1)),
+    gen_server:cast(maps:get(pid, Shard), {async, Request}),
+    State1.
+
 -spec forward_call(term(), term(), state()) -> {term(), state()}.
 forward_call(Key, Request, State) ->
     {Index, State1} = ensure_shard(Key, State),
@@ -249,11 +277,3 @@ sanitize_diagnostic_info(Info) ->
         #{},
         Info
     ).
-
--spec normalize_start_link(gen_server:start_ret()) -> {ok, pid()} | {error, term()}.
-normalize_start_link({ok, Pid}) ->
-    {ok, Pid};
-normalize_start_link({error, Reason}) ->
-    {error, Reason};
-normalize_start_link(ignore) ->
-    {error, ignore}.

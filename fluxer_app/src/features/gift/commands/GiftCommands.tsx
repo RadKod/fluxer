@@ -5,6 +5,7 @@ import {Endpoints} from '@app/features/app/constants/Endpoints';
 import InstanceSnapshotStore from '@app/features/app/state/InstanceSnapshotStore';
 import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import Cosmetics from '@app/features/cosmetics/state/Cosmetics';
+import {promptForAccountTier} from '@app/features/auth/utils/AccountTierPrompt';
 import DeveloperOptions from '@app/features/devtools/state/DeveloperOptions';
 import {GiftAcceptModal} from '@app/features/expressions/components/modals/GiftAcceptModal';
 import {GiftSendToFriendModal} from '@app/features/expressions/components/modals/GiftSendToFriendModal';
@@ -277,8 +278,12 @@ export async function openAcceptModal(
 		modal(() => (
 			<GiftAcceptModal code={code} target={target} data-flx="gift.gift-commands.open-accept-modal.gift-accept-modal" />
 		)),
-		`gift-accept-${code}`,
+		giftAcceptModalKey(code),
 	);
+}
+
+function giftAcceptModalKey(code: string): string {
+	return `gift-accept-${code}`;
 }
 
 export async function redeem(
@@ -293,20 +298,24 @@ export async function redeem(
 		logger.info('Gift redeemed', {code});
 		Gifts.markAsRedeemed(code, target);
 		if (item) {
-			// The server added the item and wore it; the gift dialog says so, so no toast.
+			// The server added the item and wore it; the gift dialog says so, so no toast and it stays open.
 			void Cosmetics.load();
 			if (item.type === 'profile_effect') UserProfileCommands.clearCurrentUserProfiles();
 		} else {
+			ModalCommands.popWithKey(giftAcceptModalKey(code));
 			ToastCommands.success(i18n._(GIFT_REDEEMED_SUCCESSFULLY_DESCRIPTOR));
 		}
 		// Only a session that opened the shop holds a catalog; premium time changes its member discount.
 		if (ShopCatalog.status !== 'idle') void ShopCatalog.load(true);
 	} catch (error) {
 		logger.error('Gift redeem failed', error);
-		if (error instanceof HttpError) {
-			handleRedeemFailure(i18n, code, target, error);
-		} else {
-			fallbackRedeemFailure(i18n);
+		const retry = () => void redeem(i18n, rawCode, target).catch(() => {});
+		if (!promptForAccountTier(error, retry)) {
+			if (error instanceof HttpError) {
+				handleRedeemFailure(i18n, code, target, error);
+			} else {
+				fallbackRedeemFailure(i18n);
+			}
 		}
 		throw error;
 	}

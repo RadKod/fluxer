@@ -4,6 +4,7 @@ import type {UserID} from '@app/api/BrandedTypes';
 import {BatchBuilder} from '@app/api/database/CassandraQueryExecution';
 import type {UserRow} from '@app/api/database/types/UserTypes';
 import {
+	UserByAcl,
 	UserByEmail,
 	UserByLastActiveIp,
 	UserByLastActiveIpTrustKey,
@@ -16,6 +17,15 @@ import {getSameIpDecisionKey} from '@fluxer/ip_utils/src/IpAddress';
 export class UserIndexRepository {
 	async syncIndices(data: UserRow, oldData?: UserRow | null): Promise<void> {
 		const batch = new BatchBuilder();
+		const acls = new Set(data.acls ?? []);
+		for (const acl of acls) {
+			batch.addPrepared(UserByAcl.upsertAll({acl, user_id: data.user_id}));
+		}
+		for (const acl of oldData?.acls ?? []) {
+			if (!acls.has(acl)) {
+				batch.addPrepared(UserByAcl.deleteByPk({acl, user_id: data.user_id}));
+			}
+		}
 		// Micup: human identity changes only through the legacy identity writer; ownership projections own their keys.
 		// sanalyer: a new account (no oldData) writes its username key here, in the batch, without a Cassandra write
 		// timestamp, since Postgres KV refuses USING TIMESTAMP.
@@ -127,6 +137,14 @@ export class UserIndexRepository {
 		await batch.execute();
 	}
 
+	async indexAcls(userId: UserID, acls: ReadonlySet<string>): Promise<void> {
+		const batch = new BatchBuilder();
+		for (const acl of acls) {
+			batch.addPrepared(UserByAcl.upsertAll({acl, user_id: userId}));
+		}
+		await batch.execute();
+	}
+
 	async updateLastActiveIpIndex(
 		userId: UserID,
 		lastActiveIp: string,
@@ -179,9 +197,13 @@ export class UserIndexRepository {
 		stripeCustomerId?: string | null,
 		stripeSubscriptionId?: string | null,
 		lastActiveIp?: string | null,
+		acls?: ReadonlySet<string> | null,
 		skipUsername = false,
 	): Promise<void> {
 		const batch = new BatchBuilder();
+		for (const acl of acls ?? []) {
+			batch.addPrepared(UserByAcl.deleteByPk({acl, user_id: userId}));
+		}
 		if (!skipUsername)
 			batch.addPrepared(
 				UserByUsername.deleteByPk({

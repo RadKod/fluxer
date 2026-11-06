@@ -712,18 +712,24 @@ fn build_tailwind(manifest_dir: &Path, out_dir: &Path) {
     } else {
         "node_modules/.bin/tailwindcss"
     };
-    let candidates = [
+    let mut candidates = vec![
         manifest_dir.join(cli_path),
         manifest_dir.join("..").join(cli_path),
     ];
-    let Some(cli) = candidates.iter().find(|c| c.exists()) else {
+    if let Some(path) = env::var_os("PATH") {
+        for dir in env::split_paths(&path) {
+            candidates.push(dir.join("tailwindcss"));
+            candidates.push(dir.join("tailwindcss.exe"));
+        }
+    }
+    let Some(cli) = candidates.iter().find(|c| c.is_file()) else {
         panic!(
-            "tailwindcss CLI not found. Run `pnpm install` in fluxer_admin/.\n\
+            "tailwindcss CLI not found. Run `pnpm install` in fluxer_admin/ or put tailwindcss on PATH.\n\
              Searched: {:?}",
             candidates
         );
     };
-    let mut command = if cfg!(windows) {
+    let mut command = if cli.extension().is_some_and(|ext| ext == "mjs") {
         let mut command = Command::new("node");
         command.arg(cli);
         command

@@ -18,6 +18,13 @@ describe('HttpClient', () => {
 		await redirectServer.close();
 	});
 	describe('sendRequest', () => {
+		it('reports a request that runs out of time as aborted', async () => {
+			const client = createHttpClient(TEST_USER_AGENT);
+			testServer.setHandler(() => {});
+			const failure = await client.sendRequest({url: testServer.url, timeout: 50}).catch((error: unknown) => error);
+			expect(failure).toBeInstanceOf(HttpError);
+			expect(failure).toMatchObject({errorType: 'aborted', message: 'Request timed out'});
+		});
 		describe('redirects', () => {
 			it('strips sensitive headers on cross-origin redirects', async () => {
 				const client = createHttpClient(TEST_USER_AGENT);
@@ -86,23 +93,6 @@ describe('HttpClient', () => {
 				expect(validationCalls).toHaveLength(2);
 				expect(validationCalls[0]?.phase).toBe('initial');
 				expect(validationCalls[1]?.phase).toBe('redirect');
-			});
-		});
-		describe('timeout', () => {
-			it('respects custom timeout', async () => {
-				const client = createHttpClient(TEST_USER_AGENT);
-				testServer.setHandler((_req, res) => {
-					setTimeout(() => {
-						res.writeHead(200);
-						res.end('OK');
-					}, 500);
-				});
-				await expect(
-					client.sendRequest({
-						url: testServer.url,
-						timeout: 100,
-					}),
-				).rejects.toThrow();
 			});
 		});
 	});

@@ -23,13 +23,13 @@ export const LocalAppFileResolution = Object.freeze({
 
 export type LocalAppFileResolution = (typeof LocalAppFileResolution)[keyof typeof LocalAppFileResolution];
 
-export const LocalAppFileBlockReason = Object.freeze({
+const LocalAppFileBlockReason = Object.freeze({
 	INVALID_ORIGIN: 'invalid-origin',
 	INVALID_PATH: 'invalid-path',
 	PATH_ESCAPE: 'path-escape',
 } as const);
 
-export type LocalAppFileBlockReason = (typeof LocalAppFileBlockReason)[keyof typeof LocalAppFileBlockReason];
+type LocalAppFileBlockReason = (typeof LocalAppFileBlockReason)[keyof typeof LocalAppFileBlockReason];
 
 export interface LocalAppFile {
 	readonly type: typeof LocalAppFileResolution.FILE;
@@ -133,7 +133,7 @@ interface LocalAppResourceWaiter {
 	readonly admit: (permit: LocalAppResourcePermit) => void;
 }
 
-export class LocalAppResourceBudget {
+class LocalAppResourceBudget {
 	private used = 0;
 	private draining = false;
 	private readonly limit: number;
@@ -244,7 +244,7 @@ class LocalAppFileResponseReservation {
 	}
 }
 
-export interface LocalAppPreparedResponseBody {
+interface LocalAppPreparedResponseBody {
 	readonly body: ReadableStream<Uint8Array> | null;
 	readonly byteLength: number;
 }

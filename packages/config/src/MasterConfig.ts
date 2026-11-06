@@ -19,6 +19,16 @@ export const TAG_STYLE_NAMES = ['none', 'random'] as const;
 type TagStyleName = (typeof TAG_STYLE_NAMES)[number];
 type SmtpTlsModeName = 'implicit' | 'starttls' | 'opportunistic' | 'none';
 
+export interface VoiceTurnServerConfig {
+	host: string;
+	port: number;
+	protocol: 'udp' | 'tcp' | 'tls';
+	username?: string;
+	credential?: string;
+	secret?: string;
+	ttl?: number;
+}
+
 interface SmtpConfig {
 	host: string;
 	port: number;
@@ -35,6 +45,8 @@ interface InstanceBrandingConfig {
 	logo_url?: string;
 	wordmark_url?: string;
 	favicon_url?: string;
+	favicon_dark_url?: string;
+	sign_in_backdrop_url?: string;
 	theme_color?: string;
 	status_page_url?: string;
 	status_page_incident_history_url?: string;
@@ -103,6 +115,7 @@ export interface MasterConfig {
 			headers_timeout_ms: number;
 			request_timeout_ms: number;
 			max_inflight_requests: number;
+			max_concurrent_form_uploads: number;
 			automated_message_deletion_delay_days: number;
 			ip_ban_exempt_ips: Array<string>;
 			donation_proxy_key: string;
@@ -116,6 +129,8 @@ export interface MasterConfig {
 			presigned_harvest_downloads_enabled: boolean;
 			unfurl_ignored_hosts: Array<string>;
 			app_origin_aliases: Array<string>;
+			discovery_public_endpoint: string;
+			discovery_transport_endpoint: string;
 			worker?: {
 				mode?: 'all_lanes' | 'single_lane' | 'single_task';
 				lane?:
@@ -137,6 +152,7 @@ export interface MasterConfig {
 				task?: string;
 				enable_cron_scheduler?: boolean;
 				metrics_port?: number;
+				embedded?: boolean;
 				lane_concurrency_overrides?: {
 					realtime?: number;
 					unfurl?: number;
@@ -186,6 +202,10 @@ export interface MasterConfig {
 		admin: {
 			secret_key_base: string;
 			oauth_client_secret: string;
+			sso: {
+				issuer: string;
+				client_id: string;
+			};
 		};
 	};
 	auth: {
@@ -225,9 +245,11 @@ export interface MasterConfig {
 		email: {
 			enabled: boolean;
 			provider: 'smtp' | 'none';
+			delivery?: 'off' | 'smtp';
 			from_email: string;
 			from_name: string;
 			reply_to_email: string;
+			support_alert_email?: string;
 			app_base_url: string;
 			webhook_secret?: string;
 			html_enabled?: boolean;
@@ -244,6 +266,7 @@ export interface MasterConfig {
 			api_secret: string;
 			url: string;
 			internal_url: string;
+			bundled?: boolean;
 			default_region?: {
 				id: string;
 				name: string;
@@ -252,9 +275,12 @@ export interface MasterConfig {
 				longitude: number;
 			};
 			p2p_stun_urls?: Array<string>;
+			turn_servers?: Array<VoiceTurnServerConfig>;
+			join_allow_private_endpoints?: boolean;
+			health_interval_ms?: number;
 		};
 		search: {
-			engine: 'elasticsearch' | 'meilisearch';
+			engine: 'elasticsearch' | 'meilisearch' | 'none';
 			url: string;
 			api_key: string;
 			username: string;
@@ -332,20 +358,6 @@ export interface MasterConfig {
 		breached_password_check: {
 			enabled?: boolean;
 		};
-		push: {
-			apns: {
-				enabled: boolean;
-				team_id?: string;
-				key_id?: string;
-				private_key?: string;
-				private_key_path?: string;
-				apps?: Array<{
-					app_id?: string;
-					topic?: string;
-					environment?: 'production' | 'development';
-				}>;
-			};
-		};
 		app_store: {
 			enabled: boolean;
 			issuer_id?: string;
@@ -369,6 +381,7 @@ export interface MasterConfig {
 			products?: Record<string, StoreProductSlotName>;
 			push_audience?: string;
 			push_service_account_email?: string;
+			self_service_refunds: boolean;
 		};
 		store_billing: {
 			sandbox_user_ids?: Array<string>;
@@ -392,6 +405,29 @@ export interface MasterConfig {
 		};
 		account_identity: AccountIdentityModeName | null;
 		tag_style: TagStyleName | null;
+		age_policy: {
+			enabled?: boolean;
+			restricted_regions?: Array<string>;
+		};
+	};
+	payment_disputes: {
+		closure_effective_at?: string;
+	};
+	operator_pass: {
+		price_rises_at?: string;
+		grace_minutes: number;
+		now_override?: string;
+		labs_guild_id?: string;
+		labs_operator_role_id?: string;
+		labs_visionary_role_id?: string;
+		labs_access_role_id?: string;
+		labs_operators_channel_id?: string;
+		standard_prices_minor?: Partial<Record<string, number>>;
+		release_lists?: string;
+		withdrawal_countries?: string;
+		localized_prices_enabled?: Partial<Record<string, boolean>>;
+		wall_tiers?: string;
+		max_quantity?: number;
 	};
 	dev: {
 		relax_registration_rate_limits: boolean;
@@ -413,7 +449,7 @@ export interface MasterConfig {
 	};
 	attachment_decay_enabled: boolean;
 	deletion_grace_period_hours: number;
-	inactivity_deletion_threshold_days: number;
+	inactivity_deletion_threshold_days?: number;
 	report_retention: {
 		days: number;
 		dry_run: boolean;

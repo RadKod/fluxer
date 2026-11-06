@@ -4,7 +4,6 @@ import {installVoiceActivitiesDebugApi} from '@app/features/activities/utils/Voi
 import 'urlpattern-polyfill';
 import {bootstrapSyntheticHistory} from '@app/app/HistoryBootstrap';
 import reactiveI18n, {applyInstanceDefaultLocale, initI18n} from '@app/app/I18n';
-import {Routes} from '@app/app/Routes';
 import {AppErrorBoundary} from '@app/features/app/components/AppErrorBoundary';
 import {ErrorFallback} from '@app/features/app/components/ErrorFallback';
 import type {DomainMigrationSide} from '@app/features/app/domain_migration/DomainMigrationCore';
@@ -106,25 +105,6 @@ function storageSessionAccount(account: Account | null): AppStorageSessionAccoun
 	return {accountKey: account.storageKey, userId: account.userId, token: account.token, instance: account.instance};
 }
 
-async function bootstrapThemeStudio(storageBootstrap: AppStorageBootstrapHandle): Promise<void> {
-	const markdownParserReady = preloadMarkdownParser();
-	const [{ThemeStudioStandaloneApp}, {setupHttp}, {default: Accounts}] = await Promise.all([
-		loadLazyModule(() => import('@app/features/theme_studio/ThemeStudioStandaloneApp')),
-		loadLazyModule(() => import('@app/app/SetupHttp')),
-		loadLazyModule(() => import('@app/features/auth/state/Accounts')),
-	]);
-	await Accounts.bootstrap();
-	await storageBootstrap.finalizeAfterSessionResolution(storageSessionAccount(Accounts.currentAccount));
-	setupHttp();
-	await markdownParserReady;
-	mountRoot(
-		<AppI18nProvider i18n={i18n}>
-			<ThemeStudioStandaloneApp data-flx="index.render-theme-studio.theme-studio-standalone-app" />
-		</AppI18nProvider>,
-		'index.render-theme-studio',
-	);
-}
-
 export async function runPasskeyBridge(side: DomainMigrationSide): Promise<void> {
 	const hash = window.location.hash;
 	const opensInOwnTab = window.history.length === 1;
@@ -208,6 +188,7 @@ async function bootstrapApp(storageBootstrap: AppStorageBootstrapHandle): Promis
 		{default: RuntimeConfig},
 		{default: StatusPage},
 		{installMigratedDeviceRemap},
+		{migrateThemeProfiles},
 	] = await Promise.all([
 		loadLazyModule(() => import(/* webpackChunkName: "boot-app" */ '@app/app/App')),
 		loadLazyModule(() => import('@app/app/SetupHttp')),
@@ -225,6 +206,7 @@ async function bootstrapApp(storageBootstrap: AppStorageBootstrapHandle): Promis
 		loadLazyModule(() => import('@app/features/app/state/RuntimeConfig')),
 		loadLazyModule(() => import('@app/features/user/state/StatusPage')),
 		loadLazyModule(() => import('@app/features/app/domain_migration/DomainMigrationDeviceRemap')),
+		loadLazyModule(() => import('@app/features/theme/state/ThemeProfileMigration')),
 	]);
 	void preloadClientInfo();
 	QuickSwitcher.setI18n(reactiveI18n);
@@ -237,6 +219,7 @@ async function bootstrapApp(storageBootstrap: AppStorageBootstrapHandle): Promis
 	StatusPage.startPolling();
 	await Promise.all([Accounts.bootstrap(), installMigratedDeviceRemap()]);
 	await storageBootstrap.finalizeAfterSessionResolution(storageSessionAccount(Accounts.currentAccount));
+	await migrateThemeProfiles(Accounts.orderedAccounts.map((account) => account.storageKey));
 	if (Accounts.currentUserId === null) {
 		void probeSignedOutDomainMigration();
 	}
@@ -258,9 +241,5 @@ export async function runApp(storageBootstrap: AppStorageBootstrapHandle): Promi
 	installLocaleSwitchWatchdog();
 	installSelfXssNotice();
 	void logClientInfo();
-	if (window.location.pathname === Routes.THEME_STUDIO) {
-		await bootstrapThemeStudio(storageBootstrap);
-	} else {
-		await bootstrapApp(storageBootstrap);
-	}
+	await bootstrapApp(storageBootstrap);
 }

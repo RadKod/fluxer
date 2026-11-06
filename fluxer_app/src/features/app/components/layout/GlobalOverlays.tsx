@@ -5,6 +5,7 @@ import styles from '@app/features/app/components/layout/GlobalOverlays.module.cs
 import {GameOverlayHost} from '@app/features/game_overlay/components/GameOverlayHost';
 import {MEDIA_VIEWER_PORTAL_ROOT_ID} from '@app/features/messaging/components/modals/MediaViewerPortal';
 import {createNamedLoadableComponent} from '@app/features/platform/components/loadable/LoadableComponent';
+import {useAppStorageDegradedNotice} from '@app/features/platform/hooks/useAppStorageDegradedNotice';
 import * as QuickSwitcherCommands from '@app/features/search/commands/QuickSwitcherCommands';
 import QuickSwitcher from '@app/features/search/state/QuickSwitcher';
 import {ContextMenu} from '@app/features/ui/action_menu/ContextMenu';
@@ -28,6 +29,7 @@ const GlobalOverlays: React.FC = observer(() => {
 	const isMobile = MobileLayout.isMobileLayout();
 	const quickSwitcherOpen = QuickSwitcher.isOpen;
 	const [quickSwitcherBottomSheetLoaded, setQuickSwitcherBottomSheetLoaded] = useState(false);
+	useAppStorageDegradedNotice();
 	useEffect(() => {
 		LayerManager.init();
 		document.addEventListener('contextmenu', handleContextMenu, false);

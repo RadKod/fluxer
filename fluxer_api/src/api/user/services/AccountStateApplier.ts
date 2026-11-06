@@ -26,6 +26,7 @@ import {isAccountLimitExempt} from '@app/api/user/AccountLimit';
 import {clearNewConversationLimit, setNewConversationLimit} from '@app/api/user/NewConversationLimit';
 import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {propagatePartialUserChange} from '@app/api/user/services/PartialUserChangePropagation';
+import {isDeletionComplete} from '@app/api/user/UserHelpers';
 import {dispatchUserUpdate} from '@app/api/user/UserMappers';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
 import {HarvestNotReadyError} from '@fluxer/errors/src/domains/moderation/HarvestNotReadyError';
@@ -139,10 +140,6 @@ export function outcomeOf(
 
 function isIneligible(user: User): boolean {
 	return user.isBot || (user.flags & UserFlags.DELETED) !== 0n;
-}
-
-function isDeletionComplete(user: User): boolean {
-	return (user.flags & UserFlags.DELETED) !== 0n && user.pendingDeletionAt === null;
 }
 
 export async function applySetAccountLimit(

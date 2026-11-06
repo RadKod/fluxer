@@ -3,7 +3,6 @@
 import {ConfirmModal} from '@app/features/app/components/dialogs/ConfirmModal';
 import {DESKTOP_DOWNLOAD_URL} from '@app/features/app/config/I18nDisplayConstants';
 import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
-import {CLOSE_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
 import * as ModalCommands from '@app/features/ui/commands/ModalCommands';
 import {modal} from '@app/features/ui/commands/ModalCommands';
 import {isCanaryDesktop, isNativeWindows, openExternalUrl} from '@app/features/ui/utils/NativeUtils';
@@ -101,7 +100,7 @@ const UPDATE_CHECK_FAILED_DESCRIPTOR = msg({
 	comment: 'Modal title shown when a user-initiated update check fails.',
 });
 const UPDATE_CHECK_FAILED_BODY_DESCRIPTOR = msg({
-	message: '{productName} could not reach the update service. Check your connection and try again.',
+	message: '{productName} could not connect to the update service. Check your connection and try again.',
 	comment: 'Modal body shown when a user-initiated update check fails. productName is the app name.',
 });
 const DESKTOP_UPDATE_DOWNLOAD_FAILED_DESCRIPTOR = msg({
@@ -214,7 +213,6 @@ export function pushUpToDateModal(currentVersion: string | null): void {
 						? i18n._(INSTALLED_VERSION_IS_CURRENT_DESCRIPTOR, {currentVersion})
 						: i18n._(NO_DESKTOP_UPDATE_IS_AVAILABLE_DESCRIPTOR)
 				}
-				secondaryText={i18n._(CLOSE_DESCRIPTOR)}
 				data-flx="updater.updater-modal-commands.push-up-to-date-modal.confirm-modal"
 			/>
 		)),
@@ -234,7 +232,6 @@ export function pushUnsupportedUpdateModal(
 						title={i18n._(SYSTEM_MANAGED_INSTALL_DESCRIPTOR)}
 						description={i18n._(SYSTEM_MANAGED_UPDATE_BODY_DESCRIPTOR, {productName: RuntimeConfig.productName})}
 						primaryText={i18n._(OPEN_SOFTWARE_CENTER_DESCRIPTOR)}
-						secondaryText={i18n._(CLOSE_DESCRIPTOR)}
 						onPrimary={() => {
 							// Micup: on Windows the system-managed install is the Microsoft Store copy (Partner Center 9P1SNJ2H2W9H).
 							if (isNativeWindows()) {
@@ -277,7 +274,6 @@ function pushUpdaterErrorModal(getTitle: () => string, getDescription: () => str
 			<ConfirmModal
 				title={getTitle()}
 				description={getDescription()}
-				secondaryText={i18n._(CLOSE_DESCRIPTOR)}
 				data-flx="updater.updater-modal-commands.push-updater-error-modal.confirm-modal"
 			/>
 		)),

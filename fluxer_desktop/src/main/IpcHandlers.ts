@@ -5,6 +5,7 @@ import {
 	type DesktopTroubleshootingSettings,
 	type DesktopWindowBehaviorSettings,
 	getDesktopWindowBehaviorSettings,
+	rememberInstanceProductName,
 	setDesktopWindowBehaviorSettings,
 	setPrebootTheme,
 } from '@electron/common/DesktopConfig';
@@ -32,6 +33,7 @@ import {cleanupGameActivityIpc, registerGameActivityIpcHandlers} from '@electron
 import {registerGameOverlayIpcHandlers} from '@electron/main/GameOverlay';
 import {getGatewayOriginRegistry} from '@electron/main/GatewayOriginRegistry';
 import {retryBlockedGlobalShortcutHooks} from '@electron/main/GlobalShortcutsIpc';
+import {setDirectMessagesAvailable} from '@electron/main/JumpList';
 import {
 	type LinuxAppearanceSnapshot,
 	type LinuxAppearanceSubscription,
@@ -90,24 +92,25 @@ import {
 } from '@electron/main/VoiceDebugEventSinkPopout';
 import {
 	clearSavedWindowBounds,
-	closeThemeStudioPopoutWindow,
 	desktopTransparencyPendingRestart,
 	desktopUseNativeTitleBarPendingRestart,
-	focusThemeStudioPopoutWindow,
+	focusQuickCssEditorWindow,
 	focusVoicePopoutWindow,
 	getActiveAllowTransparency,
 	getActiveUseNativeTitleBar,
 	getMainWindow,
-	setThemeStudioPopoutAlwaysOnTop,
+	QUICK_CSS_EDITOR_WINDOW_KEY,
+	setQuickCssEditorAlwaysOnTop,
 	setVoicePopoutAlwaysOnTop,
 	showWindow,
-	THEME_STUDIO_POPOUT_KEY,
 	toggleWindowDevTools,
 } from '@electron/main/Window';
 import {flashWindowForAttention, stopFlashingWindow} from '@electron/main/WindowFlash';
 import {setWindowsBadgeOverlay} from '@electron/main/WindowsBadge';
 import {registerWindowsToastIpcHandlers} from '@electron/main/WindowsToast';
 import {DESKTOP_MODULE_UPDATE_CHANNELS, DESKTOP_MODULE_UPDATE_EVENTS} from '@electron/common/ModuleUpdateChannels';
+import {DESKTOP_DIRECT_MESSAGES_AVAILABLE_CHANNEL} from '@fluxer/desktop_ipc/src/DirectMessagesContract';
+import {DESKTOP_INSTANCE_PRODUCT_NAME_CHANNEL} from '@fluxer/desktop_ipc/src/InstanceProductNameContract';
 import {DESKTOP_MODULE_CHANNELS} from '@fluxer/desktop_ipc/src/ModuleContract';
 import {app, BrowserWindow, clipboard, dialog, ipcMain, powerMonitor, shell, systemPreferences} from 'electron';
 import log from 'electron-log';
@@ -289,6 +292,10 @@ export function registerIpcHandlers(): void {
 		const update = state as TrayRuntimeStateUpdate;
 		updateTrayRuntimeState(update, event.sender.id);
 	});
+	ipcMain.on(DESKTOP_DIRECT_MESSAGES_AVAILABLE_CHANNEL, (event, available: unknown) => {
+		if (typeof available !== 'boolean' || !isPrivilegedRendererDocumentSender(event)) return;
+		setDirectMessagesAvailable(available);
+	});
 	ipcMain.on('native-locale-set', (_event, payload: unknown) => {
 		if (!payload || typeof payload !== 'object') return;
 		const {locale, strings} = payload as {
@@ -327,6 +334,11 @@ export function registerIpcHandlers(): void {
 	ipcMain.on(DESKTOP_PREBOOT_THEME_CHANNEL, (event, theme: unknown) => {
 		if (event.senderFrame?.origin === DESKTOP_APP_ORIGIN && typeof theme === 'string') {
 			setPrebootTheme(theme);
+		}
+	});
+	ipcMain.on(DESKTOP_INSTANCE_PRODUCT_NAME_CHANNEL, (event, report: unknown) => {
+		if (event.senderFrame?.origin === DESKTOP_APP_ORIGIN) {
+			rememberInstanceProductName(report);
 		}
 	});
 	ipcMain.handle('desktop-window-behavior-pending-restart', (): boolean => {
@@ -386,18 +398,13 @@ export function registerIpcHandlers(): void {
 	ipcMain.handle('window-is-maximized', (event): boolean => {
 		return BrowserWindow.fromWebContents(event.sender)?.isMaximized() ?? false;
 	});
-	ipcMain.handle('theme-studio-popout-focus', (): boolean => {
-		return focusThemeStudioPopoutWindow();
-	});
-	ipcMain.handle('theme-studio-popout-close', (): boolean => {
-		return closeThemeStudioPopoutWindow();
-	});
+
 	ipcMain.handle('popout:set-always-on-top', (_event, key: unknown, flag: unknown): boolean => {
 		if (typeof key !== 'string' || typeof flag !== 'boolean') {
 			return false;
 		}
-		if (key === THEME_STUDIO_POPOUT_KEY) {
-			return setThemeStudioPopoutAlwaysOnTop(flag);
+		if (key === QUICK_CSS_EDITOR_WINDOW_KEY) {
+			return setQuickCssEditorAlwaysOnTop(flag);
 		}
 		if (key === VOICE_DEBUG_EVENT_SINK_POPOUT_KEY) {
 			return setVoiceDebugEventSinkAlwaysOnTop(flag);
@@ -408,8 +415,8 @@ export function registerIpcHandlers(): void {
 		if (typeof key !== 'string') {
 			return false;
 		}
-		if (key === THEME_STUDIO_POPOUT_KEY) {
-			return focusThemeStudioPopoutWindow();
+		if (key === QUICK_CSS_EDITOR_WINDOW_KEY) {
+			return focusQuickCssEditorWindow();
 		}
 		if (key === VOICE_DEBUG_EVENT_SINK_POPOUT_KEY) {
 			return focusVoiceDebugEventSinkPopout();

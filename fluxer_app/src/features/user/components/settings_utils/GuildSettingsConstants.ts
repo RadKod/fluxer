@@ -69,9 +69,10 @@ const VANITY_URL_DESCRIPTOR = msg({
 	comment: 'Community settings tab for the community vanity/custom invite link.',
 });
 const DISCOVERY_DESCRIPTOR = msg({
-	message: 'Discovery',
+	message: 'Explore',
 	context: 'community-settings-tab',
-	comment: 'Community settings tab for public community discovery/listing.',
+	comment:
+		'Community settings tab for listing a community in Explore. Explore is the name of the feature, so use the same word as the Explore page heading.',
 });
 const BOOSTS_DESCRIPTOR = msg({
 	message: 'Boosts',
@@ -135,6 +136,7 @@ export interface GuildSettingsTab {
 	iconWeight?: IconWeight;
 	permission?: bigint | ReadonlyArray<bigint>;
 	requireFeature?: string;
+	requireDiscovery?: boolean;
 }
 
 interface GuildSettingsTabDescriptor {
@@ -145,6 +147,7 @@ interface GuildSettingsTabDescriptor {
 	iconWeight?: IconWeight;
 	permission?: bigint | ReadonlyArray<bigint>;
 	requireFeature?: string;
+	requireDiscovery?: boolean;
 }
 
 const GUILD_SETTINGS_TABS_DESCRIPTORS: Array<GuildSettingsTabDescriptor> = [
@@ -197,6 +200,7 @@ const GUILD_SETTINGS_TABS_DESCRIPTORS: Array<GuildSettingsTabDescriptor> = [
 		icon: CompassIcon,
 		iconWeight: 'fill',
 		permission: Permissions.MANAGE_GUILD,
+		requireDiscovery: true,
 	},
 	{
 		type: 'vanity_url',
@@ -263,7 +267,7 @@ export const GUILD_SETTINGS_LABEL_DESCRIPTOR = msg({
 });
 const COMMUNITY_CATEGORY_DESCRIPTOR = msg({
 	message: 'Community',
-	comment: 'Community settings sidebar category grouping discovery and the vanity URL.',
+	comment: 'Community settings sidebar category grouping Explore and the vanity URL.',
 });
 const PEOPLE_CATEGORY_DESCRIPTOR = msg({
 	message: 'People',

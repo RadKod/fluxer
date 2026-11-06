@@ -40,18 +40,8 @@ const MODULE_REGISTRY_TEST_FILES = [
 	'src/api/stripe/tests/StripeWebhookRefund.test.ts',
 	'src/api/stripe/tests/StripeWebhookSubscription.test.ts',
 	'src/api/stripe/tests/StripeGiftSubscriptionShift.test.ts',
-	'src/api/channel/tests/MessageCrosspostFanout.test.ts',
-	'src/api/experiment/tests/ExperimentController.test.ts',
 	'src/api/referral/tests/ReferralBackfill.test.ts',
 	'src/api/referral/tests/ReferralGrant.test.ts',
-	'src/api/stripe/tests/StripeCheckoutCountryEnforcement.test.ts',
-	'src/api/stripe/tests/StripeNordicCurrencies.test.ts',
-	'src/api/worker/tests/CrosspostTasks.test.ts',
-	'src/api/search/tests/ThreadSearchScopeCap.test.ts',
-	'src/api/search/ThreadSearchScope.test.ts',
-	'src/api/worker/tests/HandleMentionsThread.test.ts',
-	'src/api/search/tests/GuildSearchThreadScope.test.ts',
-	'src/api/worker/tasks/HarvestUserData.test.ts',
 	'src/api/user/username/tests/UsernamePolicyCache.test.ts',
 	'src/api/user/username/tests/UsernamePolicyConfig.test.ts',
 	'src/api/user/username/tests/UsernamePolicyService.test.ts',
@@ -68,7 +58,9 @@ const MODULE_REGISTRY_TEST_FILES = [
 	'src/api/user/username/tests/UsernameAdminReadRoutes.test.ts',
 	'src/api/user/username/tests/UsernamePolicyDictionaryCleanup.test.ts',
 	'src/api/user/username/tests/UsernamePolicyRuntime.test.ts',
-	'src/api/voice/tests/VoiceP2pConnectionReports.test.ts',
+	'src/api/worker/tasks/HarvestThreadMembershipPaging.test.ts',
+	'src/api/voice/tests/VoiceAvailabilityService.test.ts',
+	'src/api/billing_documents/BillingDocuments.test.ts',
 ];
 
 // Wall-clock budgets measured while other workers run fail on CPU contention, not on slow code; these files run
@@ -76,6 +68,8 @@ const MODULE_REGISTRY_TEST_FILES = [
 const TIMING_BUDGET_TEST_FILES = ['src/api/user/username/tests/UsernamePolicyDictionary.test.ts'];
 
 const INSTANCE_POLICY_TEST_FILES = ['src/api/admin/tests/InstanceConfigPendingRegistrationApproval.test.ts'];
+
+const NATIVE_TIMEZONE_TEST_FILES = ['src/api/utils/AgeUtils.test.ts'];
 
 // TEMPORARY: announcement channels are closed, so these upstream suites cannot build their fixtures; re-include them when they open (bucketed follower/crosspost partitions and a follower cap first).
 const CLOSED_ANNOUNCEMENT_TEST_FILES = [
@@ -139,6 +133,7 @@ export default defineConfig({
 						...MODULE_REGISTRY_TEST_FILES,
 						...INSTANCE_POLICY_TEST_FILES,
 						...TIMING_BUDGET_TEST_FILES,
+						...NATIVE_TIMEZONE_TEST_FILES,
 					],
 					isolate: false,
 				},
@@ -172,6 +167,17 @@ export default defineConfig({
 					exclude: sharedExclude,
 					isolate: true,
 					sequence: {groupOrder: 1},
+				},
+			},
+			{
+				resolve: {tsconfigPaths: true},
+				test: {
+					...sharedTestConfig,
+					name: 'api-native-timezones',
+					include: NATIVE_TIMEZONE_TEST_FILES,
+					exclude: sharedExclude,
+					pool: 'forks',
+					isolate: true,
 				},
 			},
 		],

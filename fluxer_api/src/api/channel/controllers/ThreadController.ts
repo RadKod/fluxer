@@ -4,16 +4,24 @@ import {type ChannelID, createChannelID, createGuildID, createMessageID, createU
 import type {MessageRequest} from '@app/api/channel/MessageTypes';
 import {normalizeMessageRequestPayload} from '@app/api/channel/services/message/MessageRequestCompatibility';
 import {parseMultipartMessageData, readMessageJsonBody} from '@app/api/channel/services/message/MessageRequestParser';
+import {readMultipartStream} from '@app/api/channel/services/message/MultipartStreamReader';
 import type {ForumPostInput} from '@app/api/channel/services/thread/ThreadCreationService';
 import {ChannelThreadsRouteGuard} from '@app/api/channel/threads/ChannelThreadsRouteGuard';
 import {viewerFromCtx} from '@app/api/experiment/ChannelThreadsGate';
 import {BotOnly, LoginRequired} from '@app/api/middleware/AuthMiddleware';
 import {RateLimitMiddleware} from '@app/api/middleware/RateLimitMiddleware';
+import {
+	DEFAULT_REQUEST_BODY_LIMIT,
+	isMultipartFormData,
+	MultipartUploadRoute,
+} from '@app/api/middleware/RequestBodyLimitMiddleware';
 import {OpenAPI} from '@app/api/middleware/ResponseTypeMiddleware';
 import {RateLimitConfigs} from '@app/api/RateLimitConfig';
 import type {HonoApp, HonoEnv} from '@app/api/types/HonoEnv';
+import {assertTierAllows, NO_TIER_CONTEXT} from '@app/api/user/AccountTier';
 import {parseJsonPreservingLargeIntegers} from '@app/api/utils/LosslessJsonParser';
 import {inputValidationErrorFromZodIssues, Validator} from '@app/api/Validator';
+import {TierGatedActions} from '@fluxer/constants/src/AccountTierConstants';
 import {TEXT_THREAD_PARENT_CHANNEL_TYPES} from '@fluxer/constants/src/ThreadConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import {InvalidChannelTypeError} from '@fluxer/errors/src/domains/channel/InvalidChannelTypeError';
@@ -51,23 +59,28 @@ const EXPERIMENT = 'channel_threads';
 const TAGS = 'Channels';
 
 function isMultipart(ctx: Context<HonoEnv>): boolean {
-	return (ctx.req.header('content-type') ?? '').includes('multipart/form-data');
+	return isMultipartFormData(ctx.req.header('content-type'));
 }
 
 async function readPayloadJson(ctx: Context<HonoEnv>): Promise<unknown> {
-	let payloadJson: unknown;
-	try {
-		payloadJson = (await ctx.req.parseBody())['payload_json'];
-	} catch {
-		throw InputValidationError.fromCode('multipart_form', ValidationErrorCodes.FAILED_TO_PARSE_MULTIPART_FORM_DATA);
-	}
+	let payloadJson: string | undefined;
+	await readMultipartStream(ctx, {
+		maxFiles: 0,
+		maxFileSize: DEFAULT_REQUEST_BODY_LIMIT,
+		maxFieldBytes: DEFAULT_REQUEST_BODY_LIMIT,
+		onField(name, value) {
+			if (name === 'payload_json') payloadJson = value;
+		},
+		async onFile({stream}) {
+			stream.resume();
+		},
+	});
 	if (payloadJson === undefined) return {};
-	if (typeof payloadJson === 'string') {
-		try {
-			return parseJsonPreservingLargeIntegers(payloadJson);
-		} catch {}
+	try {
+		return parseJsonPreservingLargeIntegers(payloadJson);
+	} catch {
+		throw InputValidationError.fromCode('payload_json', ValidationErrorCodes.INVALID_JSON_IN_PAYLOAD_JSON);
 	}
-	throw InputValidationError.fromCode('payload_json', ValidationErrorCodes.INVALID_JSON_IN_PAYLOAD_JSON);
 }
 
 async function readJsonBody(ctx: Context<HonoEnv>): Promise<unknown> {
@@ -150,6 +163,7 @@ export function ThreadController(app: HonoApp) {
 		async (ctx) => {
 			const {channel_id, message_id} = ctx.req.valid('param');
 			const body = ctx.req.valid('json');
+			assertTierAllows(ctx.get('user'), TierGatedActions.MESSAGE, NO_TIER_CONTEXT);
 			const thread = await ctx.get('threadService').creation.createFromMessage({
 				viewer: viewerFromCtx(ctx),
 				user: ctx.get('user'),
@@ -168,6 +182,7 @@ export function ThreadController(app: HonoApp) {
 	);
 	app.post(
 		'/channels/:channel_id/threads',
+		MultipartUploadRoute(),
 		ChannelThreadsRouteGuard(),
 		RateLimitMiddleware(RateLimitConfigs.CHANNEL_THREAD_CREATE),
 		LoginRequired,
@@ -188,6 +203,7 @@ export function ThreadController(app: HonoApp) {
 		async (ctx) => {
 			const viewer = viewerFromCtx(ctx);
 			const user = ctx.get('user');
+			assertTierAllows(user, TierGatedActions.MESSAGE, NO_TIER_CONTEXT);
 			const channelId = createChannelID(ctx.req.valid('param').channel_id);
 			const creation = ctx.get('threadService').creation;
 			const parentAuth = await creation.authenticateParent(viewer, user.id, channelId);
@@ -394,6 +410,7 @@ export function ThreadController(app: HonoApp) {
 			experiment: EXPERIMENT,
 		}),
 		async (ctx) => {
+			assertTierAllows(ctx.get('user'), TierGatedActions.THREAD_JOIN, NO_TIER_CONTEXT);
 			await ctx.get('threadService').members.join({
 				viewer: viewerFromCtx(ctx),
 				user: ctx.get('user'),

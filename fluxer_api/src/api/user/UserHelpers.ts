@@ -6,12 +6,17 @@ import {getCachedInstancePremiumMode} from '@app/api/limits/InstancePremiumModeC
 import type {User} from '@app/api/models/User';
 import {getCachedDeferredPhoneGateEnabled} from '@app/api/user/DeferredPhoneGateCache';
 import {accountPolicyContactHasCapability} from '@app/api/user/LegacyAccountPolicy';
+import {isEnforcementReasonCode} from '@fluxer/constants/src/EnforcementReasons';
 import {
 	DEFERRABLE_PHONE_FLAGS,
 	DEFERRED_PHONE_ON_COMMUNITY_JOIN,
+	DELETED_USER_DISCRIMINATOR,
+	DELETED_USER_GLOBAL_NAME,
+	DELETED_USER_USERNAME,
 	PREMIUM_GRACE_PERIOD_DAYS,
 	PREMIUM_PAYMENT_RECOVERY_GRACE_DAYS,
 	PremiumFlags,
+	ProfileFieldPrivacyFlags,
 	SuspiciousActivityFlags,
 	UserFlags,
 	type UserPremiumType,
@@ -193,8 +198,85 @@ export function isSsoUserWithoutPassword(user: Pick<User, 'traits' | 'passwordHa
 	return user.passwordHash === null && user.traits.has('sso');
 }
 
+export function isSsoLinkedUser(user: Pick<User, 'traits'>): boolean {
+	return user.traits.has('sso');
+}
+
+export function isEnforcementDeletion(user: Pick<User, 'enforcementDecisionId' | 'deletionReasonCode'>): boolean {
+	return user.enforcementDecisionId !== null || isEnforcementReasonCode(user.deletionReasonCode);
+}
+
 export function isAccountClosed(user: Pick<User, 'flags' | 'deletionStartedAt'>): boolean {
 	return (user.flags & UserFlags.DELETED) !== 0n || user.deletionStartedAt != null;
+}
+
+export function isDeletionComplete(user: Pick<User, 'flags' | 'pendingDeletionAt'>): boolean {
+	return (user.flags & UserFlags.DELETED) !== 0n && user.pendingDeletionAt === null;
+}
+
+const FIELDS_CLEARED_ON_DELETION = [
+	'email',
+	'email_bounced',
+	'password_hash',
+	'password_last_changed_at',
+	'totp_secret',
+	'authenticator_types',
+	'avatar_hash',
+	'avatar_color',
+	'banner_hash',
+	'banner_color',
+	'bio',
+	'pronouns',
+	'accent_color',
+	'timezone',
+	'date_of_birth',
+	'locale',
+	'premium_flags',
+	'hidden_profile_badges',
+	'premium_type',
+	'premium_since',
+	'premium_until',
+	'premium_gift_extension_ends_at',
+	'premium_will_cancel',
+	'premium_billing_cycle',
+	'premium_lifetime_sequence',
+	'premium_grace_ends_at',
+	'stripe_subscription_id',
+	'stripe_customer_id',
+	'has_ever_purchased',
+	'terms_agreed_at',
+	'privacy_agreed_at',
+	'last_active_at',
+	'last_active_ip',
+	'acls',
+	'traits',
+	'first_refund_at',
+	'gift_inventory_server_seq',
+	'gift_inventory_client_seq',
+	'premium_onboarding_dismissed_at',
+	'mention_flags',
+	'last_voice_activity_sharing_change_at',
+] as const satisfies ReadonlyArray<keyof UserRow>;
+
+export function deletedUserIdentity() {
+	return {
+		username: DELETED_USER_USERNAME,
+		discriminator: DELETED_USER_DISCRIMINATOR,
+		global_name: DELETED_USER_GLOBAL_NAME,
+		email_verified: false,
+		timezone_privacy_flags: ProfileFieldPrivacyFlags.EVERYONE,
+		flags: UserFlags.DELETED,
+	} satisfies Partial<UserRow>;
+}
+
+export function personalFieldsToClear(row: UserRow): Partial<UserRow> {
+	const patch: Partial<UserRow> = {};
+	for (const field of FIELDS_CLEARED_ON_DELETION) {
+		const value = row[field];
+		if (!value || (value instanceof Set && value.size === 0)) continue;
+		patch[field] = null;
+	}
+	return patch;
 }
 
 export function isTemporarilyBanned(user: Pick<User, 'flags' | 'tempBannedUntil'>, now = Date.now()): boolean {
@@ -203,7 +285,7 @@ export function isTemporarilyBanned(user: Pick<User, 'flags' | 'tempBannedUntil'
 	);
 }
 
-function isAccountDisabled(user: Pick<User, 'flags' | 'tempBannedUntil'>, now = Date.now()): boolean {
+export function isAccountDisabled(user: Pick<User, 'flags' | 'tempBannedUntil'>, now = Date.now()): boolean {
 	if ((user.flags & UserFlags.DISABLED) === 0n) return false;
 	return user.tempBannedUntil == null || user.tempBannedUntil.getTime() > now;
 }
@@ -262,6 +344,17 @@ export function getEffectivePremiumUntil(
 	return new Date(effectiveMs);
 }
 
+export function getPaidPremiumAccessEndsAt(
+	user: Pick<PremiumCheckable, 'premiumUntil' | 'premiumGiftExtensionEndsAt' | 'premiumGraceEndsAt'>,
+): Date | null {
+	const effective = getEffectivePremiumUntil(user);
+	if (effective == null) {
+		return null;
+	}
+	const graceEndsMs = user.premiumGraceEndsAt?.getTime() ?? effective.getTime() + PREMIUM_GRACE_PERIOD_MS;
+	return new Date(Math.max(effective.getTime(), graceEndsMs));
+}
+
 export function checkHasActivePaidPremium(
 	user: Pick<PremiumCheckable, 'premiumType' | 'premiumUntil' | 'premiumGiftExtensionEndsAt' | 'premiumGraceEndsAt'>,
 ): boolean {
@@ -272,19 +365,8 @@ export function checkHasActivePaidPremium(
 		// a lifetime (Visionary) account never expires, whatever end fields a ledger repair left behind.
 		return true;
 	}
-	const effective = getEffectivePremiumUntil(user);
-	if (effective == null) {
-		return true;
-	}
-	const nowMs = Date.now();
-	const untilMs = effective.getTime();
-	if (nowMs <= untilMs) {
-		return true;
-	}
-	if (user.premiumGraceEndsAt != null) {
-		return nowMs <= user.premiumGraceEndsAt.getTime();
-	}
-	return nowMs <= untilMs + PREMIUM_GRACE_PERIOD_MS;
+	const endsAt = getPaidPremiumAccessEndsAt(user);
+	return endsAt == null || Date.now() <= endsAt.getTime();
 }
 
 export function checkIsPremium(user: PremiumCheckable): boolean {

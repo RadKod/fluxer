@@ -22,13 +22,14 @@ import {
 } from '@fluxer/schema/src/domains/badge/BadgeRequestSchemas';
 import {BadgeListResponse, BadgeResponse} from '@fluxer/schema/src/domains/badge/BadgeResponseSchemas';
 
+// sanalyer: the Micup badge catalog lives under /admin/badge-catalog; /admin/badges belongs to upstream's custom badges.
 export function BadgeAdminController(app: HonoApp) {
 	app.get(
-		'/admin/badges',
+		'/admin/badge-catalog',
 		RateLimitMiddleware(RateLimitConfigs.ADMIN_BADGE_LIST),
 		requireAdminACL(AdminACLs.BADGES_MANAGE),
 		OpenAPI({
-			operationId: 'list_admin_badges',
+			operationId: 'list_admin_badge_catalog',
 			summary: 'List badges',
 			description: 'Returns every badge in the catalog. Requires BADGES_MANAGE permission.',
 			responseSchema: BadgeListResponse,
@@ -48,12 +49,12 @@ export function BadgeAdminController(app: HonoApp) {
 		},
 	);
 	app.post(
-		'/admin/badges',
+		'/admin/badge-catalog',
 		RateLimitMiddleware(RateLimitConfigs.ADMIN_BADGE_UPDATE),
 		requireAdminACL(AdminACLs.BADGES_MANAGE),
 		Validator('json', BadgeCreateRequest),
 		OpenAPI({
-			operationId: 'create_admin_badge',
+			operationId: 'create_admin_badge_catalog_entry',
 			summary: 'Create badge',
 			description: 'Adds a badge with its icon and text to the catalog. Requires BADGES_MANAGE permission.',
 			responseSchema: BadgeResponse,
@@ -73,13 +74,13 @@ export function BadgeAdminController(app: HonoApp) {
 		},
 	);
 	app.patch(
-		'/admin/badges/:badge_id',
+		'/admin/badge-catalog/:badge_id',
 		RateLimitMiddleware(RateLimitConfigs.ADMIN_BADGE_UPDATE),
 		requireAdminACL(AdminACLs.BADGES_MANAGE),
 		Validator('param', BadgeIdParam),
 		Validator('json', BadgeUpdateRequest),
 		OpenAPI({
-			operationId: 'update_admin_badge',
+			operationId: 'update_admin_badge_catalog_entry',
 			summary: 'Update badge',
 			description: 'Changes the icon or text of a badge. Requires BADGES_MANAGE permission.',
 			responseSchema: BadgeResponse,

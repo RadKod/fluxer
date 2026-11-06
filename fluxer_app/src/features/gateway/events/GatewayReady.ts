@@ -94,14 +94,14 @@ export interface ReadyPayload {
 	feed_notification_state?: FeedNotificationStateResponse;
 }
 
-export class GatewayReadyIdentityMismatchError extends Error {
+class GatewayReadyIdentityMismatchError extends Error {
 	constructor(expectedUserId: string, receivedUserId: string) {
 		super(`READY user mismatch: expected ${expectedUserId}, received ${receivedUserId}`);
 		this.name = 'GatewayReadyIdentityMismatchError';
 	}
 }
 
-export class GatewayReadyAccountContextMissingError extends Error {
+class GatewayReadyAccountContextMissingError extends Error {
 	constructor() {
 		super('Gateway READY has no account context');
 		this.name = 'GatewayReadyAccountContextMissingError';

@@ -2,6 +2,7 @@
 
 import type {LimitKey} from '@fluxer/constants/src/LimitConfigMetadata';
 import {
+	ATTACHMENT_MAX_SIZE_BOT,
 	ATTACHMENT_MAX_SIZE_NON_PREMIUM,
 	ATTACHMENT_MAX_SIZE_PREMIUM,
 	AVATAR_MAX_SIZE,
@@ -76,11 +77,13 @@ export const DEFAULT_RESTRICTED_LIMITS: Record<LimitKey, number> = {
 	feed_fanout_max_posts_per_day: 10,
 	feed_fanout_min_followers: 8000,
 	feed_suggestions_min_followers: 2,
+	guild_visit_history_days_unverified: 30,
 	max_attachment_file_size: ATTACHMENT_MAX_SIZE_NON_PREMIUM,
 	max_attachments_per_message: MAX_ATTACHMENTS_PER_MESSAGE,
 	max_bio_length: MAX_BIO_LENGTH,
 	max_bookmarks: MAX_BOOKMARKS_NON_PREMIUM,
 	max_boost_slots: 0,
+	max_bot_attachment_file_size: ATTACHMENT_MAX_SIZE_BOT,
 	max_channels_per_category: MAX_CHANNELS_PER_CATEGORY,
 	// TEMPORARY: a post's comments of one ten day bucket share a partition (feed_comments), and a viral post gets most of
 	// them in one bucket; 10,000 comments of up to 1000 characters stay under ~40 MB. Trigger: posts reaching the cap
@@ -106,6 +109,7 @@ export const DEFAULT_RESTRICTED_LIMITS: Record<LimitKey, number> = {
 	max_guild_roles: MAX_GUILD_ROLES,
 	max_guild_stickers_more: MAX_GUILD_STICKERS_MORE_STICKERS,
 	max_guild_stickers: MAX_GUILD_STICKERS,
+	max_guild_visits: 10,
 	max_guild_soundboard_sounds: 8,
 	max_guilds: 100,
 	max_message_length: MAX_MESSAGE_LENGTH_NON_PREMIUM,

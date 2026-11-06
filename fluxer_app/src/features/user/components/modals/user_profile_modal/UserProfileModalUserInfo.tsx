@@ -6,6 +6,8 @@ import {ProfilePostsButton} from '@app/features/feed/components/ProfilePostsButt
 import {ProfileFollowActions} from '@app/features/follow/components/ProfileFollowActions';
 import {GameActivityDisplay} from '@app/features/game_activity/components/GameActivityDisplay';
 import {NameStyleText} from '@app/features/name_style/components/NameStyleText';
+import * as ModalCommands from '@app/features/ui/commands/ModalCommands';
+import {openProfileBadgeSettings} from '@app/features/user/commands/UserSettingsModalCommands';
 import userProfileModalStyles from '@app/features/user/components/modals/UserProfileModal.module.css';
 import type {UserInfoProps} from '@app/features/user/components/modals/user_profile_modal/UserProfileModalShared';
 import {LimitedProfileNotice} from '@app/features/user/components/popouts/LimitedProfileNotice';
@@ -16,6 +18,8 @@ import {useAutoplayExpandedProfileAnimations} from '@app/features/user/hooks/use
 import {useProfileBadgeMetrics} from '@app/features/user/hooks/useProfileBadgeMetrics';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
 import {nameReadsOnProfileTheme, profileThemeColors} from '@app/features/user/utils/ProfileGradient';
+import {canEditOwnProfileBadges} from '@app/features/user/utils/ProfileEditAccess';
+import {getProfileDisplayBadges} from '@app/features/user/utils/ProfileUtils';
 import {
 	getProfileMembershipDisplayName,
 	resolveProfileGuildMembership,
@@ -34,6 +38,10 @@ export const UserInfo: React.FC<UserInfoProps> = observer((props) => {
 	const {badgeStyle, bindNameRef} = useProfileBadgeMetrics(displayNameRef, displayName);
 	const effectiveProfile = profile?.getEffectiveProfile() ?? null;
 	const shouldAutoplayProfileAnimations = useAutoplayExpandedProfileAnimations();
+	const handleEditBadges = () => {
+		ModalCommands.pop();
+		openProfileBadgeSettings();
+	};
 	return (
 		<div
 			className={clsx(userProfileModalStyles.userInfo, onPage && userProfileModalStyles.userInfoPage)}
@@ -81,19 +89,18 @@ export const UserInfo: React.FC<UserInfoProps> = observer((props) => {
 							/>
 						)}
 					</div>
-					<div className={userProfileModalStyles.badgesWrapper} data-flx="user.user-profile-modal.user-info.div--8">
-						<UserProfileBadges
-							user={user}
-							profile={profile}
-							isModal={true}
-							isMobile={false}
-							largeProfile={onPage}
-							data-flx="user.user-profile-modal.user-info.user-profile-badges"
-						/>
-					</div>
 					<div className={userProfileModalStyles.tagBadgeRow} data-flx="user.user-profile-modal.user-info.div--6">
 						<div className={userProfileModalStyles.usernameRow} data-flx="user.user-profile-modal.user-info.div--7">
 							{NicknameUtils.formatTagForStreamerMode(user.tag)}
+						</div>
+						<div className={userProfileModalStyles.badgesWrapper} data-flx="user.user-profile-modal.user-info.div--8">
+							<UserProfileBadges
+								badges={getProfileDisplayBadges(profile)}
+								isModal={true}
+								isMobile={false}
+								onEditBadges={canEditOwnProfileBadges(user.id, profile) ? handleEditBadges : undefined}
+								data-flx="user.user-profile-modal.user-info.user-profile-badges"
+							/>
 						</div>
 						{!onPage && (
 							<>

@@ -14,6 +14,10 @@ pub const AUDIT_LOG_VIEW: &str = "audit_log:view";
 pub const AUTHENTICATE: &str = "admin:authenticate";
 pub const JOBS_VIEW: &str = "jobs:view";
 pub const JOBS_CANCEL: &str = "jobs:cancel";
+pub const BADGE_CREATE: &str = "badge:create";
+pub const BADGE_DELETE: &str = "badge:delete";
+pub const BADGE_LIST: &str = "badge:list";
+pub const BADGE_UPDATE: &str = "badge:update";
 pub const BAN_EMAIL_ADD: &str = "ban:email:add";
 pub const BAN_EMAIL_CHECK: &str = "ban:email:check";
 pub const BAN_EMAIL_REMOVE: &str = "ban:email:remove";
@@ -63,6 +67,7 @@ pub const GUILD_LOOKUP: &str = "guild:lookup";
 pub const GUILD_RELOAD: &str = "guild:reload";
 pub const GUILD_SHUTDOWN: &str = "guild:shutdown";
 pub const GUILD_TRANSFER_OWNERSHIP: &str = "guild:transfer_ownership";
+pub const GUILD_UPDATE_BADGES: &str = "guild:update:badges";
 pub const GUILD_UPDATE_FEATURES: &str = "guild:update:features";
 pub const GUILD_UPDATE_NAME: &str = "guild:update:name";
 pub const GUILD_UPDATE_SETTINGS: &str = "guild:update:settings";
@@ -98,6 +103,7 @@ pub const USER_VIEW_DOB: &str = "user:view:dob";
 pub const USER_VIEW_EMAIL: &str = "user:view:email";
 pub const USER_VIEW_IP: &str = "user:view:ip";
 pub const USER_TEMP_BAN: &str = "user:temp_ban";
+pub const USER_UPDATE_BADGES: &str = "user:update:badges";
 pub const USER_UPDATE_BOT_STATUS: &str = "user:update:bot_status";
 pub const USER_UPDATE_DOB: &str = "user:update:dob";
 pub const USER_UPDATE_EMAIL: &str = "user:update:email";
@@ -109,6 +115,9 @@ pub const USER_UPDATE_TRAITS: &str = "user:update:traits";
 pub const USER_UPDATE_USERNAME: &str = "user:update:username";
 pub const USERNAME_RESERVE: &str = "username:reserve";
 pub const USERNAME_MIGRATION_START: &str = "username:migration:start";
+pub const VOICE_JOIN_TOKEN_CREATE: &str = "voice:join_token:create";
+pub const VOICE_JOIN_TOKEN_LIST: &str = "voice:join_token:list";
+pub const VOICE_JOIN_TOKEN_REVOKE: &str = "voice:join_token:revoke";
 pub const VOICE_REGION_CREATE: &str = "voice:region:create";
 pub const VOICE_REGION_DELETE: &str = "voice:region:delete";
 pub const VOICE_REGION_LIST: &str = "voice:region:list";
@@ -132,6 +141,10 @@ pub const ALL_ACLS: &[&str] = &[
     AUTHENTICATE,
     JOBS_VIEW,
     JOBS_CANCEL,
+    BADGE_CREATE,
+    BADGE_DELETE,
+    BADGE_LIST,
+    BADGE_UPDATE,
     BAN_EMAIL_ADD,
     BAN_EMAIL_CHECK,
     BAN_EMAIL_REMOVE,
@@ -181,6 +194,7 @@ pub const ALL_ACLS: &[&str] = &[
     GUILD_RELOAD,
     GUILD_SHUTDOWN,
     GUILD_TRANSFER_OWNERSHIP,
+    GUILD_UPDATE_BADGES,
     GUILD_UPDATE_FEATURES,
     GUILD_UPDATE_NAME,
     GUILD_UPDATE_SETTINGS,
@@ -216,6 +230,7 @@ pub const ALL_ACLS: &[&str] = &[
     USER_VIEW_EMAIL,
     USER_VIEW_IP,
     USER_TEMP_BAN,
+    USER_UPDATE_BADGES,
     USER_UPDATE_BOT_STATUS,
     USER_UPDATE_DOB,
     USER_UPDATE_EMAIL,
@@ -227,6 +242,9 @@ pub const ALL_ACLS: &[&str] = &[
     USER_UPDATE_USERNAME,
     USERNAME_RESERVE,
     USERNAME_MIGRATION_START,
+    VOICE_JOIN_TOKEN_CREATE,
+    VOICE_JOIN_TOKEN_LIST,
+    VOICE_JOIN_TOKEN_REVOKE,
     VOICE_REGION_CREATE,
     VOICE_REGION_DELETE,
     VOICE_REGION_LIST,

@@ -55,6 +55,7 @@ interface AnalyserHandle extends TrackAnalyserNodes {
 	nextTickAtMs: number;
 }
 
+// Tests construct their own adapter with autoSchedule off and drive ticks by hand.
 interface VoiceEngineV2AppRemoteSpeakingAdapterOptions {
 	autoSchedule?: boolean;
 }

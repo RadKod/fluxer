@@ -343,6 +343,12 @@ const ResolvedDMListItem = observer(function ResolvedDMListItem({
 		}
 	};
 	if (isMobile) {
+		let mobileItemClassName = styles.dmItemMobile;
+		if (isSelected) {
+			mobileItemClassName = styles.dmItemMobileSelected;
+		} else if (hasUnreadMessages()) {
+			mobileItemClassName = styles.dmItemMobileUnread;
+		}
 		return (
 			<>
 				<FocusRing offset={-2} data-flx="channel.direct-message.dm-list-item.focus-ring">
@@ -350,11 +356,7 @@ const ResolvedDMListItem = observer(function ResolvedDMListItem({
 						ref={setMobileRef}
 						onLongPress={() => setMenuOpen(true)}
 						className={clsx(
-							isSelected
-								? styles.dmItemMobileSelected
-								: hasUnreadMessages()
-									? styles.dmItemMobileUnread
-									: styles.dmItemMobile,
+							mobileItemClassName,
 							isMuted && styles.dmItemMobileMuted,
 							contextMenuOpen && styles.contextMenuActive,
 						)}
@@ -514,15 +516,17 @@ const ResolvedDMListItem = observer(function ResolvedDMListItem({
 			</>
 		);
 	}
+	let itemClassName = styles.dmItem;
+	if (isSelected) {
+		itemClassName = styles.dmItemSelected;
+	} else if (hasUnreadMessages()) {
+		itemClassName = styles.dmItemUnread;
+	}
 	return (
 		<FocusRing offset={-2} data-flx="channel.direct-message.dm-list-item.focus-ring--2">
 			<div
 				ref={setDesktopRef}
-				className={clsx(
-					isSelected ? styles.dmItemSelected : hasUnreadMessages() ? styles.dmItemUnread : styles.dmItem,
-					isMuted && styles.dmItemMuted,
-					contextMenuOpen && styles.contextMenuActive,
-				)}
+				className={clsx(itemClassName, isMuted && styles.dmItemMuted, contextMenuOpen && styles.contextMenuActive)}
 				onClick={handleNavigate}
 				onContextMenu={handleContextMenu}
 				onMouseEnter={scheduleChannelPreload}
@@ -594,7 +598,7 @@ const ResolvedDMListItem = observer(function ResolvedDMListItem({
 								<DMListItemNameText
 									displayName={displayName}
 									nameStyle={isGroupDM ? null : recipient?.nameStyle}
-									dataFlx="channel.direct-message.dm-list-item.dm-item-name-text--2"
+								dataFlx="channel.direct-message.dm-list-item.dm-item-name-text--2"
 									data-flx="channel.direct-message.dm-list-item.resolved-dm-list-item.dm-list-item-name-text--2"
 								/>
 								{!isGroupDM && recipient && (
@@ -644,10 +648,7 @@ const ResolvedDMListItem = observer(function ResolvedDMListItem({
 								</span>
 							)}
 							{!isGroupDM && !gameActivity && messagePreview && (
-								<span
-									className={styles.dmItemSubtext}
-									data-flx="channel.direct-message.dm-list-item.dm-item-subtext--2"
-								>
+								<span className={styles.dmItemSubtext} data-flx="channel.direct-message.dm-list-item.dm-item-subtext--2">
 									{messagePreview}
 								</span>
 							)}

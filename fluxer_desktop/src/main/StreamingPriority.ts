@@ -129,6 +129,13 @@ function formatErrorDetail(error: unknown): string {
 	return String(error);
 }
 
+function gpuPriorityResultStatus(succeededCount: number, failedCount: number): GpuPriorityAttemptStatus {
+	if (failedCount === 0) {
+		return 'succeeded';
+	}
+	return succeededCount > 0 ? 'partial' : 'failed';
+}
+
 const GPU_PRIORITY_MODULE_UNAVAILABLE_DETAIL = 'Windows GPU priority native API unavailable';
 
 function gpuPriorityModuleUnavailableReason(): string {
@@ -472,7 +479,7 @@ function elevateGpuSchedulingPriority(targets: Array<GpuPriorityTarget>): void {
 		}
 	}
 	lastGpuPriorityAcquire = {
-		status: failedProcessIds.length === 0 ? 'succeeded' : elevatedProcessIds.length > 0 ? 'partial' : 'failed',
+		status: gpuPriorityResultStatus(elevatedProcessIds.length, failedProcessIds.length),
 		priorityClass: GPU_SCHEDULING_PRIORITY,
 		targets: limitGpuPriorityTargets(targets),
 		elevatedProcessIds: elevatedProcessIds.slice(0, MAX_GPU_PRIORITY_DIAGNOSTIC_TARGETS),
@@ -554,7 +561,7 @@ function restoreGpuSchedulingPriority(): void {
 		}
 	}
 	lastGpuPriorityRestore = {
-		status: failedProcessIds.length === 0 ? 'succeeded' : restoredProcessIds.length > 0 ? 'partial' : 'failed',
+		status: gpuPriorityResultStatus(restoredProcessIds.length, failedProcessIds.length),
 		processIds,
 		restoredProcessIds,
 		failedProcessIds,

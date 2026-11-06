@@ -1,8 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import type {
+	ThemeFolderChange,
+	ThemeFolderImportResult,
+	ThemeFolderStatus,
+} from '@fluxer/desktop_ipc/src/DesktopBridgeTypes';
 import type {BuildChannel} from '@electron/common/BuildChannel';
 import type {GameActivityAPI} from '@electron/common/GameActivityTypes';
 import type {DesktopAccountStorageAPI} from '@fluxer/desktop_ipc/src/AccountContract';
+import type {AccountEngineRendererAPI} from '@fluxer/desktop_ipc/src/AccountEngineContract';
 import type {DesktopHandoffAPI} from '@fluxer/desktop_ipc/src/BrowserHandoffContract';
 import type {DesktopCapabilityManifest} from '@fluxer/desktop_ipc/src/CapabilityManifest';
 import type {NativeGatewayTransportAPI} from '@fluxer/desktop_ipc/src/GatewayTransportContract';
@@ -17,6 +23,8 @@ import type {
 	RegistrationResponseJSON,
 } from '@simplewebauthn/browser';
 
+
+export type {ThemeFolderChange, ThemeFolderImportResult, ThemeFolderStatus};
 export interface LinuxAppearanceSnapshot {
 	colorScheme: 'no-preference' | 'prefer-dark' | 'prefer-light';
 	contrast: 'no-preference' | 'high';
@@ -603,6 +611,7 @@ export interface NotificationOptions {
 	body: string;
 	icon?: string;
 	url?: string;
+	accountKey?: string;
 }
 
 export interface NotificationResult {
@@ -646,6 +655,16 @@ export type TrayActionPayload =
 	  }
 	| {
 			action: 'check-for-updates';
+	  }
+	| {
+			action: 'switch-account';
+			accountKey: string;
+	  }
+	| {
+			action: 'open-account-switcher';
+	  }
+	| {
+			action: 'toggle-custom-css';
 	  };
 
 export type DesktopGameOverlayCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
@@ -685,6 +704,11 @@ export interface ElectronAPI extends GameActivityAPI {
 	pickThemeLinkedFiles: (options?: {multiple?: boolean}) => Promise<Array<ThemeDirectoryCssFile>>;
 	watchThemeLinkedFiles: (paths: Array<string>) => Promise<void>;
 	onThemeLinkedFileChange: (callback: (change: ThemeLinkedFileChange) => void) => () => void;
+	importThemeFolder: () => Promise<ThemeFolderImportResult | null>;
+	watchThemeFolders: (paths: Array<string>) => Promise<void>;
+	removeThemeFolder: (path: string) => Promise<void>;
+	onThemeFolderChange: (callback: (change: ThemeFolderChange) => void) => () => void;
+	themeFolderWatch: true;
 	cacheVoiceBackgroundMedia: (options: VoiceBackgroundMediaCacheRequest) => Promise<VoiceBackgroundMediaCacheResult>;
 	readVoiceBackgroundMedia: (id: string) => Promise<VoiceBackgroundMediaReadResult | null>;
 	deleteVoiceBackgroundMedia: (id: string) => Promise<void>;
@@ -703,10 +727,10 @@ export interface ElectronAPI extends GameActivityAPI {
 	windowMaximize: () => void;
 	windowClose: () => void;
 	windowIsMaximized: () => Promise<boolean>;
-	focusThemeStudioPopout: () => Promise<boolean>;
-	closeThemeStudioPopout: () => Promise<boolean>;
+
 	popoutSetAlwaysOnTop: (key: string, flag: boolean) => Promise<boolean>;
 	popoutFocus: (key: string) => Promise<boolean>;
+	cssEditorWindow: true;
 	openVoiceDebugEventSinkPopout: (entries: Array<DesktopVoiceDebugEventSinkEntry>) => Promise<void>;
 	appendVoiceDebugEventSinkEntries: (entries: Array<DesktopVoiceDebugEventSinkEntry>) => void;
 	setVoiceDebugEventSinkStatsHtml: (html: string) => void;
@@ -741,7 +765,7 @@ export interface ElectronAPI extends GameActivityAPI {
 	getStreamerModeCaptureAppStatus: () => Promise<StreamerModeCaptureAppStatus>;
 	closeNotification: (id: string) => void;
 	closeNotifications: (ids: Array<string>) => void;
-	onNotificationClick: (callback: (id: string, url?: string) => void) => () => void;
+	onNotificationClick: (callback: (id: string, url: string | null, accountKey: string | null) => void) => () => void;
 	setBadgeCount: (count: number) => void;
 	getBadgeCount: () => Promise<number>;
 	bounceDock: (type?: 'critical' | 'informational') => number;
@@ -757,12 +781,14 @@ export interface ElectronAPI extends GameActivityAPI {
 	getAccessibilitySupportEnabled: () => Promise<boolean>;
 	onAccessibilitySupportChanged: (callback: (enabled: boolean) => void) => () => void;
 	getLinuxAppearance: () => Promise<LinuxAppearanceSnapshot>;
+	setPrebootTheme: (theme: string) => void;
 	onLinuxAppearanceChanged: (callback: (snapshot: LinuxAppearanceSnapshot) => void) => () => void;
 	onZoomIn: (callback: () => void) => () => void;
 	onZoomOut: (callback: () => void) => () => void;
 	onZoomReset: (callback: () => void) => () => void;
 	onOpenSettings: (callback: () => void) => () => void;
 	setTrayRuntimeState: (state: Partial<TrayRuntimeStatePayload>) => void;
+	setDirectMessagesAvailable: (available: boolean) => void;
 	acquireStreamingPriority: () => void;
 	releaseStreamingPriority: () => void;
 	resetStreamingPriority: () => void;
@@ -831,12 +857,14 @@ export interface ElectronAPI extends GameActivityAPI {
 	capabilities: DesktopCapabilityManifest;
 	desktopModules: DesktopModuleAPI;
 	reportLastRoute: (routePath: string) => void;
+	reportInstanceProductName: (instanceKey: string, productName: string) => void;
 	notifyFirstContentPainted: () => void;
 	desktopAccounts: DesktopAccountStorageAPI;
 	desktopStorage: DesktopStorageAPI;
 	desktopKnownInstances: DesktopKnownInstanceStorageAPI;
 	desktopHandoff: DesktopHandoffAPI;
 	nativeGatewayTransport: NativeGatewayTransportAPI;
+	accountEngine: AccountEngineRendererAPI;
 }
 
 export type GlobalShortcutsBackend = 'portal' | 'x11' | 'evdev' | 'windows' | 'macos' | 'none';
@@ -871,7 +899,7 @@ export type LinuxSessionType = 'wayland' | 'x11' | 'unknown';
 
 export type LinuxDesktopKind = 'kde' | 'gnome' | 'hyprland' | 'other';
 
-export interface GlobalShortcutsLinuxStatus {
+interface GlobalShortcutsLinuxStatus {
 	session: LinuxSessionType;
 	sandbox: 'flatpak' | 'none';
 	desktop: LinuxDesktopKind;

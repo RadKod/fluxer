@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import type {Gift, GiftDurationType} from '@app/features/gift/commands/GiftCommands';
 import {getPremiumProductFullName} from '@app/features/premium/utils/PremiumUtils';
-import type {I18n} from '@lingui/core';
+import type {I18n, MessageDescriptor} from '@lingui/core';
 import {msg} from '@lingui/core/macro';
 
 const VISIONARY_LIFETIME_DESCRIPTOR = msg({
@@ -75,23 +76,9 @@ function formatGiftDurationText(
 	}
 }
 
-function getPlutoniumDurationConfig(i18n: I18n): GiftDurationTextConfig {
+function getDurationConfig(i18n: I18n, lifetimeDescriptor: MessageDescriptor): GiftDurationTextConfig {
 	return {
-		lifetime: i18n._(VISIONARY_LIFETIME_DESCRIPTOR, {premiumProductName: getPremiumProductFullName()}),
-		days: (durationQuantity: number) =>
-			i18n._(OTHER_OF_DESCRIPTOR, {durationQuantity, premiumProductName: getPremiumProductFullName()}),
-		weeks: (durationQuantity: number) =>
-			i18n._(OTHER_OF_2_DESCRIPTOR, {durationQuantity, premiumProductName: getPremiumProductFullName()}),
-		months: (durationQuantity: number) =>
-			i18n._(OTHER_OF_3_DESCRIPTOR, {durationQuantity, premiumProductName: getPremiumProductFullName()}),
-		years: (durationQuantity: number) =>
-			i18n._(OTHER_OF_4_DESCRIPTOR, {durationQuantity, premiumProductName: getPremiumProductFullName()}),
-	};
-}
-
-function getPremiumDurationConfig(i18n: I18n): GiftDurationTextConfig {
-	return {
-		lifetime: i18n._(LIFETIME_DESCRIPTOR, {premiumProductName: getPremiumProductFullName()}),
+		lifetime: i18n._(lifetimeDescriptor, {premiumProductName: getPremiumProductFullName()}),
 		days: (durationQuantity: number) =>
 			i18n._(OTHER_OF_DESCRIPTOR, {durationQuantity, premiumProductName: getPremiumProductFullName()}),
 		weeks: (durationQuantity: number) =>
@@ -105,12 +92,20 @@ function getPremiumDurationConfig(i18n: I18n): GiftDurationTextConfig {
 
 export function getGiftDurationText(i18n: I18n, gift: Gift | GiftDurationPayload): string {
 	const duration = resolveGiftDuration(gift);
-	return formatGiftDurationText(duration.durationType, duration.durationQuantity, getPlutoniumDurationConfig(i18n));
+	return formatGiftDurationText(
+		duration.durationType,
+		duration.durationQuantity,
+		getDurationConfig(i18n, RuntimeConfig.isSelfHosted() ? LIFETIME_DESCRIPTOR : VISIONARY_LIFETIME_DESCRIPTOR),
+	);
 }
 
 export function getPremiumGiftDurationText(i18n: I18n, gift: Gift | GiftDurationPayload): string {
 	const duration = resolveGiftDuration(gift);
-	return formatGiftDurationText(duration.durationType, duration.durationQuantity, getPremiumDurationConfig(i18n));
+	return formatGiftDurationText(
+		duration.durationType,
+		duration.durationQuantity,
+		getDurationConfig(i18n, LIFETIME_DESCRIPTOR),
+	);
 }
 
 export function extractGiftCode(input: string): string {

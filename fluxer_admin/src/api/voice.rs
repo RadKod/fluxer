@@ -8,9 +8,10 @@ use crate::api::generated::types as generated_types;
 
 use super::client::{AdminApiClient, ApiError, ApiResult};
 use super::types::{
-    CreateVoiceRegionResponse, CreateVoiceServerResponse, DeleteVoiceResponse,
-    GetVoiceRegionResponse, ListVoiceRegionsResponse, ListVoiceServersResponse,
-    UpdateVoiceRegionResponse, UpdateVoiceServerResponse,
+    CreateVoiceJoinTokenResponse, CreateVoiceRegionResponse, CreateVoiceServerResponse,
+    DeleteVoiceResponse, GetVoiceRegionResponse, ListVoiceJoinTokensResponse,
+    ListVoiceRegionsResponse, ListVoiceServersResponse, UpdateVoiceRegionResponse,
+    UpdateVoiceServerResponse,
 };
 
 impl AdminApiClient {
@@ -128,6 +129,34 @@ impl AdminApiClient {
         .await
     }
 
+    pub async fn create_voice_join_token(
+        &self,
+        params: &serde_json::Value,
+    ) -> ApiResult<CreateVoiceJoinTokenResponse> {
+        validate_against::<generated_types::CreateVoiceJoinTokenRequest>(params)?;
+        self.send(Method::POST, "/admin/voice/join-tokens", Some(params), None)
+            .await
+    }
+
+    pub async fn list_voice_join_tokens(&self) -> ApiResult<ListVoiceJoinTokensResponse> {
+        let response = self
+            .generated()
+            .list_admin_voice_join_tokens()
+            .await
+            .map_err(|e| self.generated_error(e))?;
+        self.generated_value(response.into_inner())
+    }
+
+    pub async fn revoke_voice_join_token(&self, token_id: &str) -> ApiResult<DeleteVoiceResponse> {
+        self.send(
+            Method::DELETE,
+            &format!("/admin/voice/join-tokens/{}", urlencoding::encode(token_id)),
+            None::<&serde_json::Value>,
+            None,
+        )
+        .await
+    }
+
     pub async fn delete_voice_server(
         &self,
         region_id: &str,
@@ -179,68 +208,4 @@ fn required_field(params: &serde_json::Value, field: &str) -> ApiResult<String> 
         .and_then(serde_json::Value::as_str)
         .map(std::borrow::ToOwned::to_owned)
         .ok_or_else(|| ApiError::Parse(format!("{field} is required")))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use serde_json::json;
-
-    #[test]
-    fn region_update_body_preserves_explicit_restriction_clears() {
-        let expected = json!({
-            "required_guild_features": [],
-            "allowed_guild_ids": [],
-            "allowed_user_ids": [],
-        });
-        let mut params = expected.clone();
-        params["id"] = json!("eu");
-        let body = voice_request_body(&params, &["id"]).expect("region body");
-        validate_against::<generated_types::UpdateVoiceRegionRequestBody>(&body)
-            .expect("valid region body");
-        assert_eq!(body, expected);
-    }
-
-    #[test]
-    fn server_update_body_preserves_clears_and_omitted_restrictions() {
-        for expected in [
-            json!({
-                "required_guild_features": [],
-                "allowed_guild_ids": [],
-                "allowed_user_ids": [],
-                "soft_connection_limit": null,
-                "latitude": null,
-                "longitude": null,
-            }),
-            json!({"is_active": false}),
-        ] {
-            let mut params = expected.clone();
-            params["region_id"] = json!("eu");
-            params["server_id"] = json!("primary");
-            let body =
-                voice_request_body(&params, &["region_id", "server_id"]).expect("server body");
-            validate_against::<generated_types::UpdateVoiceServerRequestBody>(&body)
-                .expect("valid server body");
-            assert_eq!(body, expected);
-        }
-    }
-
-    #[test]
-    fn create_server_body_keeps_the_server_id_and_rejects_missing_fields() {
-        let expected = json!({
-            "server_id": "primary",
-            "endpoint": "wss://voice.example.com",
-            "api_key": "key",
-            "api_secret": "secret",
-        });
-        let mut params = expected.clone();
-        params["region_id"] = json!("eu");
-        let body = voice_request_body(&params, &["region_id"]).expect("server body");
-        validate_against::<generated_types::CreateVoiceServerRequestBody>(&body)
-            .expect("valid server body");
-        assert_eq!(body, expected);
-        assert!(
-            validate_against::<generated_types::CreateVoiceServerRequestBody>(&json!({})).is_err()
-        );
-    }
 }

@@ -38,6 +38,7 @@ import {
 } from '@app/api/guild/services/data/TemplateChannelImport';
 import {memberEndsInvitePause} from '@app/api/guild/services/GuildInvitePauseApplier';
 import {GuildSoundboardRepository} from '@app/api/guild/soundboard/GuildSoundboardRepository';
+import {enqueuePruneGuildVisits, onGuildVisitSettingsChanged} from '@app/api/guild/visits/GuildVisitLifecycle';
 import {emitGuildCreated, emitGuildFeaturesChanged} from '@app/api/infrastructure/activity/GuildEvents';
 import {contentModerationService} from '@app/api/infrastructure/ContentModerationService';
 import type {EntityAssetService, PreparedAssetUpload} from '@app/api/infrastructure/EntityAssetService';
@@ -70,6 +71,7 @@ import {
 	ThreadOnlyChannelsByGuild,
 	ThreadParentConfig as ThreadParentConfigTable,
 } from '@app/api/Tables';
+import {assertTierAllows, NO_TIER_CONTEXT} from '@app/api/user/AccountTier';
 import {onUserGuildsChanged} from '@app/api/user/lifecycle/UserLifecycleHooks';
 import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {mapUserSettingsToResponse} from '@app/api/user/UserMappers';
@@ -78,6 +80,7 @@ import {serializeGuildForAudit} from '@app/api/utils/AuditSerializationUtils';
 import {mapWithConcurrency} from '@app/api/utils/ConcurrencyUtils';
 import type {WebhookRepository} from '@app/api/webhook/WebhookRepository';
 import type {WorkerTaskName} from '@app/api/worker/WorkerLaneConfig';
+import {TierGatedActions} from '@fluxer/constants/src/AccountTierConstants';
 import {AuditLogActionType} from '@fluxer/constants/src/AuditLogActionType';
 import {ALL_PERMISSIONS, ChannelTypes, DEFAULT_PERMISSIONS, Permissions} from '@fluxer/constants/src/ChannelConstants';
 import {DiscoveryApplicationStatus} from '@fluxer/constants/src/DiscoveryConstants';
@@ -117,7 +120,6 @@ import {GuildTemplateInvalidError} from '@fluxer/errors/src/domains/guild/GuildT
 import {MaxGuildChannelsError} from '@fluxer/errors/src/domains/guild/MaxGuildChannelsError';
 import {MaxGuildRolesError} from '@fluxer/errors/src/domains/guild/MaxGuildRolesError';
 import {MaxGuildsError} from '@fluxer/errors/src/domains/guild/MaxGuildsError';
-import {UnclaimedAccountCannotCreateGuildsError} from '@fluxer/errors/src/domains/guild/UnclaimedAccountCannotCreateGuildsError';
 import {UnknownGuildError} from '@fluxer/errors/src/domains/guild/UnknownGuildError';
 import {DEFAULT_STOCK_LIMITS} from '@fluxer/limits/src/LimitDefaults';
 import type {GuildCreateRequest, GuildUpdateRequest} from '@fluxer/schema/src/domains/guild/GuildRequestSchemas';
@@ -182,6 +184,7 @@ const USER_TOGGLEABLE_GUILD_FEATURES: ReadonlySet<string> = new Set([
 	GuildFeatures.CLONE_EMOJI_ENABLED,
 	GuildFeatures.CLONE_STICKER_ENABLED,
 	GuildFeatures.HIDE_OWNER_CROWN,
+	GuildFeatures.VISITS_ENABLED,
 ]);
 const SUPPORTED_SYSTEM_CHANNEL_FLAGS = SystemChannelFlags.SUPPRESS_JOIN_NOTIFICATIONS;
 const GUILD_SETTINGS_AUDIT_KEYS: ReadonlySet<string> = new Set([
@@ -363,9 +366,7 @@ export class GuildOperationsService {
 		if (user.isBot) {
 			throw new BotsCannotCreateGuildsError();
 		}
-		if (user.isUnclaimedAccount()) {
-			throw new UnclaimedAccountCannotCreateGuildsError();
-		}
+		assertTierAllows(user, TierGatedActions.GUILD_CREATE, NO_TIER_CONTEXT);
 		const currentGuildCount = await this.guildRepository.countUserGuilds(user.id);
 		const ctx = createLimitMatchContext({user});
 		const maxGuilds = resolveLimitSafe(
@@ -376,7 +377,9 @@ export class GuildOperationsService {
 		);
 		if (currentGuildCount >= maxGuilds) throw new MaxGuildsError(maxGuilds);
 		const shouldUseEmptyFeatures = data.empty_features ?? false;
-		const featuresSet = shouldUseEmptyFeatures ? new Set<string>() : new Set(BASE_GUILD_FEATURES);
+		const featuresSet = shouldUseEmptyFeatures
+			? new Set<string>()
+			: new Set([...BASE_GUILD_FEATURES, GuildFeatures.VISITS_ENABLED]);
 		const context = createLimitMatchContext({user: null, guildFeatures: featuresSet});
 		const snapshot = this.limitConfigService.getConfigSnapshot();
 		const maxChannels = resolveLimitSafe(snapshot, context, 'max_guild_channels', MAX_GUILD_CHANNELS, 'guild');
@@ -453,6 +456,7 @@ export class GuildOperationsService {
 			embed_splash_width: null,
 			embed_splash_height: null,
 			features: featuresSet,
+			badge_ids: null,
 			verification_level: templateSettings.verificationLevel,
 			mfa_level: 0,
 			nsfw_level: 0,
@@ -532,7 +536,7 @@ export class GuildOperationsService {
 				});
 				if (modified) {
 					settingsRow.guild_folders = nextFolders;
-					const updatedSettings = await this.userRepository.upsertSettings(settingsRow);
+					const updatedSettings = await this.userRepository.upsertSettings(settingsRow, userSettings.toRow());
 					await this.gatewayService.dispatchPresence({
 						userId: user.id,
 						event: 'USER_SETTINGS_UPDATE',
@@ -759,6 +763,9 @@ export class GuildOperationsService {
 				source: 'member',
 			});
 		}
+		if (updatedGuild !== currentGuild) {
+			await onGuildVisitSettingsChanged({guildId, before: currentGuild, after: updatedGuild});
+		}
 		const guildSearchService = getGuildSearchService();
 		if (guildSearchService) {
 			let discoveryContext: GuildDiscoveryContext | undefined;
@@ -946,6 +953,7 @@ export class GuildOperationsService {
 			event: 'GUILD_DELETE',
 			data: {id: guildId.toString()},
 		});
+		await enqueuePruneGuildVisits(guildId, 'deleted');
 		await mapWithConcurrency(members, GUILD_DELETION_MEMBER_CONCURRENCY, async (member) => {
 			await this.gatewayService.leaveGuild({userId: member.userId, guildId});
 			await this.userRepository.deleteGuildSettings(member.userId, guildId);

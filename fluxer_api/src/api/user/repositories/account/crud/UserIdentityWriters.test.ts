@@ -156,7 +156,7 @@ test.each(['legacy', 'preparing', 'selecting'] as const)('bots keep username ind
 });
 test('ownership deletion skips username index and cleans the remaining keys', async () => {
 	await new UserIndexRepository().syncIndices(row);
-	await new UserIndexRepository().deleteIndices(id, row.username, row.discriminator, row.email, null, null, null, true);
+	await new UserIndexRepository().deleteIndices(id, row.username, row.discriminator, row.email, null, null, null, null, true);
 	expect((await fetchMany(UserByUsername.select().bind({}))).length).toBe(1);
 	expect((await fetchMany(UserByEmail.select().bind({}))).length).toBe(0);
 });

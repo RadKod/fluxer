@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
+import {offerAuthenticatorCalmly} from '@app/features/auth/components/modals/AuthenticatorOfferModal';
 import Accounts from '@app/features/auth/state/Accounts';
+import * as OperatorPassModalCommands from '@app/features/premium/commands/OperatorPassModalCommands';
 import * as PlutoniumPageCommands from '@app/features/premium/commands/PlutoniumPageCommands';
 import * as PremiumCommands from '@app/features/premium/commands/PremiumCommands';
+import OperatorPassCheckoutSession from '@app/features/premium/state/OperatorPassCheckoutSession';
+import OperatorPassHoldings from '@app/features/premium/state/OperatorPassHoldings';
+import {isOperatorPassAvailable} from '@app/features/premium/utils/OperatorPassUtils';
 import {
 	consumeCompletedPremiumCheckoutReturnIntent,
 	getCurrentPremiumActive,
@@ -27,13 +32,17 @@ const ActivePremiumCheckoutReturnWatcher = observer(function ActivePremiumChecko
 	showPremiumFeatures,
 }: ActivePremiumCheckoutReturnWatcherProps) {
 	const isPremium = getCurrentPremiumActive();
+	const operatorPassRun = OperatorPassCheckoutSession.run;
+	const operatorPassArrived =
+		operatorPassRun !== null && (OperatorPassHoldings.count ?? 0) > operatorPassRun.startedPassCount;
 	const isFocused = WindowState.focused;
 	const isVisible = WindowState.visible;
 	const refreshInFlightRef = useRef(false);
 	const lastRefreshAtRef = useRef(0);
 	const maybeRefreshPremiumState = useCallback(() => {
 		if (!showPremiumFeatures) return;
-		if (!getPendingPremiumCheckoutReturnIntent()) return;
+		const intent = getPendingPremiumCheckoutReturnIntent();
+		if (!intent) return;
 		const now = Date.now();
 		if (refreshInFlightRef.current || now - lastRefreshAtRef.current < REFRESH_COOLDOWN_MS) return;
 		lastRefreshAtRef.current = now;
@@ -51,9 +60,16 @@ const ActivePremiumCheckoutReturnWatcher = observer(function ActivePremiumChecko
 	}, [isFocused, isVisible, maybeRefreshPremiumState, showPremiumFeatures]);
 	useEffect(() => {
 		if (!showPremiumFeatures) return;
-		if (!isPremium || !consumeCompletedPremiumCheckoutReturnIntent()) return;
+		if (!isPremium) return;
+		const intent = consumeCompletedPremiumCheckoutReturnIntent();
+		if (!intent) return;
 		PlutoniumPageCommands.openPlutoniumPage();
+		void offerAuthenticatorCalmly();
 	}, [isPremium, currentUserId, showPremiumFeatures]);
+	useEffect(() => {
+		if (!operatorPassArrived || !isOperatorPassAvailable()) return;
+		OperatorPassModalCommands.reopenCheckoutModalAfterReturn();
+	}, [operatorPassArrived]);
 	return null;
 });
 

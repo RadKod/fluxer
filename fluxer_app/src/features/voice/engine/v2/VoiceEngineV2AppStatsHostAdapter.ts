@@ -572,6 +572,7 @@ function toVoiceEngineV2Stats(rttMs: number | null, tracks: ReadonlyArray<PerTra
 	};
 }
 
+// Tests inject the clock and the interval scheduler; the app uses the real ones.
 export interface VoiceEngineV2AppStatsHostAdapterScheduler {
 	setInterval(handler: () => void, intervalMs: number): unknown;
 	clearInterval(handle: unknown): void;

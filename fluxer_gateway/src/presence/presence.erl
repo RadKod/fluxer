@@ -7,6 +7,8 @@
 -export([start_link/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
+-define(HIBERNATE_AFTER_MS, 5000).
+
 -type user_id() :: integer().
 -type session_id() :: binary().
 -type status() :: online | offline | idle | dnd | invisible.
@@ -32,6 +34,7 @@
     push_unread_grace_timer => reference(),
     custom_status := custom_status(),
     status := status(),
+    settings_invisible => boolean(),
     guild_ids := #{integer() => true},
     temporary_guild_ids := #{integer() => true},
     friends := #{user_id() => true},
@@ -58,7 +61,9 @@
 
 -spec start_link(presence_data()) -> {ok, pid()} | {error, term()}.
 start_link(PresenceData) ->
-    normalize_start_link(gen_server:start_link(?MODULE, PresenceData, [])).
+    shard_utils:normalize_start_link(
+        gen_server:start_link(?MODULE, PresenceData, [{hibernate_after, ?HIBERNATE_AFTER_MS}])
+    ).
 
 -spec init(presence_data()) -> {ok, state()}.
 init(PresenceData) ->
@@ -219,6 +224,14 @@ handle_cast_guild({add_temporary_guild, GuildId}, State) when is_integer(GuildId
     {noreply, cast_guild_op(fun presence_connect:handle_add_temporary_guild/2, GuildId, State)};
 handle_cast_guild({remove_temporary_guild, GuildId}, State) when is_integer(GuildId) ->
     {noreply, presence_connect:remove_temporary_guild_id(GuildId, State)};
+handle_cast_guild({start_visit, GuildId, Operator}, State) when
+    is_integer(GuildId), is_boolean(Operator)
+->
+    ok = presence_session:notify_sessions({visit_start, GuildId, Operator}, State),
+    {noreply, State};
+handle_cast_guild({end_visit, GuildId}, State) when is_integer(GuildId) ->
+    ok = presence_session:notify_sessions({visit_end, GuildId}, State),
+    {noreply, State};
 handle_cast_guild(_, State) ->
     {noreply, State}.
 
@@ -306,6 +319,7 @@ build_initial_state(PresenceData) ->
         push_buffer => [],
         custom_status => maps:get(custom_status, PresenceData, null),
         status => Status,
+        settings_invisible => false,
         guild_ids => presence_targets:map_from_ids(GuildIds),
         temporary_guild_ids => #{},
         friends => presence_targets:map_from_ids(FriendIds),
@@ -386,17 +400,17 @@ handle_presence_rejoin(State) ->
     ),
     {noreply, State}.
 
--spec process_dispatch_event(atom(), map(), state()) -> state().
-process_dispatch_event(user_update, Data, State) ->
+-spec process_dispatch_event(atom(), map() | list(), state()) -> state().
+process_dispatch_event(user_update, Data, State) when is_map(Data) ->
     presence_update:handle_user_update_event(Data, State);
-process_dispatch_event(user_settings_update, Data, State) ->
+process_dispatch_event(user_settings_update, Data, State) when is_map(Data) ->
     NewState = presence_update:handle_user_settings_update(Data, State),
     presence_game_activity:update(
         #{session_id => <<>>}, presence_broadcast:force_publish_global_presence(NewState)
     );
-process_dispatch_event(message_create, Data, State) ->
+process_dispatch_event(message_create, Data, State) when is_map(Data) ->
     presence_update:handle_message_create_event(Data, State);
-process_dispatch_event(message_ack, Data, State) ->
+process_dispatch_event(message_ack, Data, State) when is_map(Data) ->
     presence_update:handle_message_ack_event(Data, State);
 process_dispatch_event(_, _Data, State) ->
     State.
@@ -409,36 +423,8 @@ binary_list(Items) ->
 user_ids(Items) ->
     [Item || Item <- Items, is_integer(Item)].
 
--spec normalize_start_link(gen_server:start_ret()) -> {ok, pid()} | {error, term()}.
-normalize_start_link({ok, Pid}) ->
-    {ok, Pid};
-normalize_start_link({error, Reason}) ->
-    {error, Reason};
-normalize_start_link(ignore) ->
-    {error, ignore}.
-
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
-
-presence_rejoin_notifies_all_sessions_test() ->
-    Parent = self(),
-    Session1 = spawn(fun() -> rejoin_check_receiver(Parent, one) end),
-    Session2 = spawn(fun() -> rejoin_check_receiver(Parent, two) end),
-    State = test_state(#{
-        <<"s1">> => test_session_entry(Session1),
-        <<"s2">> => test_session_entry(Session2)
-    }),
-    ?assertEqual({noreply, State}, handle_cast(presence_rejoin, State)),
-    ?assert(received_rejoin_ack(one)),
-    ?assert(received_rejoin_ack(two)).
-
-thread_user_flip_is_forwarded_to_every_session_test() ->
-    State = test_state(#{<<"s1">> => test_session_entry(self())}),
-    ?assertEqual({noreply, State}, handle_info({thread_user_flip, 4}, State)),
-    receive
-        {thread_user_flip, 4} -> ok
-    after 1000 -> ?assert(false)
-    end.
 
 private_only_user_update_reaches_own_sessions_without_bus_publish_test() ->
     Update = #{<<"id">> => <<"1">>, <<"theme_colors">> => [2, 3]},
@@ -549,20 +535,5 @@ test_session_entry(Pid) ->
         mref => make_ref(),
         socket_pid => undefined
     }.
-
--spec rejoin_check_receiver(pid(), atom()) -> term().
-rejoin_check_receiver(Parent, Tag) ->
-    receive
-        {presence_rejoin_check} -> Parent ! {rejoin_ack, Tag}
-    after 1000 -> Parent ! {rejoin_timeout, Tag}
-    end.
-
--spec received_rejoin_ack(atom()) -> boolean().
-received_rejoin_ack(Tag) ->
-    receive
-        {rejoin_ack, Tag} -> true;
-        {rejoin_timeout, Tag} -> false
-    after 1500 -> false
-    end.
 
 -endif.

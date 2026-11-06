@@ -18,7 +18,7 @@ import {SudoVerificationSchema} from '@fluxer/schema/src/domains/auth/AuthSchema
 import {GuildFeatureSchema} from '@fluxer/schema/src/domains/guild/GuildResponseSchemas';
 import {TemplateSerializedGuild} from '@fluxer/schema/src/domains/guild/GuildTemplateSchemas';
 import {VanityURLCodeType} from '@fluxer/schema/src/primitives/ChannelValidators';
-import {isValidSingleUnicodeEmoji} from '@fluxer/schema/src/primitives/EmojiValidators';
+import {UnicodeRoleEmojiType} from '@fluxer/schema/src/primitives/EmojiValidators';
 import {createBase64ImageType} from '@fluxer/schema/src/primitives/FileValidators';
 import {
 	ContentWarningLevelSchema,
@@ -179,22 +179,50 @@ export const MyGuildMemberUpdateRequest = GuildMemberUpdateRequest.omit({roles: 
 
 export type MyGuildMemberUpdateRequest = z.infer<typeof MyGuildMemberUpdateRequest>;
 
+const RoleIconFields = {
+	icon: createBase64ImageType().nullish().describe('Base64 data URI for the role icon image, or null to remove it'),
+	unicode_emoji: UnicodeRoleEmojiType.nullish().describe(
+		'A single Unicode emoji to use as the role icon, or null to remove it',
+	),
+	// Micup: boost-unlocked role extras, a second gradient color and a guild emoji as the role icon.
+	color_secondary: ColorType.nullish().describe('The secondary role gradient color as an integer'),
+	icon_emoji_id: SnowflakeType.nullish().describe('The ID of a role icon emoji from this guild'),
+};
+
+function requireExclusiveRoleIcon(
+	value: {icon?: string | null; unicode_emoji?: string | null; icon_emoji_id?: unknown},
+	ctx: z.RefinementCtx,
+) {
+	if (value.icon != null && value.unicode_emoji != null) {
+		ctx.addIssue({code: 'custom', message: ValidationErrorCodes.ROLE_ICON_AND_EMOJI_EXCLUSIVE, path: ['icon']});
+	}
+	if (value.icon_emoji_id != null && (value.icon != null || value.unicode_emoji != null)) {
+		ctx.addIssue({code: 'custom', message: 'Choose one role icon source', path: ['icon_emoji_id']});
+	}
+}
+
 export const GuildRoleCreateRequest = z
 	.object({
 		name: createStringType(1, 100).describe('The name of the role (1-100 characters)'),
 		color: ColorType.default(0x000000).describe('The color of the role as an integer (default: 0)'),
-		color_secondary: ColorType.nullish().describe('The secondary role gradient color as an integer'),
-		icon_emoji_id: SnowflakeType.nullish().describe('The ID of a role icon emoji from this guild'),
-		unicode_emoji: z
-			.string()
-			.refine(isValidSingleUnicodeEmoji, 'Expected a single Unicode emoji')
-			.nullish()
-			.describe('The Unicode role icon'),
 		permissions: UnsignedInt64Type.optional().describe('The permissions bitfield for the role'),
+		...RoleIconFields,
+		icon_source_role_id: SnowflakeType.optional().describe(
+			'The ID of a role in this community whose icon the new role copies. An image is stored again for the new role',
+		),
 	})
-	.refine((value) => value.icon_emoji_id == null || value.unicode_emoji == null, {
-		message: 'Choose one role icon source',
-		path: ['unicode_emoji'],
+	.superRefine((value, ctx) => {
+		requireExclusiveRoleIcon(value, ctx);
+		if (
+			value.icon_source_role_id !== undefined &&
+			(value.icon != null || value.unicode_emoji != null || value.icon_emoji_id != null)
+		) {
+			ctx.addIssue({
+				code: 'custom',
+				message: ValidationErrorCodes.ROLE_ICON_SOURCE_AND_ICON_EXCLUSIVE,
+				path: ['icon_source_role_id'],
+			});
+		}
 	});
 
 export type GuildRoleCreateRequest = z.infer<typeof GuildRoleCreateRequest>;
@@ -203,22 +231,13 @@ export const GuildRoleUpdateRequest = z
 	.object({
 		name: createStringType(1, 100).optional().describe('The name of the role (1-100 characters)'),
 		color: ColorType.optional().describe('The color of the role as an integer'),
-		color_secondary: ColorType.nullish().describe('The secondary role gradient color as an integer'),
-		icon_emoji_id: SnowflakeType.nullish().describe('The ID of a role icon emoji from this guild'),
-		unicode_emoji: z
-			.string()
-			.refine(isValidSingleUnicodeEmoji, 'Expected a single Unicode emoji')
-			.nullish()
-			.describe('The Unicode role icon'),
 		permissions: UnsignedInt64Type.optional().describe('The permissions bitfield for the role'),
 		hoist: z.boolean().optional().describe('Whether the role should be displayed separately in the member list'),
 		hoist_position: z.number().int().nullish().describe('The position of the role in the hoisted member list'),
 		mentionable: z.boolean().optional().describe('Whether the role can be mentioned by anyone'),
+		...RoleIconFields,
 	})
-	.refine((value) => value.icon_emoji_id == null || value.unicode_emoji == null, {
-		message: 'Choose one role icon source',
-		path: ['unicode_emoji'],
-	});
+	.superRefine(requireExclusiveRoleIcon);
 
 export type GuildRoleUpdateRequest = z.infer<typeof GuildRoleUpdateRequest>;
 
@@ -373,7 +392,7 @@ const GuildRoleHoistPositionItem = z.object({
 	hoist_position: z.number().int().describe('The new hoist position for the role'),
 });
 
-export const GuildRoleHoistPositionsRequest = z.array(GuildRoleHoistPositionItem);
+export const GuildRoleHoistPositionsRequest = z.array(GuildRoleHoistPositionItem).max(10000);
 
 export type GuildRoleHoistPositionsRequest = z.infer<typeof GuildRoleHoistPositionsRequest>;
 
@@ -382,7 +401,7 @@ const GuildRolePositionItem = z.object({
 	position: z.number().int().optional().describe('The new position for the role'),
 });
 
-export const GuildRolePositionsRequest = z.array(GuildRolePositionItem);
+export const GuildRolePositionsRequest = z.array(GuildRolePositionItem).max(10000);
 
 export type GuildRolePositionsRequest = z.infer<typeof GuildRolePositionsRequest>;
 

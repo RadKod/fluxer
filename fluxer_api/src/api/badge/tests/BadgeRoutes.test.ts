@@ -31,9 +31,9 @@ const SVG_BASE64 = Buffer.from(
 ).toString('base64');
 
 const BADGE_ENDPOINTS = [
-	['get', '/admin/badges', null],
-	['post', '/admin/badges', {icon: getPngDataUrl(), description: 'Early supporter'}],
-	['patch', '/admin/badges/1', {description: 'Beta tester'}],
+	['get', '/admin/badge-catalog', null],
+	['post', '/admin/badge-catalog', {icon: getPngDataUrl(), description: 'Early supporter'}],
+	['patch', '/admin/badge-catalog/1', {description: 'Beta tester'}],
 	['post', '/admin/users/:self/badges/1', null],
 	['delete', '/admin/users/:self/badges/1', null],
 	['post', '/admin/badges/pioneer/backfill', {badge_id: '1', first_user_id: '1', excluded_user_ids: []}],
@@ -87,7 +87,7 @@ describe('badge admin routes and profile badges', () => {
 
 	async function createBadge(description = 'Early supporter', icon = getPngDataUrl()): Promise<BadgeResponse> {
 		return createBuilder<BadgeResponse>(harness, admin.token)
-			.post('/admin/badges')
+			.post('/admin/badge-catalog')
 			.body({icon, description})
 			.expect(HTTP_STATUS.OK)
 			.execute();
@@ -124,7 +124,7 @@ describe('badge admin routes and profile badges', () => {
 		expect(badge.icon).toMatch(/^[0-9a-f]{8}$/);
 		expect(await storedIcon(badge.id, badge.icon)).not.toBeNull();
 		const list = await createBuilder<BadgeListResponse>(harness, admin.token)
-			.get('/admin/badges')
+			.get('/admin/badge-catalog')
 			.expect(HTTP_STATUS.OK)
 			.execute();
 		expect(list).toEqual([badge]);
@@ -162,7 +162,7 @@ describe('badge admin routes and profile badges', () => {
 		const uploadsBefore = badgeIconUploads();
 
 		const json = await createBuilder<ValidationErrorResponse>(harness, admin.token)
-			.post('/admin/badges')
+			.post('/admin/badge-catalog')
 			.body({icon, description: 'Nope'})
 			.expect(HTTP_STATUS.BAD_REQUEST, APIErrorCodes.INVALID_FORM_BODY)
 			.execute();
@@ -182,7 +182,7 @@ describe('badge admin routes and profile badges', () => {
 		});
 
 		const json = await createBuilder<ValidationErrorResponse>(harness, admin.token)
-			.post('/admin/badges')
+			.post('/admin/badge-catalog')
 			.body({icon: getPngDataUrl(), description: 'Nope'})
 			.expect(HTTP_STATUS.BAD_REQUEST, APIErrorCodes.INVALID_FORM_BODY)
 			.execute();
@@ -194,14 +194,14 @@ describe('badge admin routes and profile badges', () => {
 		const badge = await createBadge();
 
 		const renamed = await createBuilder<BadgeResponse>(harness, admin.token)
-			.patch(`/admin/badges/${badge.id}`)
+			.patch(`/admin/badge-catalog/${badge.id}`)
 			.body({description: 'Founding member'})
 			.expect(HTTP_STATUS.OK)
 			.execute();
 		expect(renamed).toEqual({...badge, description: 'Founding member'});
 
 		const reiconed = await createBuilder<BadgeResponse>(harness, admin.token)
-			.patch(`/admin/badges/${badge.id}`)
+			.patch(`/admin/badge-catalog/${badge.id}`)
 			.body({icon: await webpDataUrl('#ff0000')})
 			.expect(HTTP_STATUS.OK)
 			.execute();
@@ -213,7 +213,7 @@ describe('badge admin routes and profile badges', () => {
 	it('answers 404 for an unknown badge on update and on grant, and UNKNOWN_USER for an unknown user', async () => {
 		const target = await createTestAccount(harness);
 		await createBuilder(harness, admin.token)
-			.patch('/admin/badges/123456789012345678')
+			.patch('/admin/badge-catalog/123456789012345678')
 			.body({description: 'Ghost'})
 			.expect(HTTP_STATUS.NOT_FOUND, APIErrorCodes.NOT_FOUND)
 			.execute();
@@ -287,7 +287,7 @@ describe('badge admin routes and profile badges', () => {
 
 		for (const [builder, status, code] of refusals) {
 			await builder()
-				.post('/admin/badges')
+				.post('/admin/badge-catalog')
 				.body({icon: getPngDataUrl(), description: 'Forged'})
 				.expect(status, code)
 				.execute();
@@ -295,7 +295,7 @@ describe('badge admin routes and profile badges', () => {
 		}
 
 		const list = await createBuilder<BadgeListResponse>(harness, admin.token)
-			.get('/admin/badges')
+			.get('/admin/badge-catalog')
 			.expect(HTTP_STATUS.OK)
 			.execute();
 		expect(list).toEqual([badge]);
@@ -346,7 +346,7 @@ describe('badge admin routes and profile badges', () => {
 		expect((await getProfile(target, target)).badges).toEqual([badge]);
 
 		await createBuilder(harness, admin.token)
-			.patch(`/admin/badges/${badge.id}`)
+			.patch(`/admin/badge-catalog/${badge.id}`)
 			.body({description: 'Founding member'})
 			.expect(HTTP_STATUS.OK)
 			.execute();

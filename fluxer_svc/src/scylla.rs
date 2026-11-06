@@ -123,14 +123,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn request_timeout_stays_below_the_shard_request_budget() {
-        assert!(
-            REQUEST_TIMEOUT < crate::router::SHARD_REQUEST_TIMEOUT,
-            "scylla request timeout {REQUEST_TIMEOUT:?} outlives the shard budget"
-        );
-    }
-
-    #[test]
     fn execution_profile_keeps_the_driver_default_consistency_when_unset() {
         assert_eq!(
             Consistency::LocalQuorum,

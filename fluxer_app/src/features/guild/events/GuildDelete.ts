@@ -5,6 +5,7 @@ import Emoji from '@app/features/emoji/state/Emoji';
 import Sticker from '@app/features/emoji/state/EmojiSticker';
 import GameActivityStore from '@app/features/game_activity/state/GameActivityStore';
 import type {GatewayHandlerContext} from '@app/features/gateway/events/EventRouter';
+import {showVisitEndedToast} from '@app/features/guild/commands/GuildVisitCommands';
 import ChannelMemberCount from '@app/features/guild/state/ChannelMemberCount';
 import GuildAvailability from '@app/features/guild/state/GuildAvailability';
 import GuildCount from '@app/features/guild/state/GuildCount';
@@ -12,6 +13,7 @@ import GuildList from '@app/features/guild/state/GuildList';
 import GuildReadState from '@app/features/guild/state/GuildReadState';
 import Guilds from '@app/features/guild/state/Guilds';
 import GuildVerification from '@app/features/guild/state/GuildVerification';
+import GuildVisits from '@app/features/guild/state/GuildVisits';
 import Invites from '@app/features/invite/state/Invites';
 import GuildMembers from '@app/features/member/state/GuildMembers';
 import MemberSearch from '@app/features/member/state/MemberSearch';
@@ -35,6 +37,7 @@ export interface GuildDeletePayload {
 }
 
 export function handleGuildDelete(data: GuildDeletePayload, _context: GatewayHandlerContext): void {
+	const endedVisit = data.unavailable ? undefined : Guilds.getGuild(data.id);
 	GuildAvailability.setGuildDegraded(data.id, false);
 	GuildAvailability.handleGuildAvailability(data.id, data.unavailable, data.unavailable_hidden);
 	Guilds.handleGuildDelete({guildId: data.id, unavailable: data.unavailable});
@@ -61,4 +64,7 @@ export function handleGuildDelete(data: GuildDeletePayload, _context: GatewayHan
 	MentionFeed.handleGuildDelete(data.id);
 	UserProfile.handleGuildDelete(data.unavailable);
 	QuickSwitcher.recomputeIfOpen();
+	if (endedVisit?.visiting === true && !GuildVisits.consumeEndedByUser(data.id)) {
+		showVisitEndedToast(endedVisit.name);
+	}
 }

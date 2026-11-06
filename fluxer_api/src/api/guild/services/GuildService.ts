@@ -164,6 +164,7 @@ export class GuildService {
 			guildAuditLogService,
 			limitConfigService,
 			userRepository,
+			entityAssetService,
 		);
 		this.moderation = new GuildModerationService(
 			guildRepository,

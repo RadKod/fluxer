@@ -5,17 +5,21 @@ import {createAttachmentID, createChannelID, createMessageID} from '@app/api/Bra
 import {AnnouncementChannelsRouteGuard} from '@app/api/channel/AnnouncementChannelsRouteGuard';
 import type {MessageRequest, MessageUpdateRequest} from '@app/api/channel/MessageTypes';
 import {parseMessageRequestBody} from '@app/api/channel/services/message/MessageRequestParser';
+import {isPersonalNotesChannelId} from '@app/api/channel/services/PersonalNotesChannelRepair';
 import {viewerFromCtx} from '@app/api/experiment/ChannelThreadsGate';
 import {DefaultUserOnly, LoginRequired} from '@app/api/middleware/AuthMiddleware';
 import {RateLimitMiddleware} from '@app/api/middleware/RateLimitMiddleware';
+import {MultipartUploadRoute} from '@app/api/middleware/RequestBodyLimitMiddleware';
 import {OpenAPI} from '@app/api/middleware/ResponseTypeMiddleware';
 import {SudoModeMiddleware} from '@app/api/middleware/SudoModeMiddleware';
 import {RateLimitConfigs} from '@app/api/RateLimitConfig';
 import {readStateCapable} from '@app/api/read_state/ReadStateChannelMeta';
 import type {HonoApp} from '@app/api/types/HonoEnv';
 import {assertAccountNotLimited} from '@app/api/user/AccountLimit';
+import {assertTierAllows, NO_TIER_CONTEXT} from '@app/api/user/AccountTier';
 import {requireRequestClientIp} from '@app/api/utils/RequestClientIp';
 import {Validator} from '@app/api/Validator';
+import {TierGatedActions} from '@fluxer/constants/src/AccountTierConstants';
 import {SudoVerificationSchema} from '@fluxer/schema/src/domains/auth/AuthSchemas';
 import {
 	ChannelIdMessageIdAttachmentIdParam,
@@ -159,6 +163,7 @@ export function MessageController(app: HonoApp) {
 	);
 	app.post(
 		'/channels/:channel_id/messages',
+		MultipartUploadRoute(),
 		RateLimitMiddleware(RateLimitConfigs.CHANNEL_MESSAGE_CREATE),
 		LoginRequired,
 		Validator('param', ChannelIdParam),
@@ -254,6 +259,7 @@ export function MessageController(app: HonoApp) {
 	);
 	app.patch(
 		'/channels/:channel_id/messages/:message_id',
+		MultipartUploadRoute(),
 		RateLimitMiddleware(RateLimitConfigs.CHANNEL_MESSAGE_UPDATE),
 		LoginRequired,
 		Validator('param', ChannelIdMessageIdParam),
@@ -277,6 +283,9 @@ export function MessageController(app: HonoApp) {
 			const messageId = createMessageID(message_id);
 			const requestCache = ctx.get('requestCache');
 			const messageRequestService = ctx.get('messageRequestService');
+			if (!isPersonalNotesChannelId({userId, channelId})) {
+				assertTierAllows(user, TierGatedActions.MESSAGE, NO_TIER_CONTEXT);
+			}
 			const validatedData = await parseMessageRequestBody(ctx, user, channelId, MessageUpdateRequestSchema);
 			return ctx.json(
 				await messageRequestService.editMessage({
@@ -445,7 +454,7 @@ export function MessageController(app: HonoApp) {
 			security: ['botToken', 'bearerToken', 'sessionToken'],
 			tags: ['Channels', 'Messages'],
 			description:
-				'Deletes every message the caller has authored in the specified channel. Requires sudo mode verification. Returns 202 Accepted once matching messages have been removed.',
+				'Deletes every message the caller has authored in the specified channel and in its threads, active and archived. When the channel is a thread, only that thread is cleared. Requires sudo mode verification. Returns 202 Accepted once matching messages have been removed.',
 		}),
 		async (ctx) => {
 			const user = ctx.get('user');
@@ -481,6 +490,9 @@ export function MessageController(app: HonoApp) {
 			const user = ctx.get('user');
 			const viewer = viewerFromCtx(ctx);
 			const channelId = createChannelID(ctx.req.valid('param').channel_id);
+			if (!isPersonalNotesChannelId({userId: user.id, channelId})) {
+				assertTierAllows(user, TierGatedActions.TYPING, NO_TIER_CONTEXT);
+			}
 			const channelService = ctx.get('channelService');
 			const auth = await channelService.interactions.startTyping({viewer, userId: user.id, channelId});
 			const cooldown = await channelService.getTypingCooldown({user, viewer, auth});
@@ -506,6 +518,7 @@ export function MessageController(app: HonoApp) {
 		async (ctx) => {
 			const {channel_id, message_id} = ctx.req.valid('param');
 			assertAccountNotLimited(ctx.get('user'));
+			assertTierAllows(ctx.get('user'), TierGatedActions.MESSAGE, NO_TIER_CONTEXT);
 			return ctx.json(
 				await ctx.get('messageRequestService').crosspostMessage({
 					userId: ctx.get('user').id,

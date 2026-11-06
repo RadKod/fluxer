@@ -13,6 +13,7 @@ import * as RouterUtils from '@app/features/navigation/utils/RouterUtils';
 import {createRoute, type RouteBuilder} from '@app/features/platform/components/router/RouterBuilder';
 import {NotFound, Redirect, type RouteContext} from '@app/features/platform/components/router/RouterTypes';
 import SessionManager from '@app/features/platform/state/AuthSession';
+import {planForCheckoutProduct, rememberPurchaseIntent} from '@app/features/premium/state/PurchaseIntent';
 import {shouldShowPremiumFeatures} from '@app/features/premium/utils/PremiumUtils';
 import {saveReferralCode} from '@app/features/referral/utils/ReferralCodeStorage';
 
@@ -157,10 +158,24 @@ function createShortLinkAuthRoutes({
 	];
 }
 
-const inviteRouteEnterHandlers = ShortLinkRouteEnterPolicy.createHandlers({
+function shortLinkSignInPath(paramName: string, toSignIn: (value: string) => string) {
+	return (context: RouteContext): string | null => {
+		const value = context.params[paramName];
+		return value == null || value === '' ? null : toSignIn(value);
+	};
+}
+
+const inviteShortLinkHandlers = ShortLinkRouteEnterPolicy.createHandlers({
 	paramName: 'code',
 	openAcceptModal: ShortLinkAcceptModalOpener.openInvite,
 });
+const inviteRouteEnterHandlers = {
+	onRegisterEnter: AuthRouteRedirectPolicy.redirectRegisterToSignIn(
+		shortLinkSignInPath('code', Routes.inviteLogin),
+		inviteShortLinkHandlers.onRegisterEnter,
+	),
+	onLoginEnter: inviteShortLinkHandlers.onLoginEnter,
+};
 const giftShortLinkHandlers = ShortLinkRouteEnterPolicy.createHandlers({
 	paramName: 'code',
 	openAcceptModal: ShortLinkAcceptModalOpener.openGift,
@@ -176,7 +191,12 @@ function whenGiftingAvailable(handler: AuthRouteRedirectPolicy.AuthRouteEnterHan
 }
 
 const giftRouteEnterHandlers = {
-	onRegisterEnter: whenGiftingAvailable(giftShortLinkHandlers.onRegisterEnter),
+	onRegisterEnter: whenGiftingAvailable(
+		AuthRouteRedirectPolicy.redirectRegisterToSignIn(
+			shortLinkSignInPath('code', Routes.giftLogin),
+			giftShortLinkHandlers.onRegisterEnter,
+		),
+	),
 	onLoginEnter: whenGiftingAvailable(giftShortLinkHandlers.onLoginEnter),
 };
 const themeRouteEnterHandlers = ShortLinkRouteEnterPolicy.createHandlers({
@@ -226,6 +246,7 @@ const registerRoute = createAuthPageRoute({
 	path: '/register',
 	page: RegisterPage,
 	dataFlx: 'app.router.auth-routes.register-page',
+	onEnter: AuthRouteRedirectPolicy.redirectRegisterToSignIn(() => Routes.LOGIN),
 });
 const oauthAuthorizeRoute = createAuthPageRoute({
 	id: 'oauthAuthorize',
@@ -292,6 +313,19 @@ const authorizeIPRoute = createAuthPageRoute({
 	dataFlx: 'app.router.auth-routes.authorize-ip-page',
 });
 const pendingRoute = createAuthRedirectRoute('pending', Routes.PENDING);
+const checkoutRoute = createRoute({
+	getParentRoute: () => authLayoutRoute,
+	id: 'checkout',
+	path: Routes.CHECKOUT,
+	onEnter: (context) => {
+		const plan = planForCheckoutProduct(context.params['product'] ?? '');
+		if (plan === null || (RuntimeConfig.getSnapshotOrNull() !== null && !shouldShowPremiumFeatures())) {
+			return new Redirect(Routes.ME);
+		}
+		rememberPurchaseIntent(plan);
+		return new Redirect(Routes.PLUTONIUM);
+	},
+});
 const reportRoute = createAuthPageRoute({
 	id: 'report',
 	path: Routes.REPORT,
@@ -303,7 +337,10 @@ const themeRegisterRoute = createAuthPageRoute({
 	path: Routes.THEME_REGISTER,
 	page: ThemeRegisterPage,
 	dataFlx: 'app.router.auth-routes.theme-register-page',
-	onEnter: themeRouteEnterHandlers.onRegisterEnter,
+	onEnter: AuthRouteRedirectPolicy.redirectRegisterToSignIn(
+		shortLinkSignInPath('themeId', Routes.themeLogin),
+		themeRouteEnterHandlers.onRegisterEnter,
+	),
 });
 const themeLoginRoute = createAuthPageRoute({
 	id: 'themeLogin',
@@ -333,5 +370,6 @@ export const authRouteTree = authLayoutRoute.addChildren([
 	verifyEmailRoute,
 	authorizeIPRoute,
 	pendingRoute,
+	checkoutRoute,
 	reportRoute,
 ]);

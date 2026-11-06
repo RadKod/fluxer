@@ -4,7 +4,7 @@ import {BatchBuilder, upsertOne} from '@app/api/database/CassandraQueryExecution
 import type {BannedProfileSubstringRow} from '@app/api/database/types/AdminArchiveTypes';
 import {ProfileSubstringBlocklistCache} from '@app/api/middleware/ProfileSubstringBlocklistCache';
 import {BannedProfileSubstrings} from '@app/api/Tables';
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
+import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 
 describe('ProfileSubstringBlocklistCache', () => {
 	let cache: ProfileSubstringBlocklistCache;
@@ -12,7 +12,6 @@ describe('ProfileSubstringBlocklistCache', () => {
 		cache = new ProfileSubstringBlocklistCache();
 	});
 	afterEach(() => {
-		vi.restoreAllMocks();
 		cache.resetForTesting();
 	});
 	it('refresh replaces every scope while preserving name widening and normalized matches', async () => {

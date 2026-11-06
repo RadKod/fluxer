@@ -3,7 +3,6 @@
 use crate::{
     api::{
         client::{AdminApiClient, ApiResultExt},
-        enforcement::api_error_message,
         generated::types::CommunityRemovalBasis,
     },
     middleware::{
@@ -45,6 +44,8 @@ struct GuildDetailQuery {
     reports_page: Option<u32>,
     before: Option<String>,
     thread_cursor: Option<String>,
+    badge_q: Option<String>,
+    badge_pick: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -136,12 +137,7 @@ async fn guild_detail(
         .flatten();
 
     let tq = to_tab_query(&query);
-    let admin_acls = auth
-        .0
-        .admin_user
-        .as_ref()
-        .map(|user| user.acls.as_slice())
-        .unwrap_or(&[]);
+    let admin_acls = auth.0.acls();
     let username_sign_in = state.account_identity(&client).await.is_username();
     let tab_body = if let Some(guild) = guild.as_ref() {
         guild_tabs::render(
@@ -194,10 +190,10 @@ async fn guild_detail_post(
     let form = match MultiValueForm::from_request(request).await {
         Some(form) => form,
         None => {
-            return flash::redirect_with_flash(
+            return flash::redirect_error(
+                config,
                 &format!("{base}/guilds/{guild_id}"),
-                FlashData::error("Invalid form data"),
-                config.secure_cookies(),
+                "Invalid form data",
             );
         }
     };
@@ -268,12 +264,32 @@ async fn dispatch_guild_action(
                 "Failed to update guild features",
             )
         }
+        "update_badges" => action_result(
+            client
+                .update_guild_badges(
+                    guild_id,
+                    &form.list_values_any(&["badge_ids[]", "badge_ids"]),
+                )
+                .await,
+            "Guild badges updated",
+            "Failed to update guild badges",
+        ),
         "clear_fields" => {
             let fields = form.list_values_any(&["fields[]", "fields"]);
             action_result(
                 client.clear_guild_fields(guild_id, &fields).await,
                 "Guild fields cleared",
                 "Failed to clear guild fields",
+            )
+        }
+        "clear_role_icon" => {
+            let Some(role_id) = get("role_id") else {
+                return FlashData::error("Role ID is required");
+            };
+            action_result(
+                client.clear_guild_role_icon(guild_id, &role_id).await,
+                "Role icon cleared",
+                "Failed to clear role icon",
             )
         }
         "update_name" => {
@@ -482,7 +498,7 @@ async fn remove_community(
         Ok(_) => FlashData::success("Community removed"),
         Err(error) => {
             tracing::warn!(%error, guild_id, "admin API request failed: remove community");
-            FlashData::error(api_error_message(&error).map_or_else(
+            FlashData::error(error.detail_message().map_or_else(
                 || "Failed to remove the community".to_owned(),
                 |message| format!("Failed to remove the community: {message}"),
             ))
@@ -520,14 +536,18 @@ async fn guild_tab(
     request: Request,
 ) -> Response {
     let config = state.config();
+    if let Some(redirect) = htmx::tab_page_redirect(
+        request.headers(),
+        request.uri().query(),
+        &format!("{}/guilds", config.base_path),
+        &guild_id,
+        &tab,
+    ) {
+        return redirect;
+    }
     let csrf_token = csrf::get_csrf_token(&request);
     let client = AdminApiClient::new(state.http_client(), config, &auth.0.session);
-    let admin_acls = auth
-        .0
-        .admin_user
-        .as_ref()
-        .map(|user| user.acls.as_slice())
-        .unwrap_or(&[]);
+    let admin_acls = auth.0.acls();
 
     let tq = to_tab_query(&query);
     if let Some(markup) = guild_tabs::render(
@@ -573,6 +593,8 @@ fn to_tab_query(q: &GuildDetailQuery) -> guild_tabs::GuildTabQuery {
         reports_page: q.reports_page,
         audit_before: q.before.clone(),
         thread_cursor: q.thread_cursor.clone(),
+        badge_query: q.badge_q.clone(),
+        badge_picks: crate::api::badges::parse_badge_picks(q.badge_pick.as_deref()),
     }
 }
 

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {ResettableStates} from '@app/features/app/state/ResettableStates';
 import {initializeStore} from '@app/features/platform/utils/StoreInitialization';
 import {makeSyncedField} from '@app/features/user/state/SyncedField';
 import {NagbarDismissalsSchema} from '@fluxer/schema/src/gen/fluxer/user/preferences/v1/preferences_pb';
@@ -24,7 +25,6 @@ interface NagbarSettings {
 	visionaryMfaDismissed: boolean;
 	profilePrivacyWidenedDismissed: boolean;
 	profilePublicOfferDismissed: boolean;
-	claimAccountModalShownThisSession: boolean;
 	forceConnectionNotice: boolean;
 	forceEmailVerification: boolean;
 	forceAccountLimited: boolean;
@@ -69,7 +69,6 @@ export type NagbarToggleKey = Exclude<
 	keyof NagbarSettings,
 	| 'guildMfaRequirementDismissed'
 	| 'invitesDisabledDismissed'
-	| 'claimAccountModalShownThisSession'
 	| 'pendingBulkDeletionDismissed'
 	| 'priceAnnouncementDismissed'
 	| 'legacyPriceOptInDismissed'
@@ -96,7 +95,7 @@ export class Nagbar implements NagbarSettings {
 	profilePublicOfferDismissed = false;
 	buildEnvironmentDismissedThisSession = false;
 	scheduledMaintenanceDismissalVersion = 0;
-	claimAccountModalShownThisSession = false;
+	unclaimedAccountDismissedThisSession = false;
 	forceEmailVerification = false;
 	forceAccountLimited = false;
 	forceUnclaimedAccount = false;
@@ -232,8 +231,8 @@ export class Nagbar implements NagbarSettings {
 		this.buildEnvironmentDismissedThisSession = true;
 	}
 
-	markClaimAccountModalShown(): void {
-		this.claimAccountModalShownThisSession = true;
+	dismissUnclaimedAccountForSession(): void {
+		this.unclaimedAccountDismissedThisSession = true;
 	}
 
 	dismiss(nagbarType: NagbarToggleKey): void {
@@ -276,6 +275,10 @@ export class Nagbar implements NagbarSettings {
 		this[key] = value;
 	}
 
+	resetSessionDismissals(): void {
+		this.unclaimedAccountDismissedThisSession = false;
+	}
+
 	resetAll(): void {
 		this.iosInstallDismissed = false;
 		this.pwaInstallDismissed = false;
@@ -296,7 +299,7 @@ export class Nagbar implements NagbarSettings {
 		this.profilePrivacyWidenedDismissed = false;
 		this.profilePublicOfferDismissed = false;
 		this.buildEnvironmentDismissedThisSession = false;
-		this.claimAccountModalShownThisSession = false;
+		this.unclaimedAccountDismissedThisSession = false;
 		this.forceEmailVerification = false;
 		this.forceAccountLimited = false;
 		this.forceUnclaimedAccount = false;
@@ -362,4 +365,8 @@ export class Nagbar implements NagbarSettings {
 	}
 }
 
-export default new Nagbar();
+const nagbar = new Nagbar();
+
+ResettableStates.register(nagbar, () => nagbar.resetSessionDismissals());
+
+export default nagbar;

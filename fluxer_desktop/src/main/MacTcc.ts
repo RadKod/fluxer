@@ -175,8 +175,8 @@ export function getTccStatus(surface: TccSurface): TccStatus {
 	return statusOf(surface);
 }
 
-export async function refreshTccStatus(surface: TccSurface): Promise<TccStatus> {
-	if (surface === 'screen-recording') await refreshScreenRecordingLiveGrant();
+export async function refreshTccStatus(surface: TccSurface, liveProbe = false): Promise<TccStatus> {
+	if (surface === 'screen-recording' && liveProbe) await refreshScreenRecordingLiveGrant();
 	return statusOf(surface);
 }
 
@@ -185,8 +185,8 @@ let registered = false;
 export function registerMacTccIpcHandlers(options: MacTccIpcOptions = {}): void {
 	if (registered) return;
 	registered = true;
-	ipcMain.handle('mac-tcc:status', async (_event, surface: TccSurface): Promise<RendererTccStatus> => {
-		const status = rendererStatusOf(surface, await refreshTccStatus(surface));
+	ipcMain.handle('mac-tcc:status', async (_event, surface: TccSurface, liveProbe?: unknown): Promise<RendererTccStatus> => {
+		const status = rendererStatusOf(surface, await refreshTccStatus(surface, liveProbe === true));
 		options.onStatus?.(surface, status);
 		return status;
 	});

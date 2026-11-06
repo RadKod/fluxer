@@ -15,10 +15,12 @@ export const NATIVE_TITLEBAR_CLASS = {
 	controlClose: 'fluxer-native-titlebar__control--close',
 } as const;
 
-export const NATIVE_TITLEBAR_WORDMARK_VIEWBOX = '0 0 256 256';
+const NATIVE_TITLEBAR_DEFAULT_PRODUCT_NAME = 'sanalyer';
+
+const NATIVE_TITLEBAR_WORDMARK_VIEWBOX = '0 0 256 256';
 
 // sanalyer: the startup titlebar draws the sanalyer symbol (three squares and the tilted one) instead of Fluxer's wordmark.
-export const NATIVE_TITLEBAR_WORDMARK_PATHS: ReadonlyArray<string> = [
+const NATIVE_TITLEBAR_WORDMARK_PATHS: ReadonlyArray<string> = [
 	'M102.30 75.58h45.28a10.29 10.29 0 0 1 10.29 10.29v45.28a10.29 10.29 0 0 1 -10.29 10.29h-45.28a10.29 10.29 0 0 1 -10.29 -10.29v-45.28a10.29 10.29 0 0 1 10.29 -10.29Z',
 	'M28.21 149.67h45.28a10.29 10.29 0 0 1 10.29 10.29v45.28a10.29 10.29 0 0 1 -10.29 10.29h-45.28a10.29 10.29 0 0 1 -10.29 -10.29v-45.28a10.29 10.29 0 0 1 10.29 -10.29Z',
 	'M102.30 149.67h45.28a10.29 10.29 0 0 1 10.29 10.29v45.28a10.29 10.29 0 0 1 -10.29 10.29h-45.28a10.29 10.29 0 0 1 -10.29 -10.29v-45.28a10.29 10.29 0 0 1 10.29 -10.29Z',
@@ -37,18 +39,35 @@ export const NATIVE_TITLEBAR_CONTROL_ICON_PATH = {
 
 export type NativeTitlebarControlIconName = keyof typeof NATIVE_TITLEBAR_CONTROL_ICON_PATH;
 
-export function nativeTitlebarControlIconSvg(icon: NativeTitlebarControlIconName): string {
+function nativeTitlebarControlIconSvg(icon: NativeTitlebarControlIconName): string {
 	return (
 		'<svg viewBox="0 0 256 256" fill="currentColor" xmlns="http://www.w3.org/2000/svg">' +
 		`<path d="${NATIVE_TITLEBAR_CONTROL_ICON_PATH[icon]}"/></svg>`
 	);
 }
 
-export function nativeTitlebarWordmarkSvg(className: string = NATIVE_TITLEBAR_CLASS.wordmark): string {
+function nativeTitlebarWordmarkSvg(className: string = NATIVE_TITLEBAR_CLASS.wordmark): string {
 	const paths = NATIVE_TITLEBAR_WORDMARK_PATHS.map((d) => `<path fill="currentColor" d="${d}"/>`).join('');
 	return (
-		`<svg class="${className}" role="img" aria-label="sanalyer" xmlns="http://www.w3.org/2000/svg" ` +
+		`<svg class="${className}" role="img" aria-label="${NATIVE_TITLEBAR_DEFAULT_PRODUCT_NAME}" xmlns="http://www.w3.org/2000/svg" ` +
 		`fill="none" viewBox="${NATIVE_TITLEBAR_WORDMARK_VIEWBOX}">${paths}</svg>`
+	);
+}
+
+function escapeHtml(value: string): string {
+	return value
+		.replaceAll('&', '&amp;')
+		.replaceAll('<', '&lt;')
+		.replaceAll('>', '&gt;')
+		.replaceAll('"', '&quot;')
+		.replaceAll("'", '&#39;');
+}
+
+function nativeTitlebarProductNameHtml(productName: string): string {
+	const name = escapeHtml(productName);
+	return (
+		`<span class="${NATIVE_TITLEBAR_CLASS.wordmark}" role="img" dir="auto" aria-label="${name}" ` +
+		`style="align-items:center;display:inline-flex;font-weight:800;line-height:1">${name}</span>`
 	);
 }
 
@@ -77,7 +96,7 @@ function controlButtonHtml(
 	);
 }
 
-export function nativeTitlebarControlsHtml(labels: StartupControlLabels = DEFAULT_STARTUP_CONTROL_LABELS): string {
+function nativeTitlebarControlsHtml(labels: StartupControlLabels = DEFAULT_STARTUP_CONTROL_LABELS): string {
 	return (
 		`<div class="${NATIVE_TITLEBAR_CLASS.controls}">` +
 		controlButtonHtml('minimize', 'minimize', labels.minimize) +
@@ -87,8 +106,15 @@ export function nativeTitlebarControlsHtml(labels: StartupControlLabels = DEFAUL
 	);
 }
 
-export function buildNativeTitlebarStartupHtml(layout: NativeTitlebarLayout): string {
-	const brand = `<div class="${NATIVE_TITLEBAR_CLASS.left}">${nativeTitlebarWordmarkSvg()}</div>`;
+export function buildNativeTitlebarStartupHtml(
+	layout: NativeTitlebarLayout,
+	productName: string | null = null,
+): string {
+	const mark =
+		productName === null || productName === NATIVE_TITLEBAR_DEFAULT_PRODUCT_NAME
+			? nativeTitlebarWordmarkSvg()
+			: nativeTitlebarProductNameHtml(productName);
+	const brand = `<div class="${NATIVE_TITLEBAR_CLASS.left}">${mark}</div>`;
 	const spacer = `<div class="${NATIVE_TITLEBAR_CLASS.spacer}"></div>`;
 	if (layout === 'macos') {
 		return `${spacer}${brand}`;

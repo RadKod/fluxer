@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {requireEmailVerified} from '@app/api/auth/EmailVerificationUtils';
 import {createEmojiID, type MessageID, type UserID} from '@app/api/BrandedTypes';
 import type {ChannelRepository} from '@app/api/channel/ChannelRepository';
 import type {AuthenticatedChannel} from '@app/api/channel/services/AuthenticatedChannel';
@@ -194,7 +193,6 @@ export class MessageReactionService {
 		const requestingUser = await this.userRepository.findUnique(userId);
 		if (requestingUser) {
 			getUsernameSelectionGate().assertMayAct(requestingUser, 'reaction');
-			requireEmailVerified(requestingUser, 'reaction');
 			assertAccountNotLimited(requestingUser);
 		}
 		const guildFeatures = guild?.features ?? null;
@@ -450,10 +448,11 @@ export class MessageReactionService {
 			if (!emoji) {
 				throw InputValidationError.fromCode('emoji', ValidationErrorCodes.CUSTOM_EMOJI_NOT_FOUND);
 			}
-			if (hasGlobalExpressions === 0 && emoji.guildId.toString() !== guildId) {
+			const isExternalEmoji = emoji.guildId.toString() !== guildId;
+			if (hasGlobalExpressions === 0 && isExternalEmoji) {
 				throw InputValidationError.fromCode('emoji', ValidationErrorCodes.CUSTOM_EMOJIS_REQUIRE_PREMIUM_OUTSIDE_SOURCE);
 			}
-			if (hasPermission) {
+			if (hasPermission && isExternalEmoji) {
 				const canUseExternalEmojis = await hasPermission(Permissions.USE_EXTERNAL_EMOJIS);
 				if (!canUseExternalEmojis) {
 					throw new MissingPermissionsError();

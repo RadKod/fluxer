@@ -50,7 +50,7 @@ export const AnalyticsConsentBanner = observer(() => {
 				measurementId: Config.PUBLIC_GA4_MEASUREMENT_ID,
 				router,
 				platform: isDesktop() ? 'desktop' : 'web',
-				appVersion: Config.PUBLIC_BUILD_VERSION,
+				appVersion: Config.BUILD_VERSION,
 			}),
 		[],
 	);

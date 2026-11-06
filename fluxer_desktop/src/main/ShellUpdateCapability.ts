@@ -3,7 +3,7 @@
 import {BUILD_CHANNEL, type BuildChannel} from '@electron/common/BuildChannel';
 import {isPortableMode} from '@electron/common/UserDataPath';
 import {type AppImageTarget, isRunningFromAppImage, resolveAppImageTarget} from '@electron/main/AppImageUpdate';
-import {isFlatpakRuntime} from '@electron/main/LinuxSandbox';
+import {isFlatpakFromFluxerRepository, isFlatpakRuntime} from '@electron/main/LinuxSandbox';
 import {app} from 'electron';
 
 export const ShellUpdateCapability = Object.freeze({
@@ -22,7 +22,7 @@ export type ShellUpdatePlan =
 			readonly target: AppImageTarget;
 	  }
 	| {readonly capability: typeof ShellUpdateCapability.MANUAL_DOWNLOAD; readonly reason: 'platform' | 'unpackaged'}
-	| {readonly capability: typeof ShellUpdateCapability.MANAGED_PACKAGE};
+	| {readonly capability: typeof ShellUpdateCapability.MANAGED_PACKAGE; readonly releaseFeed: 'fluxer' | 'flathub'};
 
 interface ShellUpdateRuntime {
 	readonly channel: BuildChannel;
@@ -30,16 +30,29 @@ interface ShellUpdateRuntime {
 	readonly portable: boolean;
 	readonly flatpak: boolean;
 	readonly windowsStore: boolean;
+	readonly flatpakFromFluxerRepository: boolean;
 	readonly appImage: AppImageTarget | null;
 	readonly platform: NodeJS.Platform;
 }
 
-export function decideShellUpdatePlan(runtime: ShellUpdateRuntime): ShellUpdatePlan {
+function decideShellUpdatePlan(runtime: ShellUpdateRuntime): ShellUpdatePlan {
 	if (!runtime.packaged || runtime.channel === 'development') {
 		return {capability: ShellUpdateCapability.MANUAL_DOWNLOAD, reason: 'unpackaged'};
 	}
-	if (runtime.flatpak || (runtime.platform === 'win32' && runtime.windowsStore)) {
-		return {capability: ShellUpdateCapability.MANAGED_PACKAGE};
+	if (runtime.flatpak) {
+		return {
+			capability: ShellUpdateCapability.MANAGED_PACKAGE,
+			releaseFeed: runtime.flatpakFromFluxerRepository ? 'fluxer' : 'flathub',
+		};
+	}
+	if (runtime.platform === 'win32' && runtime.windowsStore) {
+		return {capability: ShellUpdateCapability.MANAGED_PACKAGE, releaseFeed: 'fluxer'};
+	}
+	if (runtime.platform === 'linux') {
+		if (!runtime.portable && runtime.appImage != null) {
+			return {capability: ShellUpdateCapability.SELF_UPDATE, updater: 'appimage', target: runtime.appImage};
+		}
+		return {capability: ShellUpdateCapability.MANAGED_PACKAGE, releaseFeed: 'fluxer'};
 	}
 	if (runtime.portable) {
 		return {capability: ShellUpdateCapability.MANUAL_DOWNLOAD, reason: 'platform'};
@@ -71,6 +84,7 @@ export function resolveShellUpdatePlan(): ShellUpdatePlan {
 		portable: isPortableMode(),
 		flatpak: isFlatpakRuntime(),
 		windowsStore: process.windowsStore === true,
+		flatpakFromFluxerRepository: isFlatpakFromFluxerRepository(),
 		appImage: resolveRunningAppImage(),
 		platform: process.platform,
 	});

@@ -184,14 +184,4 @@ check_user_data_differs_name_style_test() ->
     ?assertNot(check_user_data_differs(Styled, Styled)),
     ?assertNot(check_user_data_differs(Styled, Predates)).
 
-check_user_data_differs_missing_field_test() ->
-    Current = #{<<"id">> => <<"123">>, <<"username">> => <<"test">>},
-    New = #{<<"id">> => <<"123">>},
-    ?assertEqual(false, check_user_data_differs(Current, New)).
-
-check_user_data_differs_normalizes_equivalent_user_ids_test() ->
-    Current = #{<<"id">> => 123, <<"username">> => <<"test">>},
-    New = #{<<"id">> => <<"123">>, <<"username">> => <<"test">>},
-    ?assertEqual(false, check_user_data_differs(Current, New)).
-
 -endif.

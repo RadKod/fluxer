@@ -63,17 +63,13 @@ export class UserMessageDeletionService {
 
 	constructor(private readonly deps: UserMessageDeletionServiceDeps) {}
 
-	async deleteUserMessagesInScope(
-		userId: UserID,
-		scope: DeleteUserMessagesScope,
-		options: Omit<BulkDeleteUserMessagesOptions, 'channelIdAllowlist'> = {},
-	): Promise<number> {
+	async deleteUserMessagesInScope(userId: UserID, scope: DeleteUserMessagesScope): Promise<number> {
 		const channelIdAllowlist = await this.resolveChannelAllowlist(scope);
 		if (channelIdAllowlist.size === 0) {
 			Logger.debug({userId: userId.toString()}, 'No channels in scope for bulk user message deletion');
 			return 0;
 		}
-		return this.deleteUserMessagesBulk(userId, {...options, channelIdAllowlist});
+		return this.deleteUserMessagesBulk(userId, {channelIdAllowlist});
 	}
 
 	async deleteUserMessagesBulk(userId: UserID, options: BulkDeleteUserMessagesOptions = {}): Promise<number> {
@@ -163,6 +159,16 @@ export class UserMessageDeletionService {
 		if (scope.channelIds) {
 			for (const channelId of scope.channelIds) {
 				allowlist.add(channelId.toString());
+			}
+			const channels = await this.deps.channelRepository.channelData.listChannels([...scope.channelIds]);
+			for (const channel of channels) {
+				if (!channel.guildId) continue;
+				const threadIds = await this.deps.channelRepository.threads.listGuildThreadIds(channel.guildId, {
+					parents: [channel],
+				});
+				for (const threadId of threadIds) {
+					allowlist.add(threadId.toString());
+				}
 			}
 		}
 		if (scope.guildId) {

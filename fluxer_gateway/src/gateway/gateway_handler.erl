@@ -5,11 +5,6 @@
 -behaviour(cowboy_websocket).
 
 -export([init/2, websocket_init/1, websocket_handle/2, websocket_info/2, terminate/3]).
--export([new_state/0]).
-
--ifdef(TEST).
--export([parse_forwarded_for/1]).
--endif.
 
 -type state() :: #{
     version := 1 | undefined,
@@ -29,13 +24,27 @@
     pending_identify_retry_timer := {reference(), reference()} | undefined,
     connection_acquired => boolean(),
     identify_received => boolean(),
-    game_activity_clear_session => pid() | undefined
+    game_activity_clear_session => pid() | undefined,
+    session_start => session_start() | undefined,
+    deferred_payloads => [{atom(), map()}],
+    deferred_count => non_neg_integer()
 }.
 
+-type session_start() :: {
+    session_manager:start_request(), map(), pid(), {reference(), reference()}
+}.
 -type ws_frame() :: {text, binary()} | {binary, binary()}.
--type ws_result() :: {ok, state()} | {[ws_frame() | {close, integer(), binary()}], state()}.
+-type ws_command() :: ws_frame() | {close, integer(), binary()} | {active, boolean()}.
+-type ws_result() :: {ok, state()} | {[ws_command()], state()}.
+-type ws_info_result() ::
+    ws_result()
+    | {ok, state(), hibernate}
+    | {[ws_command()], state(), hibernate}.
 
--export_type([state/0, ws_frame/0, ws_result/0]).
+-export_type([state/0, ws_frame/0, ws_result/0, session_start/0]).
+
+-define(PAUSE_DEFERRED_PAYLOADS, 16).
+-define(MAX_DEFERRED_PAYLOADS, 64).
 
 -spec new_state() -> state().
 new_state() ->
@@ -57,10 +66,14 @@ new_state() ->
         request_workers => #{},
         voice_queue_timer => undefined,
         pending_identify => undefined,
-        pending_identify_retry_timer => undefined
+        pending_identify_retry_timer => undefined,
+        session_start => undefined,
+        deferred_payloads => [],
+        deferred_count => 0
     }.
 
--spec init(cowboy_req:req(), term()) -> {cowboy_websocket, cowboy_req:req(), state()}.
+-spec init(cowboy_req:req(), term()) ->
+    {cowboy_websocket, cowboy_req:req(), state(), cowboy_websocket:opts()}.
 init(Req, _Opts) ->
     QS = cowboy_req:parse_qs(Req),
     Version = parse_version(proplists:get_value(<<"v">>, QS)),
@@ -73,13 +86,24 @@ init(Req, _Opts) ->
     PeerIPBinary = extract_client_ip(Req),
     State = new_state(),
     ReqWithVersion = gateway_build_info:set_version_header(Req),
-    {cowboy_websocket, ReqWithVersion, State#{
-        version => Version,
-        encoding => Encoding,
-        compress_ctx => CompressCtx,
-        socket_pid => self(),
-        peer_ip => PeerIPBinary
-    }}.
+    {cowboy_websocket, ReqWithVersion,
+        State#{
+            version => Version,
+            encoding => Encoding,
+            compress_ctx => CompressCtx,
+            socket_pid => self(),
+            peer_ip => PeerIPBinary
+        },
+        #{
+            idle_timeout => infinity,
+            active_n => 16,
+            max_frame_size => constants:max_payload_size(),
+            req_filter => fun drop_req/1
+        }}.
+
+-spec drop_req(cowboy_req:req()) -> map().
+drop_req(_Req) ->
+    #{}.
 
 -spec websocket_init(state()) -> ws_result().
 websocket_init(#{version := 1} = State) ->
@@ -106,61 +130,87 @@ websocket_init(State) ->
 
 -spec websocket_handle(
     {text, binary()} | {binary, binary()} | term(), state()
-) -> ws_result().
-websocket_handle({text, Text}, State) when is_binary(Text) ->
+) -> ws_info_result().
+websocket_handle(Frame, State) ->
+    after_callback(handle_frame(Frame, State)).
+
+-spec handle_frame({text, binary()} | {binary, binary()} | term(), state()) -> ws_result().
+handle_frame({text, Text}, State) when is_binary(Text) ->
     handle_incoming_data(Text, State);
-websocket_handle({binary, Binary}, State) when is_binary(Binary) ->
+handle_frame({binary, Binary}, State) when is_binary(Binary) ->
     handle_incoming_data(Binary, State);
-websocket_handle(_, State) ->
+handle_frame(_, State) ->
     {ok, State}.
 
--spec websocket_info(term(), state()) -> ws_result().
-websocket_info({heartbeat_check, Token}, State) when is_reference(Token) ->
-    gateway_handler_heartbeat:handle_heartbeat_check(Token, State);
-websocket_info({dispatch, Event, Data, Seq}, State) when
+-spec websocket_info(term(), state()) -> ws_info_result().
+websocket_info(Msg, State) ->
+    case maps:get(session_start, State, undefined) of
+        undefined ->
+            after_callback(handle_message(Msg, State));
+        _SessionStart ->
+            case gateway_handler_identify:handle_session_start_message(Msg, State) of
+                no_reply -> after_callback(handle_message(Msg, State));
+                Result -> after_callback(Result)
+            end
+    end.
+
+-spec handle_message(term(), state()) -> ws_info_result().
+handle_message({heartbeat_check, Token}, State) when is_reference(Token) ->
+    hibernate(gateway_handler_heartbeat:handle_heartbeat_check(Token, State));
+handle_message({dispatch, ready, Data, Seq}, State) when is_integer(Seq), is_map(Data) ->
+    hibernate(gateway_handler_dispatch:handle_dispatch(ready, Data, Seq, State));
+handle_message({dispatch, Event, Data, Seq}, State) when
     is_integer(Seq), is_atom(Event), is_map(Data);
     is_integer(Seq), is_binary(Event), is_map(Data);
     is_integer(Seq), is_atom(Event), is_list(Data);
     is_integer(Seq), is_binary(Event), is_list(Data)
 ->
     gateway_handler_dispatch:handle_dispatch(Event, Data, Seq, State);
-websocket_info({dispatch, Event, null, Seq}, State) when
+handle_message({dispatch, Event, null, Seq}, State) when
     is_integer(Seq), is_atom(Event); is_integer(Seq), is_binary(Event)
 ->
     gateway_handler_dispatch:handle_dispatch(Event, null, Seq, State);
-websocket_info({dispatch, Event, {pre_encoded, Bin} = Data, Seq}, State) when
+handle_message({dispatch, Event, {pre_encoded, Bin} = Data, Seq}, State) when
     is_integer(Seq), is_atom(Event), is_binary(Bin);
     is_integer(Seq), is_binary(Event), is_binary(Bin)
 ->
     gateway_handler_dispatch:handle_dispatch(Event, Data, Seq, State);
-websocket_info({gateway_error, ErrorAtom}, State) when is_atom(ErrorAtom) ->
+handle_message({gateway_error, ErrorAtom}, State) when is_atom(ErrorAtom) ->
     gateway_handler_dispatch:handle_gateway_error(ErrorAtom, State);
-websocket_info(rollout_config_changed, State) ->
+handle_message(rollout_config_changed, State) ->
     gateway_handler_identify:handle_rollout_config_changed(State);
-websocket_info({retry_pending_identify, Token}, State) when is_reference(Token) ->
+handle_message({retry_pending_identify, Token}, State) when is_reference(Token) ->
     gateway_handler_identify:handle_pending_identify_retry(Token, State);
-websocket_info(session_reconnect, State) ->
+handle_message(session_reconnect, State) ->
     gateway_handler_dispatch:handle_session_reconnect(State);
-websocket_info({'DOWN', _, process, Pid, _}, #{session_pid := Pid} = State) ->
+handle_message({'DOWN', _, process, Pid, _}, #{session_pid := Pid} = State) ->
     gateway_handler_dispatch:handle_session_down(State);
-websocket_info({'DOWN', Ref, process, Pid, Reason}, State) when
+handle_message({'DOWN', Ref, process, Pid, Reason}, State) when
     is_reference(Ref), is_pid(Pid)
 ->
     gateway_handler_dispatch:handle_request_worker_down(Ref, Pid, Reason, State);
-websocket_info({gateway_request_worker_timeout, Ref, Type}, State) when is_reference(Ref) ->
+handle_message({gateway_request_worker_timeout, Ref, Type}, State) when is_reference(Ref) ->
     gateway_handler_dispatch:handle_request_worker_timeout(Ref, Type, State);
-websocket_info(forum_unreads_unknown_opcode, State) ->
+handle_message(forum_unreads_unknown_opcode, State) ->
     gateway_handler_encode:close_with_reason(unknown_opcode, <<"Unknown opcode">>, State);
-websocket_info({process_voice_queue}, State) ->
+handle_message({process_voice_queue}, State) ->
     QueueState = State#{voice_queue_timer => undefined},
     NewState = gateway_handler_voice:process_queued_voice_updates(QueueState),
     {ok, NewState};
-websocket_info(
+handle_message(
     identify_timeout, #{session_pid := undefined, pending_identify := undefined} = State
 ) ->
-    ok = gateway_connection_metrics:record_rejection(identify_timeout_reason(State)),
-    gateway_handler_encode:close_with_reason(not_authenticated, <<"Identify timeout">>, State);
-websocket_info(_, State) ->
+    %% A session start in flight counts as identified; the socket is not idle.
+    case maps:get(session_start, State, undefined) of
+        undefined ->
+            ok = gateway_connection_metrics:record_rejection(identify_timeout_reason(State)),
+            gateway_handler_encode:close_with_reason(
+                not_authenticated, <<"Identify timeout">>, State
+            );
+        _SessionStart ->
+            {ok, State}
+    end;
+handle_message(_, State) ->
     {ok, State}.
 
 %% An Identify or Resume that was held without a session (its IP was past the Identify rate) was
@@ -181,6 +231,62 @@ maybe_schedule_identify_timeout() ->
         _ ->
             ok
     end.
+
+-spec hibernate(ws_result()) -> ws_info_result().
+hibernate({Frames, State}) ->
+    {Frames, State, hibernate}.
+
+-spec after_callback(ws_info_result()) -> ws_info_result().
+after_callback({Commands, State, hibernate}) ->
+    {Replayed, NewState} = replay_deferred({Commands, State}),
+    {Replayed, NewState, hibernate};
+after_callback({Commands, State}) ->
+    {Replayed, NewState} = replay_deferred({Commands, State}),
+    case awaiting_session(NewState) of
+        true -> {Replayed, NewState, hibernate};
+        false -> {Replayed, NewState}
+    end.
+
+-spec awaiting_session(state()) -> boolean().
+awaiting_session(#{session_pid := undefined} = State) ->
+    maps:get(session_start, State, undefined) =/= undefined orelse
+        maps:get(pending_identify, State, undefined) =/= undefined;
+awaiting_session(_State) ->
+    false.
+
+-spec replay_deferred(ws_result()) -> {[ws_command()] | ok, state()}.
+replay_deferred({Commands, State} = Result) ->
+    case {maps:get(session_start, State, undefined), maps:get(deferred_payloads, State, [])} of
+        {undefined, [_ | _] = Deferred} ->
+            Cleared = State#{deferred_payloads => [], deferred_count => 0},
+            replay_payloads(lists:reverse(Deferred), commands(Commands), Cleared);
+        _ ->
+            Result
+    end.
+
+-spec replay_payloads([{atom(), map()}], [ws_command()], state()) ->
+    {[ws_command()], state()}.
+replay_payloads([], Commands, State) ->
+    case maps:get(session_start, State, undefined) of
+        undefined -> {Commands ++ [{active, true}], State};
+        _SessionStart -> {Commands, State}
+    end;
+replay_payloads([{OpAtom, Payload} | Rest], Commands, State) ->
+    case closes(Commands) of
+        true ->
+            {Commands, State};
+        false ->
+            {More, NewState} = dispatch_or_defer(OpAtom, Payload, State),
+            replay_payloads(Rest, Commands ++ commands(More), NewState)
+    end.
+
+-spec commands([ws_command()] | ok) -> [ws_command()].
+commands(ok) -> [];
+commands(Commands) -> Commands.
+
+-spec closes([ws_command()]) -> boolean().
+closes(Commands) ->
+    lists:any(fun(Command) -> element(1, Command) =:= close end, Commands).
 
 -spec terminate(term(), cowboy_req:req(), state() | term()) -> ok.
 terminate(Reason, _Req, State) when is_map(State) ->
@@ -323,6 +429,35 @@ handle_decode({ok, _}, State) ->
 handle_decode({error, _Reason}, State) ->
     gateway_handler_encode:close_with_reason(decode_error, <<"Decode failed">>, State).
 
+-spec dispatch_or_defer(atom(), map(), state()) -> ws_result().
+dispatch_or_defer(OpAtom, Payload, State) ->
+    case defer_payload(OpAtom, State) of
+        true -> defer(OpAtom, Payload, State);
+        false -> gateway_handler_dispatch:handle_opcode(OpAtom, Payload, State)
+    end.
+
+-spec defer_payload(atom(), state()) -> boolean().
+defer_payload(heartbeat, _State) ->
+    false;
+defer_payload(_OpAtom, State) ->
+    maps:get(session_start, State, undefined) =/= undefined.
+
+-spec defer(atom(), map(), state()) -> ws_result().
+defer(OpAtom, Payload, State) ->
+    Count = maps:get(deferred_count, State, 0) + 1,
+    NewState = State#{
+        deferred_payloads => [{OpAtom, Payload} | maps:get(deferred_payloads, State, [])],
+        deferred_count => Count
+    },
+    if
+        Count > ?MAX_DEFERRED_PAYLOADS ->
+            gateway_handler_encode:close_with_reason(rate_limited, <<"Rate limited">>, State);
+        Count >= ?PAUSE_DEFERRED_PAYLOADS ->
+            {[{active, false}], NewState};
+        true ->
+            {ok, NewState}
+    end.
+
 -spec dispatch_after_rate_limit(
     {ok, state()} | {rate_limited, state()} | {opcode_rate_limited, state()},
     atom(),
@@ -331,9 +466,7 @@ handle_decode({error, _Reason}, State) ->
 dispatch_after_rate_limit({ok, RLState}, OpAtom, Payload) ->
     note_resume_outcome(
         OpAtom,
-        gateway_handler_dispatch:handle_opcode(
-            OpAtom, Payload, note_identify_attempt(OpAtom, RLState)
-        )
+        dispatch_or_defer(OpAtom, Payload, note_identify_attempt(OpAtom, RLState))
     );
 dispatch_after_rate_limit({opcode_rate_limited, RLState}, presence_update, Payload) ->
     gateway_handler_dispatch:handle_rate_limited_game_clear(Payload, RLState);

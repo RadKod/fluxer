@@ -2,9 +2,6 @@
 
 import {bornYearsAgo, createTestAccount, type TestAccount} from '@app/api/auth/tests/AuthTestUtils';
 import {createReportID} from '@app/api/BrandedTypes';
-import {MessageContentService} from '@app/api/channel/services/message/MessageContentService';
-import {MessagePersistenceService} from '@app/api/channel/services/message/MessagePersistenceService';
-import {MessageSendService} from '@app/api/channel/services/message/MessageSendService';
 import {
 	acceptInvite,
 	createChannel,
@@ -15,8 +12,7 @@ import {
 import {threadsRequest} from '@app/api/channel/tests/ThreadTestUtils';
 import {clearChannelThreadsTaintCacheForTesting} from '@app/api/experiment/ChannelThreadsGate';
 import {overrideLimits} from '@app/api/feed/tests/FeedTestUtils';
-import {EmbedService} from '@app/api/infrastructure/EmbedService';
-import {ensureSessionStarted, sendMessage} from '@app/api/message/tests/MessageTestUtils';
+import {ensureSessionStarted} from '@app/api/message/tests/MessageTestUtils';
 import {ReportRepository} from '@app/api/report/ReportRepository';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
@@ -25,7 +21,7 @@ import type {ChannelResponse} from '@fluxer/schema/src/domains/channel/ChannelSc
 import type {StartForumThreadResponse} from '@fluxer/schema/src/domains/channel/ForumRequestSchemas';
 import type {ThreadChannelResponse} from '@fluxer/schema/src/domains/channel/ThreadRequestSchemas';
 import type {MessageResponse} from '@fluxer/schema/src/domains/message/MessageResponseSchemas';
-import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
+import {afterAll, beforeAll, beforeEach, describe, expect, it} from 'vitest';
 
 interface Setup {
 	owner: TestAccount;
@@ -46,10 +42,6 @@ describe('thread nsfw scope', () => {
 		await harness.reset();
 		clearChannelThreadsTaintCacheForTesting();
 		overrideLimits({feature_mature_content_settings: 1});
-	});
-
-	afterEach(() => {
-		vi.restoreAllMocks();
 	});
 
 	afterAll(async () => {
@@ -79,53 +71,13 @@ describe('thread nsfw scope', () => {
 			.execute();
 	}
 
-	function post(token: string, channelId: string, body: Record<string, unknown>, status = 200, code?: string) {
+	function post(token: string, channelId: string, body: Record<string, unknown>) {
 		return threadsRequest<MessageResponse>(harness, token)
 			.post(`/channels/${channelId}/messages`)
 			.body(body)
-			.expect(status, code)
+			.expect(200)
 			.execute();
 	}
-
-	it('allows nsfw attachments and unfurls in a thread under an nsfw parent', async () => {
-		const s = await setup();
-		const nsfwThread = await startThread(s.owner.token, s.nsfwChannelId);
-		const sfwThread = await startThread(s.owner.token, s.sfwChannelId);
-		const attachments = vi.spyOn(
-			MessagePersistenceService.prototype as unknown as {processAttachments: (...args: Array<unknown>) => unknown},
-			'processAttachments',
-		);
-		const embeds = vi.spyOn(EmbedService.prototype, 'getInitialEmbeds');
-		const scope = vi.spyOn(MessageContentService.prototype, 'isNSFWContentAllowed');
-		await post(s.owner.token, nsfwThread.id, {content: 'see https://example.com/a'});
-		expect(scope.mock.calls.at(-1)?.[0].channel?.id.toString()).toBe(s.nsfwChannelId);
-		expect(scope.mock.results.at(-1)?.value).toBe(true);
-		expect(attachments.mock.calls.at(-1)?.[1]).toBe('allow');
-		expect(embeds.mock.calls.at(-1)?.[0].nsfwMode).toBe('allow');
-		await post(s.owner.token, sfwThread.id, {content: 'see https://example.com/b'});
-		expect(scope.mock.calls.at(-1)?.[0].channel?.id.toString()).toBe(s.sfwChannelId);
-		expect(scope.mock.calls.at(-1)?.[0].channel?.isNsfw).toBe(false);
-	});
-
-	it('accepts nsfw forwards into a thread only under an nsfw parent', async () => {
-		const s = await setup();
-		const nsfwThread = await startThread(s.owner.token, s.nsfwChannelId);
-		const sfwThread = await startThread(s.owner.token, s.sfwChannelId);
-		const source = await sendMessage(harness, s.owner.token, s.sfwChannelId, 'forward me');
-		vi.spyOn(
-			MessageSendService.prototype as unknown as {snapshotsContainNsfwContent: () => boolean},
-			'snapshotsContainNsfwContent',
-		).mockReturnValue(true);
-		const reference = {type: 1, channel_id: s.sfwChannelId, message_id: source.id};
-		await post(s.owner.token, nsfwThread.id, {message_reference: reference});
-		await post(
-			s.owner.token,
-			sfwThread.id,
-			{message_reference: reference},
-			403,
-			APIErrorCodes.NSFW_CONTENT_AGE_RESTRICTED,
-		);
-	});
 
 	it('requires age verification for posts and post data under an nsfw forum', async () => {
 		const s = await setup();

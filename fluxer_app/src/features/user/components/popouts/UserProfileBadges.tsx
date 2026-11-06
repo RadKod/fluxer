@@ -1,302 +1,283 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {PRODUCT_NAME} from '@app/features/app/config/I18nDisplayConstants';
-import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
-import {mediaUrl} from '@app/features/messaging/utils/MessagingUrlUtils';
-import {Logger} from '@app/features/platform/utils/AppLogger';
-import {getPremiumProductFullName} from '@app/features/premium/utils/PremiumUtils';
+import * as ImageCacheUtils from '@app/features/messaging/utils/ImageCacheUtils';
+import * as PremiumModalCommands from '@app/features/premium/commands/PremiumModalCommands';
+import * as ModalCommands from '@app/features/ui/commands/ModalCommands';
 import FocusRing from '@app/features/ui/focus_ring/FocusRing';
 import {Tooltip} from '@app/features/ui/tooltip/Tooltip';
 import {handleExternalLinkClick} from '@app/features/ui/utils/NativeUtils';
+import {BadgeListModal} from '@app/features/user/components/modals/BadgeListModal';
 import styles from '@app/features/user/components/popouts/UserProfileBadges.module.css';
-import type {Profile} from '@app/features/user/models/Profile';
-import type {User} from '@app/features/user/models/User';
-import premiumBadgeUrl from '@app/media/images/micup-premium-badge.png';
-import {PublicUserFlags, UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
+import {profileBadgeImageUrl} from '@app/features/user/utils/ProfileUtils';
+import {
+	MORE_BADGES_DESCRIPTOR,
+	SHOW_ALL_BADGES_COUNT_DESCRIPTOR,
+	SHOW_ALL_BADGES_DESCRIPTOR,
+} from '@app/features/user/utils/UserMessageDescriptors';
+import type {ProfileBadgeResponse} from '@fluxer/schema/src/domains/user/ProfileBadgeSchemas';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
+import {PencilSimpleIcon} from '@phosphor-icons/react';
 import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
-import {useMemo} from 'react';
-
-const BADGE_ASSET_VERSION = '3';
-const PROFILE_BADGE_PRIORITY: Record<string, number> = {staff: 0, premium: 1, bug_hunter: 3};
-const logger = new Logger('UserProfileBadges');
-
-// Catalog assets have no fixed identity. Measure their alpha padding once they load; media responses allow CORS.
-const measureCatalogBadge = (event: React.SyntheticEvent<HTMLImageElement>) => {
-	const image = event.currentTarget;
-	if (!image.naturalWidth || !image.naturalHeight) return;
-	const canvas = image.ownerDocument.createElement('canvas');
-	const ratio = Math.min(1, 128 / Math.max(image.naturalWidth, image.naturalHeight));
-	canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio));
-	canvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
-	const context = canvas.getContext('2d', {willReadFrequently: true});
-	if (!context) return;
-	try {
-		context.drawImage(image, 0, 0, canvas.width, canvas.height);
-		const {data} = context.getImageData(0, 0, canvas.width, canvas.height);
-		let top = canvas.height;
-		let bottom = -1;
-		let left = canvas.width;
-		let right = -1;
-		for (let y = 0; y < canvas.height; y++) {
-			for (let x = 0; x < canvas.width; x++) {
-				if (data[(y * canvas.width + x) * 4 + 3] >= 16) {
-					top = Math.min(top, y);
-					bottom = y;
-					left = Math.min(left, x);
-					right = Math.max(right, x);
-				}
-			}
-		}
-		if (bottom >= top) {
-			image.style.setProperty('--badge-optical-scale', String(canvas.height / (bottom - top + 1)));
-			image.style.setProperty('--badge-optical-inset-left', String(left / canvas.height));
-			image.style.setProperty('--badge-optical-inset-right', String((canvas.width - right - 1) / canvas.height));
-		}
-	} catch (error) {
-		logger.warn('Could not measure catalog badge alpha padding', error);
-	}
-};
-
-// Micup: Micup served its own flag badge icons from its CDN, and they are not in the source. sanalyer uses the
-// CC BY-SA 4.0 badges that fluxer_static already ships under /badges/.
-const badgeAssetUrl = (fileName: string) =>
-	`${RuntimeConfig.staticCdnEndpoint}/badges/${fileName}?v=${BADGE_ASSET_VERSION}`;
-
-const STAFF_DESCRIPTOR = msg({
-	message: '{productName} Staff',
-	comment:
-		'Short badge title in the user profile badges popout. Preserve {productName}; it is inserted by code. English locales use Title Case for official badge titles; other locales should use natural local capitalization.',
-});
-const PARTNER_DESCRIPTOR = msg({
-	message: '{productName} Partner',
-	comment:
-		'Short badge title in the user profile badges popout. Preserve {productName}; it is inserted by code. English locales use Title Case for official badge titles; other locales should use natural local capitalization.',
-});
-const BUG_HUNTER_DESCRIPTOR = msg({
-	message: '{productName} Bug Hunter',
-	comment:
-		'Short badge title in the user profile badges popout. Preserve {productName}; it is inserted by code. English locales use Title Case for official badge titles; other locales should use natural local capitalization.',
-});
-const VISIONARY_ID_DESCRIPTOR = msg({
-	message: 'Visionary ID {visionaryIdLabel}',
-	comment:
-		'Short label in the user profile badges popout. Keep it concise. Preserve {visionaryIdLabel}; it is inserted by code.',
-});
-
-interface BaseBadge {
-	key: string;
-	priority?: number;
-	tooltip: string;
-	url?: string;
-	onClick?: () => void;
-}
-
-interface IconBadge extends BaseBadge {
-	type: 'icon';
-	iconUrl: string;
-	opticalScale?: number;
-	opticalInsets?: [number, number];
-}
-
-interface TextBadge extends BaseBadge {
-	type: 'text';
-	text: string;
-}
-
-type Badge = IconBadge | TextBadge;
+import {useEffect, useState} from 'react';
 
 interface UserProfileBadgesProps {
-	user: User;
-	profile: Profile | null;
+	badges: ReadonlyArray<ProfileBadgeResponse>;
 	isModal?: boolean;
 	isMobile?: boolean;
-	// The You page and DM welcome keep their existing crown next to the name.
-	showPremium?: boolean;
-	largeProfile?: boolean;
+	maxVisible?: number;
+	onEditBadges?: () => void;
+	'data-flx'?: string;
+}
+
+const EDIT_BADGES_DESCRIPTOR = msg({
+	message: 'Edit badges',
+	comment:
+		'Tooltip and screen reader label for the pencil button next to your own profile badges. It opens the profile settings where you choose which badges other people see.',
+});
+
+const BADGE_REVEAL_TIMEOUT_MS = 1000;
+const COMPACT_VISIBLE_BADGES = 7;
+const WIDE_VISIBLE_BADGES = 15;
+
+function openBadgeList(badges: ReadonlyArray<ProfileBadgeResponse>, dataFlx: string): void {
+	ModalCommands.push(
+		ModalCommands.modal(() => (
+			<BadgeListModal
+				items={badges.map((badge) => ({
+					key: badge.key,
+					imageUrl: profileBadgeImageUrl(badge),
+					caption: badge.caption ?? null,
+					title: badge.details?.title ?? badge.label,
+					lines: badge.details?.lines ?? [],
+					quote: badge.quote ?? null,
+					href: badge.href ?? null,
+				}))}
+				data-flx={`${dataFlx}.badge-list-modal`}
+			/>
+		)),
+	);
+}
+
+function isSettledImage(url: string): boolean {
+	return ImageCacheUtils.hasImage(url) || ImageCacheUtils.hasFailedImage(url);
+}
+
+function useBadgeImagesReady(badges: ReadonlyArray<ProfileBadgeResponse>): boolean {
+	const key = badges.flatMap((badge) => profileBadgeImageUrl(badge) ?? []).join('\n');
+	const settled = key === '' || key.split('\n').every(isSettledImage);
+	const [readyKey, setReadyKey] = useState<string | null>(null);
+	useEffect(() => {
+		if (settled) return;
+		const urls = key.split('\n');
+		let pending = urls.length;
+		const settle = () => {
+			pending -= 1;
+			if (pending === 0) setReadyKey(key);
+		};
+		const cancels = urls.map((url) => ImageCacheUtils.loadImage(url, settle, settle));
+		const timer = window.setTimeout(() => setReadyKey(key), BADGE_REVEAL_TIMEOUT_MS);
+		return () => {
+			window.clearTimeout(timer);
+			for (const cancel of cancels) cancel();
+		};
+	}, [key, settled]);
+	return settled || readyKey === key;
+}
+
+function ProfileBadgeQuote({quote, 'data-flx': dataFlx}: {quote: string; 'data-flx': string}) {
+	return (
+		<span className={styles.detailsQuote} dir="auto" data-flx={dataFlx}>
+			{`"${quote}"`}
+		</span>
+	);
+}
+
+function ProfileBadgeLabelTooltip({
+	label,
+	quote,
+	'data-flx': dataFlx,
+}: {
+	label: string;
+	quote: string;
+	'data-flx': string;
+}) {
+	return (
+		<div className={styles.details} data-flx={dataFlx}>
+			<span data-flx={`${dataFlx}.label`}>{label}</span>
+			<ProfileBadgeQuote quote={quote} data-flx={`${dataFlx}.quote`} />
+		</div>
+	);
+}
+
+function ProfileBadgeDetailsTooltip({
+	badge,
+	details,
+	'data-flx': dataFlx,
+}: {
+	badge: ProfileBadgeResponse;
+	details: NonNullable<ProfileBadgeResponse['details']>;
+	'data-flx': string;
+}) {
+	const imageUrl = profileBadgeImageUrl(badge);
+	return (
+		<div className={styles.details} data-flx={dataFlx}>
+			{imageUrl !== null && (
+				<img
+					src={imageUrl}
+					alt=""
+					className={styles.detailsArt}
+					style={badge.aspect_ratio ? {width: 'auto', aspectRatio: badge.aspect_ratio} : undefined}
+					data-flx={`${dataFlx}.art`}
+				/>
+			)}
+			<span className={styles.detailsTitle} data-flx={`${dataFlx}.title`}>
+				{details.title}
+			</span>
+			{details.lines.map((line) => (
+				<span key={line} className={styles.detailsLine} data-flx={`${dataFlx}.line`}>
+					{line}
+				</span>
+			))}
+			{badge.quote && <ProfileBadgeQuote quote={badge.quote} data-flx={`${dataFlx}.quote`} />}
+		</div>
+	);
+}
+
+function opensPremiumModal(badge: ProfileBadgeResponse): boolean {
+	if (badge.kind === 'premium') return badge.href === null;
+	return badge.kind === 'plutonium';
 }
 
 export const UserProfileBadges: React.FC<UserProfileBadgesProps> = observer(
-	({user, profile, isModal = false, isMobile = false, showPremium = true, largeProfile = false}) => {
+	({
+		badges,
+		isModal = false,
+		isMobile = false,
+		maxVisible,
+		onEditBadges,
+		'data-flx': dataFlx = 'user.user-profile-badges',
+	}) => {
 		const {i18n} = useLingui();
-		const badges = useMemo(() => {
-			const result: Array<Badge> = [];
-			// Micup: every flag badge shows on this self-hosted instance, without links to Fluxer's marketing pages.
-			if (user.flags & PublicUserFlags.STAFF) {
-				result.push({
-					type: 'icon',
-					key: 'staff',
-					iconUrl: badgeAssetUrl('staff.svg'),
-					opticalScale: 1.15,
-					opticalInsets: [19 / 512, 18 / 512],
-					tooltip: i18n._(STAFF_DESCRIPTOR, {productName: PRODUCT_NAME}),
-				});
-			}
-			if (showPremium && user.flags & PublicUserFlags.PREMIUM_BADGE) {
-				result.push({
-					type: 'icon',
-					key: 'premium',
-					iconUrl: premiumBadgeUrl,
-					opticalScale: 1.37,
-					opticalInsets: [18 / 512, 18 / 512],
-					tooltip: getPremiumProductFullName(),
-				});
-			}
-			if (user.flags & PublicUserFlags.PARTNER) {
-				result.push({
-					type: 'icon',
-					key: 'partner',
-					iconUrl: badgeAssetUrl('partner.svg'),
-					opticalScale: 1,
-					tooltip: i18n._(PARTNER_DESCRIPTOR, {productName: PRODUCT_NAME}),
-				});
-			}
-			if (user.flags & PublicUserFlags.BUG_HUNTER) {
-				result.push({
-					type: 'icon',
-					key: 'bug_hunter',
-					iconUrl: badgeAssetUrl('bug-hunter.svg'),
-					opticalScale: 1.02,
-					opticalInsets: [41 / 512, 40 / 512],
-					tooltip: i18n._(BUG_HUNTER_DESCRIPTOR, {productName: PRODUCT_NAME}),
-				});
-			}
-			if (profile?.premiumType === UserPremiumTypes.LIFETIME && profile.premiumLifetimeSequence != null) {
-				const visionaryIdLabel = `#${profile.premiumLifetimeSequence}`;
-				result.push({
-					type: 'text',
-					key: 'premium_sequence',
-					text: visionaryIdLabel,
-					tooltip: i18n._(VISIONARY_ID_DESCRIPTOR, {visionaryIdLabel}),
-				});
-			}
-			// Micup: catalog badges from the profile, in the server's order; the description is plain text.
-			for (const badge of profile?.badges ?? []) {
-				result.push({
-					type: 'icon',
-					key: `badge-${badge.id}`,
-					priority: 2,
-					iconUrl: mediaUrl(`branding/badge-${badge.id}/${badge.icon}.webp?size=128`),
-					tooltip: badge.description,
-				});
-			}
-			return showPremium
-				? result.sort(
-						(a, b) =>
-							(PROFILE_BADGE_PRIORITY[a.key] ?? a.priority ?? 4) - (PROFILE_BADGE_PRIORITY[b.key] ?? b.priority ?? 4),
-					)
-				: result;
-		}, [user.flags, profile?.premiumType, profile?.premiumLifetimeSequence, profile?.badges, i18n.locale, showPremium]);
-		if (badges.length === 0) {
+		const limit = maxVisible ?? (isModal && !isMobile ? WIDE_VISIBLE_BADGES : COMPACT_VISIBLE_BADGES);
+		const visible = badges.length > limit ? badges.slice(0, limit) : badges;
+		const hidden = badges.length - visible.length;
+		const ready = useBadgeImagesReady(visible);
+		if (badges.length === 0 && !onEditBadges) {
 			return null;
 		}
 		const containerClassName = isModal
 			? clsx(styles.containerModal, isMobile ? styles.containerModalMobile : styles.containerModalDesktop)
 			: styles.containerPopout;
-		const badgeClassName = showPremium ? styles.badge : isModal && isMobile ? styles.badgeMobile : styles.badgeDesktop;
-		const isDesktopInteractions = !isMobile;
-		const renderInteractiveWrapper = (
-			url: string | undefined,
-			onClick: (() => void) | undefined,
-			children: React.ReactNode,
-		) => {
-			if (onClick && isDesktopInteractions) {
+		const touch = isModal && isMobile;
+		const renderInteractiveWrapper = (badge: ProfileBadgeResponse, children: React.ReactNode) => {
+			if (!isMobile && opensPremiumModal(badge)) {
 				return (
 					<button
 						type="button"
 						className={clsx(styles.link, styles.linkButton)}
-						onClick={onClick}
-						data-flx="user.user-profile-badges.render-interactive-wrapper.button"
+						onClick={() => PremiumModalCommands.open()}
+						data-flx={`${dataFlx}.button`}
 					>
 						{children}
 					</button>
 				);
 			}
-			if (url && isDesktopInteractions) {
+			const href = badge.href;
+			if (href && !isMobile) {
 				return (
 					<a
-						href={url}
+						href={href}
 						target="_blank"
 						rel="noopener noreferrer"
 						className={styles.link}
-						onClick={(event) => handleExternalLinkClick(event, url)}
-						data-flx="user.user-profile-badges.render-interactive-wrapper.link"
+						onClick={(event) => handleExternalLinkClick(event, href)}
+						data-flx={`${dataFlx}.link`}
 					>
 						{children}
 					</a>
 				);
 			}
 			return (
-				<div className={styles.link} data-flx="user.user-profile-badges.render-interactive-wrapper.link--2">
+				<div className={styles.link} data-flx={`${dataFlx}.static`}>
 					{children}
 				</div>
 			);
 		};
 		return (
-			<div
-				className={clsx(containerClassName, largeProfile && styles.largeProfile)}
-				style={
-					largeProfile
-						? ({'--profile-badge-height': '17px', '--profile-badge-gap': 'var(--spacing-2)'} as React.CSSProperties)
-						: showPremium
-							? ({
-									'--profile-badge-gap': 'calc(var(--profile-badge-height, 0.75rem) * 0.570327553)',
-								} as React.CSSProperties)
-							: undefined
-				}
-				data-flx="user.user-profile-badges.div"
-			>
-				{badges.map((badge) => {
-					const sequenceClassName = isModal && isMobile ? styles.sequenceBadgeMobile : styles.sequenceBadgeDesktop;
-					// The shipped flag SVGs fill their canvas; the 128px premium PNG has 90px of visible ink.
-					const profileOpticalStyle =
-						largeProfile && ['staff', 'premium', 'partner', 'bug_hunter'].includes(badge.key)
-							? ({
-									'--badge-optical-scale': badge.key === 'premium' ? 128 / 90 : 1,
-									'--badge-optical-inset-left': badge.key === 'premium' ? 4 / 128 : 0,
-									'--badge-optical-inset-right': badge.key === 'premium' ? 5 / 128 : 0,
-								} as React.CSSProperties)
-							: undefined;
-					const badgeContent =
-						badge.type === 'icon' ? (
+			<div className={clsx(containerClassName, !ready && styles.pending)} data-flx={dataFlx}>
+				{visible.map((badge) => {
+					const imageUrl = profileBadgeImageUrl(badge);
+					const content =
+						imageUrl !== null ? (
 							<img
-								src={badge.iconUrl}
-								alt={badge.tooltip}
-								className={badgeClassName}
-								style={
-									profileOpticalStyle ??
-									(showPremium && badge.opticalScale
-										? ({
-												'--badge-optical-scale': badge.opticalScale,
-												'--badge-optical-inset-left': badge.opticalInsets?.[0],
-												'--badge-optical-inset-right': badge.opticalInsets?.[1],
-											} as React.CSSProperties)
-										: undefined)
-								}
-								crossOrigin={showPremium && badge.opticalScale === undefined ? 'anonymous' : undefined}
-								onLoad={showPremium && badge.opticalScale === undefined ? measureCatalogBadge : undefined}
-								data-flx="user.user-profile-badges.img"
+								src={imageUrl}
+								alt={badge.accessible_label ?? badge.caption ?? badge.label}
+								className={touch ? styles.badgeMobile : styles.badgeDesktop}
+								style={badge.aspect_ratio ? {width: 'auto', aspectRatio: badge.aspect_ratio} : undefined}
+								data-flx={`${dataFlx}.img`}
 							/>
 						) : (
 							<span
-								className={clsx(styles.sequenceBadge, sequenceClassName)}
+								className={clsx(styles.captionBadge, touch ? styles.captionBadgeMobile : styles.captionBadgeDesktop)}
 								aria-hidden="true"
-								data-flx="user.user-profile-badges.sequence-badge"
+								data-flx={`${dataFlx}.caption`}
 							>
-								{badge.text}
+								{badge.caption}
 							</span>
 						);
+					const details = badge.details ?? null;
+					const quote = badge.quote ?? null;
+					let tooltipText: string | (() => React.ReactNode) = badge.label;
+					if (details && !touch) {
+						tooltipText = () => (
+							<ProfileBadgeDetailsTooltip badge={badge} details={details} data-flx={`${dataFlx}.tooltip-details`} />
+						);
+					} else if (quote) {
+						tooltipText = () => (
+							<ProfileBadgeLabelTooltip label={badge.label} quote={quote} data-flx={`${dataFlx}.tooltip-label`} />
+						);
+					}
 					return (
-						<Tooltip key={badge.key} text={badge.tooltip} maxWidth="xl" data-flx="user.user-profile-badges.tooltip">
-							<FocusRing offset={-2} data-flx="user.user-profile-badges.focus-ring">
-								{renderInteractiveWrapper(badge.url, badge.onClick, badgeContent)}
+						<Tooltip key={badge.key} text={tooltipText} maxWidth="xl" data-flx={`${dataFlx}.tooltip`}>
+							<FocusRing offset={-2} data-flx={`${dataFlx}.focus-ring`}>
+								{renderInteractiveWrapper(badge, content)}
 							</FocusRing>
 						</Tooltip>
 					);
 				})}
+				{hidden > 0 && (
+					<Tooltip text={i18n._(SHOW_ALL_BADGES_DESCRIPTOR)} data-flx={`${dataFlx}.more-tooltip`}>
+						<FocusRing offset={-2} data-flx={`${dataFlx}.more-focus-ring`}>
+							<button
+								type="button"
+								className={clsx(styles.moreButton, touch ? styles.moreButtonMobile : styles.moreButtonDesktop)}
+								aria-label={i18n._(SHOW_ALL_BADGES_COUNT_DESCRIPTOR, {count: hidden})}
+								onClick={() => openBadgeList(badges, dataFlx)}
+								data-flx={`${dataFlx}.more-button`}
+							>
+								{i18n._(MORE_BADGES_DESCRIPTOR, {count: hidden})}
+							</button>
+						</FocusRing>
+					</Tooltip>
+				)}
+				{onEditBadges && (
+					<Tooltip text={i18n._(EDIT_BADGES_DESCRIPTOR)} data-flx={`${dataFlx}.edit-tooltip`}>
+						<FocusRing offset={-2} data-flx={`${dataFlx}.edit-focus-ring`}>
+							<button
+								type="button"
+								className={clsx(styles.editButton, touch ? styles.badgeMobile : styles.badgeDesktop)}
+								aria-label={i18n._(EDIT_BADGES_DESCRIPTOR)}
+								onClick={onEditBadges}
+								data-flx={`${dataFlx}.edit-button`}
+							>
+								<PencilSimpleIcon weight="bold" className={styles.editIcon} data-flx={`${dataFlx}.edit-icon`} />
+							</button>
+						</FocusRing>
+					</Tooltip>
+				)}
 			</div>
 		);
 	},

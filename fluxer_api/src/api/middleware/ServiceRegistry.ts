@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {BillingRepository} from '@app/api/billing/repositories/BillingRepository';
-import {BlueskyOAuthService} from '@app/api/bluesky/BlueskyOAuthService';
 import type {IBlueskyOAuthService} from '@app/api/bluesky/IBlueskyOAuthService';
 import {Config} from '@app/api/Config';
 import type {BlueskyOAuthConfig} from '@app/api/config/APIConfig';
@@ -12,6 +11,7 @@ import type {ILiveKitService} from '@app/api/infrastructure/ILiveKitService';
 import type {IMediaService} from '@app/api/infrastructure/IMediaService';
 import {InMemoryVoiceRoomStore} from '@app/api/infrastructure/InMemoryVoiceRoomStore';
 import type {ISnowflakeService} from '@app/api/infrastructure/ISnowflakeService';
+import type {IUnfurlerService} from '@app/api/infrastructure/IUnfurlerService';
 import type {IVoiceRoomStore} from '@app/api/infrastructure/IVoiceRoomStore';
 import {LiveKitService} from '@app/api/infrastructure/LiveKitService';
 import {MediaService as ProdMediaService} from '@app/api/infrastructure/MediaService';
@@ -29,6 +29,7 @@ import {UsernameSelectionGate} from '@app/api/user/username/UsernameSelectionGat
 import {readOptionalEnv, readOptionalIntegerEnv} from '@app/api/utils/IntegerOptions';
 import {VoiceAvailabilityService} from '@app/api/voice/VoiceAvailabilityService';
 import {VoiceRepository} from '@app/api/voice/VoiceRepository';
+import {VoiceServerHealthMonitor} from '@app/api/voice/VoiceServerHealth';
 import {VoiceServerLoadTracker} from '@app/api/voice/VoiceServerLoad';
 import {VoiceTopology} from '@app/api/voice/VoiceTopology';
 import {readUsernameMigrationStartEvidence} from '@app/api/worker/tasks/UsernameMigrationEvidence';
@@ -237,14 +238,18 @@ function resetBlueskyOAuthServiceCache(): void {
 	_blueskyOAuthGeneration = Symbol();
 }
 
-async function createBlueskyOAuthService(config: BlueskyOAuthConfig): Promise<IBlueskyOAuthService | null> {
+async function createBlueskyOAuthService(
+	config: BlueskyOAuthConfig,
+	unfurler: IUnfurlerService,
+): Promise<IBlueskyOAuthService | null> {
 	if (!config.enabled) return null;
 	if (config.keys.length === 0) {
 		Logger.warn('Bluesky OAuth is enabled but no signing keys are configured; disabling Bluesky OAuth.');
 		return null;
 	}
 	try {
-		return await BlueskyOAuthService.create(config, getKVClient(), Config.endpoints.apiPublic);
+		const {BlueskyOAuthService} = await import('@app/api/bluesky/BlueskyOAuthService');
+		return await BlueskyOAuthService.create(config, getKVClient(), unfurler, Config.endpoints.apiPublic);
 	} catch (error) {
 		Logger.error({error}, 'Bluesky OAuth initialization failed; disabling Bluesky OAuth for this configuration.');
 		return null;
@@ -252,6 +257,7 @@ async function createBlueskyOAuthService(config: BlueskyOAuthConfig): Promise<IB
 }
 
 export async function resolveBlueskyOAuthService(
+	unfurler: IUnfurlerService,
 	instanceConfigRepository?: Pick<InstanceConfigRepository, 'getEffectiveBlueskyConfig'>,
 ): Promise<IBlueskyOAuthService | null> {
 	if (_injectedBlueskyOAuthService) {
@@ -274,7 +280,7 @@ export async function resolveBlueskyOAuthService(
 	const next: BlueskyOAuthServiceSelection = {
 		config: blueskyConfig,
 		signature,
-		service: createBlueskyOAuthService(blueskyConfig),
+		service: createBlueskyOAuthService(blueskyConfig, unfurler),
 	};
 	_blueskyOAuthSelection = next;
 	return next.service;
@@ -285,6 +291,7 @@ interface VoiceResources {
 	readonly availability: VoiceAvailabilityService | null;
 	readonly liveKit: ILiveKitService;
 	readonly roomStore: IVoiceRoomStore;
+	readonly health: VoiceServerHealthMonitor | null;
 }
 
 class VoiceResourceSession {
@@ -324,6 +331,7 @@ class VoiceResourceSession {
 	}
 
 	shutdown(): Promise<void> {
+		this.current?.health?.stop();
 		this.current = null;
 		this.stopCompletion ??= this.close();
 		return this.stopCompletion;
@@ -345,17 +353,23 @@ function createVoiceSession(): VoiceResourceSession {
 			availability: null,
 			liveKit: new DisabledLiveKitService(),
 			roomStore: new InMemoryVoiceRoomStore(),
+			health: null,
 		}));
 	}
 	const kvClient = getKVClient();
 	const gatewayService = getGatewayService();
 	const topology = new VoiceTopology(new VoiceRepository(), kvClient);
-	return new VoiceResourceSession(topology, () => ({
-		topology,
-		availability: new VoiceAvailabilityService(topology, new VoiceServerLoadTracker({gatewayService})),
-		liveKit: new LiveKitService(topology),
-		roomStore: new VoiceRoomStore(kvClient),
-	}));
+	return new VoiceResourceSession(topology, () => {
+		const health = new VoiceServerHealthMonitor(topology);
+		health.start();
+		return {
+			topology,
+			availability: new VoiceAvailabilityService(topology, new VoiceServerLoadTracker({gatewayService}), health),
+			liveKit: new LiveKitService(topology),
+			roomStore: new VoiceRoomStore(kvClient),
+			health,
+		};
+	});
 }
 
 export async function ensureVoiceResourcesInitialized(): Promise<void> {
@@ -378,6 +392,10 @@ export async function shutdownVoiceResources(): Promise<void> {
 
 export function getVoiceTopology(): VoiceTopology | null {
 	return voiceSession?.resources?.topology ?? null;
+}
+
+export function getVoiceServerHealth(): VoiceServerHealthMonitor | null {
+	return voiceSession?.resources?.health ?? null;
 }
 
 export function getVoiceAvailabilityService(): VoiceAvailabilityService | null {

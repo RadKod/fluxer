@@ -12,8 +12,8 @@ resolver = "2"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-napi = {version = "3.12.6", default-features = false, features = ["dyn-symbols", "napi8"]}
-napi-derive = "3.6.7"
+napi = {version = "3.16.0", default-features = false, features = ["dyn-symbols", "napi8"]}
+napi-derive = "3.7.0"
 fluxer_rt_thread = {path = "../rt-thread"}
 fluxer_audio_mix = {path = "../audio-mix"}
 fluxer_audio_apm = {path = "../audio-apm"}
@@ -24,7 +24,7 @@ fluxer_screen_frame_bus = {path = "../screen-frame-bus"}
 pipewire = "0.10.1"
 
 [build-dependencies]
-napi-build = "2.4.3"
+napi-build = "2.6.0"
 
 [dev-dependencies]
 criterion = "0.8"

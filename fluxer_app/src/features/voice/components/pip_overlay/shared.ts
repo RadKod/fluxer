@@ -18,6 +18,7 @@ import type {PiPContent, PiPContentType} from '@app/features/ui/state/PiP';
 import type {SpringOptions} from 'framer-motion';
 import type {Room} from 'livekit-client';
 
+const PIP_MAX_VIEWPORT_FRACTION = 0.7;
 const EDGE_PADDING = 20;
 
 // The window's proportions and width limits. A stream keeps its video's 16:9; the activity is played in the window,
@@ -84,7 +85,11 @@ function buildGeometry(
 		topInset: titlebarHeight,
 		aspectRatio: shape.aspectRatio,
 		minWidth: shape.minWidth,
-		maxWidth: shape.maxWidth,
+		// Upstream sizes the window from the viewport; the shape's own cap still applies.
+		maxWidth: Math.min(
+			shape.maxWidth,
+			Math.min(viewportWidth, viewportHeight * shape.aspectRatio) * PIP_MAX_VIEWPORT_FRACTION,
+		),
 	};
 }
 

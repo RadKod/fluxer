@@ -8,6 +8,7 @@ import * as ColorUtils from '@app/features/theme/utils/ColorUtils';
 import {User} from '@app/features/user/models/User';
 import Users from '@app/features/user/state/Users';
 import {GuildMemberProfileFlags} from '@fluxer/constants/src/GuildConstants';
+import {filterDisplayRoles} from '@fluxer/constants/src/RoleDisplayUtils';
 import type {MentionReplyPreference} from '@fluxer/constants/src/UserConstants';
 import type {GuildMemberData} from '@fluxer/schema/src/domains/guild/GuildMemberSchemas';
 
@@ -88,20 +89,20 @@ export class GuildMember {
 		return (this.profileFlags & GuildMemberProfileFlags.BANNER_UNSET) !== 0;
 	}
 
-	getSortedRoles(): ReadonlyArray<GuildRole> {
+	getDisplayRoles(): ReadonlyArray<GuildRole> {
 		const guild = Guilds.getGuild(this.guildId);
 		if (!guild) {
 			return [];
 		}
-		return Array.from(this.roles)
+		const roles = Array.from(this.roles)
 			.map((roleId) => guild.roles[roleId])
-			.filter((role): role is GuildRole => role !== undefined)
-			.sort((a, b) => {
-				if (b.position !== a.position) {
-					return b.position - a.position;
-				}
-				return BigInt(a.id) < BigInt(b.id) ? -1 : 1;
-			});
+			.filter((role): role is GuildRole => role !== undefined);
+		return filterDisplayRoles(roles, RuntimeConfig.hiddenRoleIds).sort((a, b) => {
+			if (b.position !== a.position) {
+				return b.position - a.position;
+			}
+			return BigInt(a.id) < BigInt(b.id) ? -1 : 1;
+		});
 	}
 
 	getColorString(): string | undefined {
@@ -113,25 +114,15 @@ export class GuildMember {
 		return this.getHighestRole((role) => role.color !== 0);
 	}
 
+	// Micup role icons (a custom emoji) and upstream role icons (an uploaded image) both count.
 	getIconRole(): GuildRole | undefined {
-		return this.getHighestRole((role) => Boolean(role.iconEmojiId || role.unicodeEmoji));
+		return this.getHighestRole((role) => Boolean(role.icon || role.iconEmojiId || role.unicodeEmoji));
 	}
 
 	private getHighestRole(matches: (role: GuildRole) => boolean): GuildRole | undefined {
 		const guild = Guilds.getGuild(this.guildId);
 		if (!guild) return undefined;
-		let highest: GuildRole | undefined;
-		for (const roleId of this.roles) {
-			const role = guild.roles[roleId];
-			if (!role || !matches(role)) continue;
-			if (
-				!highest ||
-				role.position > highest.position ||
-				(role.position === highest.position && BigInt(role.id) < BigInt(highest.id))
-			) {
-				highest = role;
-			}
-		}
+		const highest = this.getDisplayRoles().find(matches);
 		if (highest) return highest;
 		const everyone = guild.roles[this.guildId];
 		return everyone && matches(everyone) ? everyone : undefined;

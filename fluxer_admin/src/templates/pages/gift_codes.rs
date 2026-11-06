@@ -96,8 +96,8 @@ pub fn gift_codes_page(
     let content = html! {
         (page_header(
             "Gift Codes",
-            Some("Create one-use Plus or item gift URLs. Plus codes carry a fixed positive \
-                  duration; lifetime gifts cannot be generated here."),
+            Some("Create one-use Plus or item gift URLs. Plus codes last for a set time \
+                  or for life."),
         ))
         @if premium.needs_mirror_mode {
             (card(html! {
@@ -180,8 +180,8 @@ pub fn gift_codes_page(
                             (form_field_group(
                                 "Duration unit", "gift-duration-type",
                                 true, None,
-                                Some("Days, weeks, months, or years. \
-                                      No lifetime option is available."),
+                                Some("Days, weeks, months, years, or lifetime. \
+                                      Lifetime ignores the quantity."),
                                 html! {
                                     select id="gift-duration-type" name="duration_type"
                                         required class=(FORM_SELECT_CLASS) {
@@ -189,6 +189,7 @@ pub fn gift_codes_page(
                                         option value="weeks" { "Weeks" }
                                         option value="months" selected { "Months" }
                                         option value="years" { "Years" }
+                                        option value="lifetime" { "Lifetime" }
                                     }
                                 },
                             ))

@@ -32,7 +32,7 @@ const STYLE_SOURCES: ReadonlyArray<string> = Object.freeze([
 const FONT_SOURCES: ReadonlyArray<string> = Object.freeze([
 	STATIC_CDN_URL,
 	'https://fonts.gstatic.com',
-	'https://api.fonts.coollabs.io',
+	'https://cdn.fonts.coollabs.io',
 ]);
 
 const CONNECT_SOURCES: ReadonlyArray<string> = Object.freeze([
@@ -90,7 +90,7 @@ export function buildLocalAppCSP({nonce, cleartextInstanceOrigins = []}: LocalAp
 	extendFrom(media, cleartextSources);
 	directives.push(`media-src ${media.join(' ')}`);
 
-	const font = [SELF_SOURCE, 'data:'];
+	const font = [SELF_SOURCE, 'blob:', 'data:'];
 	extendFrom(font, FONT_SOURCES);
 	directives.push(`font-src ${font.join(' ')}`);
 
@@ -98,6 +98,10 @@ export function buildLocalAppCSP({nonce, cleartextInstanceOrigins = []}: LocalAp
 	extendFrom(connect, CONNECT_SOURCES);
 	extendFrom(connect, DESKTOP_CEILING_CONNECT_SOURCES);
 	extendFrom(connect, cleartextSources);
+	extendFrom(
+		connect,
+		cleartextSources.map((source) => `ws:${source.slice('http:'.length)}`),
+	);
 	directives.push(`connect-src ${connect.join(' ')}`);
 
 	const frame = [SELF_SOURCE];

@@ -916,13 +916,18 @@ export class DesktopOutboundHTTP {
 		return new Promise<DesktopOutboundHTTPMessage>((resolve, reject) => {
 			const secure = request.url.protocol === 'https:';
 			const transport = secure ? https : http;
-			const clientRequest = transport.request(request.url, {
+			const connection = new AbortController();
+			const connectionOptions = {
 				agent: secure ? this.httpsAgent : this.httpAgent,
+				connectionSignal: connection.signal,
 				lookup: createPinnedHostLookup(request.url.hostname, pinned),
 				method: 'GET',
-			});
+			};
+			const clientRequest = transport.request(request.url, connectionOptions);
 			const deadline = setTimeout(() => {
-				clientRequest.destroy(new DesktopOutboundHTTPTimeoutError());
+				const error = new DesktopOutboundHTTPTimeoutError();
+				clientRequest.destroy(error);
+				connection.abort(error);
 			}, request.timeoutMs);
 			deadline.unref();
 			let settled = false;
@@ -1111,23 +1116,33 @@ export class DesktopOutboundHTTP {
 			let attemptsRemaining = isReplayableRequest(request) ? DESKTOP_OUTBOUND_HTTP_STALE_SOCKET_ATTEMPTS : 0;
 			let active: http.ClientRequest | null = null;
 			let terminated = false;
+			const connection = new AbortController();
+			const destroyActive = (error: Error): void => {
+				active?.destroy(error);
+				connection.abort(error);
+			};
+			const releaseUnconnectedBinding = (): void => {
+				const socket = active?.socket;
+				if (socket == null || socket.connecting) {
+					this.markBindingUnreachable(binding);
+				}
+			};
 			const timeout = setTimeout(() => {
 				terminated = true;
-				active?.destroy(new DesktopOutboundHTTPRequestTimeoutError(target.toString(), request.timeoutMs));
+				releaseUnconnectedBinding();
+				destroyActive(new DesktopOutboundHTTPRequestTimeoutError(target.toString(), request.timeoutMs));
 			}, request.timeoutMs);
 			timeout.unref();
 			const onAbort = (): void => {
 				terminated = true;
-				active?.destroy(new DesktopOutboundHTTPRequestAbortedError(target.toString()));
+				releaseUnconnectedBinding();
+				destroyActive(new DesktopOutboundHTTPRequestAbortedError(target.toString()));
 			};
 			request.signal?.addEventListener('abort', onAbort, {once: true});
 			const settle = (): void => {
 				clearTimeout(timeout);
 				request.signal?.removeEventListener('abort', onAbort);
 				release();
-			};
-			const destroyActive = (error: Error): void => {
-				active?.destroy(error);
 			};
 			if (request.signal?.aborted === true) {
 				settle();
@@ -1136,12 +1151,14 @@ export class DesktopOutboundHTTP {
 			}
 			const attempt = (): void => {
 				const transport = target.protocol === 'https:' ? https : http;
-				const clientRequest = transport.request(target, {
+				const connectionOptions = {
 					agent: target.protocol === 'https:' ? this.originRequestHttpsAgent : this.originRequestHttpAgent,
+					connectionSignal: connection.signal,
 					headers: requestHeaders(request.headers),
 					lookup: createPinnedHostLookup(target.hostname, binding.address),
 					method: request.method,
-				});
+				};
+				const clientRequest = transport.request(target, connectionOptions);
 				active = clientRequest;
 				clientRequest.on('error', (error) => {
 					if (

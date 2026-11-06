@@ -3,6 +3,7 @@
 import {AdminAuditReadActions} from '@app/api/admin/AdminAuditActions';
 import {recordAdminRead} from '@app/api/admin/AdminAuditRecorder';
 import {mapUserToAdminResponse} from '@app/api/admin/models/UserTypes';
+import {createSignInLink} from '@app/api/auth/SignInLinks';
 import {createUserID} from '@app/api/BrandedTypes';
 import {enforcementActor} from '@app/api/enforcement/EnforcementActor';
 import {
@@ -14,20 +15,29 @@ import {RateLimitMiddleware} from '@app/api/middleware/RateLimitMiddleware';
 import {OpenAPI} from '@app/api/middleware/ResponseTypeMiddleware';
 import {getInstanceConfigRepository} from '@app/api/middleware/ServiceSingletons';
 import {RateLimitConfigs} from '@app/api/RateLimitConfig';
-import type {HonoApp} from '@app/api/types/HonoEnv';
+import type {HonoApp, HonoEnv} from '@app/api/types/HonoEnv';
 import {holdBucket} from '@app/api/user/username/UsernameOwnershipRepository';
 import {inputValidationErrorFromZodIssues, Validator} from '@app/api/Validator';
+import {EmailDeliveryStates} from '@fluxer/constants/src/AccountConfigConstants';
+import {AccountIdentityModes} from '@fluxer/constants/src/AccountIdentityConstants';
 import {AdminACLs} from '@fluxer/constants/src/AdminACLs';
+import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
+import {EmailDeliveryOffError} from '@fluxer/errors/src/domains/auth/EmailDeliveryOffError';
+import {UsernameSignInOnlyError} from '@fluxer/errors/src/domains/auth/UsernameSignInOnlyError';
+import {AccessDeniedError} from '@fluxer/errors/src/domains/core/AccessDeniedError';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
 import {ListUserGuildsResponse} from '@fluxer/schema/src/domains/admin/AdminGuildSchemas';
 import {SearchUsersResponse} from '@fluxer/schema/src/domains/admin/AdminSchemas';
 import {
 	AdminAclListResponse,
 	AdminPasswordResetLinkResponse,
+	AdminSignInLinkResponse,
 	AdminUserAclsRequest,
 	AdminUserBotStatusRequest,
 	AdminUserChangeLogQuery,
 	AdminUserClearFieldsRequest,
+	AdminUserCreateRequest,
+	AdminUserCreateResponse,
 	AdminUserDeletionCancelRequest,
 	AdminUserDeletionScheduleRequest,
 	AdminUserDmChannelListQuery,
@@ -45,6 +55,8 @@ import {
 	AdminUserTraitsRequest,
 	AdminUserUsernameUpdateRequest,
 	AdminUserWebAuthnCredentialParam,
+	ListAppSessionsQuery,
+	ListAppSessionsResponse,
 	ListUserChangeLogResponseSchema,
 	ListUserRelationshipsResponse,
 	ListUserSessionsResponse,
@@ -72,6 +84,25 @@ import {
 } from '@fluxer/schema/src/domains/admin/UsernameSchemas';
 import {WebAuthnCredentialListResponse} from '@fluxer/schema/src/domains/auth/AuthSchemas';
 import {UserIdParam} from '@fluxer/schema/src/domains/common/CommonParamSchemas';
+import {createMiddleware} from 'hono/factory';
+
+const RequireUsernameIdentityOrNoEmailDelivery = createMiddleware<HonoEnv>(async (ctx, next) => {
+	const repository = ctx.get('instanceConfigRepository');
+	if (
+		(await repository.getAccountIdentityMode()) !== AccountIdentityModes.USERNAME &&
+		(await repository.getEmailDeliveryState()) === EmailDeliveryStates.ON
+	) {
+		throw new UsernameSignInOnlyError();
+	}
+	await next();
+});
+
+const RequireEmailDeliveryOn = createMiddleware<HonoEnv>(async (ctx, next) => {
+	if ((await ctx.get('instanceConfigRepository').getEmailDeliveryState()) !== EmailDeliveryStates.ON) {
+		throw new EmailDeliveryOffError();
+	}
+	await next();
+});
 
 export function UserAdminController(app: HonoApp) {
 	app.get(
@@ -261,7 +292,7 @@ export function UserAdminController(app: HonoApp) {
 		async (ctx) => {
 			const canReviewRegistrations = hasAdminACL(ctx.get('adminUserAcls'), AdminACLs.REGISTRATION_REVIEW);
 			const [user, pendingRegistrations] = await Promise.all([
-				mapUserToAdminResponse(ctx.get('user'), ctx.get('cacheService')),
+				mapUserToAdminResponse(ctx.get('user'), ctx.get('cacheService'), undefined, ctx.get('requestLocale')),
 				canReviewRegistrations ? getInstanceConfigRepository().getPendingRegistrations() : null,
 			]);
 			return ctx.json({user, pending_registration_count: pendingRegistrations?.length ?? null});
@@ -280,14 +311,16 @@ export function UserAdminController(app: HonoApp) {
 			security: 'adminApiKey',
 			tags: 'Admin',
 			description:
-				'Lists and searches users. Exactly one selector is honoured, in this precedence order: user_id, resolve, email, last_active_ip, then the indexed q search. The resolve selector takes one exact identifier, which may be a username#discriminator tag, a user ID, an email address, or a Stripe subscription ID. The email and user_id selectors ignore limit and offset. Requires USER_LOOKUP permission.',
+				'Lists and searches users. Exactly one selector is honoured, in this precedence order: user_id, resolve, email, last_active_ip, acl, then the indexed q search. The acl selector lists the users granted one admin permission, ordered by user ID. The resolve selector takes one exact identifier, which may be a username#discriminator tag, a user ID, an email address, or a Stripe subscription ID. The email and user_id selectors ignore limit and offset. Requires USER_LOOKUP permission.',
 		}),
 		async (ctx) => {
 			const adminService = ctx.get('adminService');
 			const adminUserAcls = ctx.get('adminUserAcls');
 			const query = ctx.req.valid('query');
-			const userIds =
-				query.user_id === undefined ? undefined : Array.isArray(query.user_id) ? query.user_id : [query.user_id];
+			let userIds: Array<string> | undefined;
+			if (query.user_id !== undefined) {
+				userIds = Array.isArray(query.user_id) ? query.user_id : [query.user_id];
+			}
 			if (userIds || query.resolve !== undefined) {
 				if (!userIds && query.resolve?.includes('@')) {
 					requireGrantedAdminACLs(adminUserAcls, [AdminACLs.USER_VIEW_EMAIL]);
@@ -296,7 +329,11 @@ export function UserAdminController(app: HonoApp) {
 				if (!parsed.success) {
 					throw inputValidationErrorFromZodIssues(parsed.error.issues);
 				}
-				const {users} = await adminService.userService.lookupService.lookupUser(parsed.data, adminUserAcls);
+				const {users} = await adminService.userService.lookupService.lookupUser(
+					parsed.data,
+					adminUserAcls,
+					ctx.get('requestLocale'),
+				);
 				await recordAdminRead(ctx, {
 					targetType: 'user',
 					targetId: 0n,
@@ -311,7 +348,14 @@ export function UserAdminController(app: HonoApp) {
 				});
 				return ctx.json({users, total: users.length});
 			}
-			const selector = query.email?.trim() ? 'email' : query.last_active_ip?.trim() ? 'last_active_ip' : 'search';
+			let selector: 'email' | 'last_active_ip' | 'acl' | 'search' = 'search';
+			if (query.email?.trim()) {
+				selector = 'email';
+			} else if (query.last_active_ip?.trim()) {
+				selector = 'last_active_ip';
+			} else if (query.acl !== undefined) {
+				selector = 'acl';
+			}
 			if (selector === 'email') {
 				requireGrantedAdminACLs(adminUserAcls, [AdminACLs.USER_VIEW_EMAIL]);
 			} else if (selector === 'last_active_ip') {
@@ -322,10 +366,12 @@ export function UserAdminController(app: HonoApp) {
 					query: query.q,
 					email: query.email,
 					last_active_ip: query.last_active_ip,
+					acl: selector === 'acl' ? query.acl : undefined,
 					limit: query.limit,
 					offset: query.offset,
 				},
 				adminUserAcls,
+				ctx.get('requestLocale'),
 			);
 			await recordAdminRead(ctx, {
 				targetType: 'user',
@@ -334,6 +380,7 @@ export function UserAdminController(app: HonoApp) {
 				metadata: {
 					selector,
 					has_query: selector === 'search' && query.q?.trim() ? true : undefined,
+					acl: selector === 'acl' ? query.acl : undefined,
 					limit: selector === 'email' ? undefined : query.limit,
 					offset: selector === 'email' ? undefined : query.offset,
 					result_count: response.users.length,
@@ -341,6 +388,33 @@ export function UserAdminController(app: HonoApp) {
 				},
 			});
 			return ctx.json(response);
+		},
+	);
+	app.post(
+		'/admin/users',
+		RateLimitMiddleware(RateLimitConfigs.ADMIN_USER_MODIFY),
+		requireAdminACL(AdminACLs.WILDCARD),
+		Validator('json', AdminUserCreateRequest),
+		OpenAPI({
+			operationId: 'create_admin_user',
+			summary: 'Create user',
+			responseSchema: AdminUserCreateResponse,
+			statusCode: 200,
+			security: 'adminApiKey',
+			tags: 'Admin',
+			description:
+				'Create an account with no password and return a one-time password reset link for it. Hand the link to the new user, who opens it to choose a password. It works once and expires after an hour. On an instance where people sign in with email, an email address is required, and it is verified like a new registration when the instance sends email. Set admin to give the account full admin access. Creates audit log entries. Requires the * permission.',
+		}),
+		async (ctx) => {
+			const adminService = ctx.get('adminService');
+			return ctx.json(
+				await adminService.userService.creationService.createUser(
+					ctx.req.valid('json'),
+					ctx.get('adminUserId'),
+					ctx.get('auditLogReason'),
+					ctx.get('adminUserAcls'),
+				),
+			);
 		},
 	);
 	app.get(
@@ -362,7 +436,11 @@ export function UserAdminController(app: HonoApp) {
 			const adminService = ctx.get('adminService');
 			const adminUserAcls = ctx.get('adminUserAcls');
 			const {user_id: userId} = ctx.req.valid('param');
-			const response = await adminService.userService.lookupService.lookupUser({user_ids: [userId]}, adminUserAcls);
+			const response = await adminService.userService.lookupService.lookupUser(
+				{user_ids: [userId]},
+				adminUserAcls,
+				ctx.get('requestLocale'),
+			);
 			await recordAdminRead(ctx, {
 				targetType: 'user',
 				targetId: userId,
@@ -617,6 +695,38 @@ export function UserAdminController(app: HonoApp) {
 			);
 		},
 	);
+	app.get(
+		'/admin/app-sessions',
+		RateLimitMiddleware(RateLimitConfigs.ADMIN_LOOKUP),
+		requireAdminACL(AdminACLs.USER_LIST_SESSIONS),
+		Validator('query', ListAppSessionsQuery),
+		OpenAPI({
+			operationId: 'list_admin_app_sessions',
+			summary: 'List native app sessions by platform and release channel',
+			responseSchema: ListAppSessionsResponse,
+			statusCode: 200,
+			security: 'adminApiKey',
+			tags: 'Admin',
+			description:
+				'Lists active sessions whose native app last reported the given platform and release channel, with the app version, build number and beta number it reported. Pages hold up to 200 sessions and can hold fewer while next_cursor is still set. Requires USER_LIST_SESSIONS permission.',
+		}),
+		async (ctx) => {
+			const query = ctx.req.valid('query');
+			const result = await ctx.get('adminService').userService.securityService.listAppSessions(query);
+			await recordAdminRead(ctx, {
+				targetType: 'user',
+				targetId: 0n,
+				action: AdminAuditReadActions.LIST_APP_SESSIONS,
+				metadata: {
+					platform: query.platform,
+					release_channel: query.release_channel,
+					has_cursor: query.after !== undefined,
+					result_count: result.sessions.length,
+				},
+			});
+			return ctx.json(result);
+		},
+	);
 	app.delete(
 		'/admin/users/:user_id/sessions',
 		RateLimitMiddleware(RateLimitConfigs.ADMIN_USER_MODIFY),
@@ -741,7 +851,7 @@ export function UserAdminController(app: HonoApp) {
 			security: 'adminApiKey',
 			tags: 'Admin',
 			description:
-				'Clears profile fields such as the bio, avatar or display name. An enforcement basis saves the old values as evidence, records a profile reset decision and sends its notice by system DM and email. Creates audit log entry. Requires USER_UPDATE_PROFILE permission.',
+				'Clears profile fields such as the bio, avatar or display name. An enforcement basis saves the old values as evidence, records a profile reset decision and sends its notice by system DM and email, leaving out the system DM when the instance has direct messages turned off. Creates audit log entry. Requires USER_UPDATE_PROFILE permission.',
 		}),
 		async (ctx) => {
 			const {user_id: userId} = ctx.req.valid('param');
@@ -952,6 +1062,7 @@ export function UserAdminController(app: HonoApp) {
 		RateLimitMiddleware(RateLimitConfigs.ADMIN_USER_MODIFY),
 		requireAdminACL(AdminACLs.USER_UPDATE_EMAIL),
 		RequireEmailAccountIdentity,
+		RequireEmailDeliveryOn,
 		Validator('param', UserIdParam),
 		OpenAPI({
 			operationId: 'send_admin_user_password_reset',
@@ -961,7 +1072,7 @@ export function UserAdminController(app: HonoApp) {
 			security: 'adminApiKey',
 			tags: 'Admin',
 			description:
-				'Send password reset email to user with reset link. User must use link within expiry window. Creates audit log entry. Requires USER_UPDATE_EMAIL permission.',
+				'Send password reset email to user with reset link. User must use link within expiry window. Creates audit log entry. Requires USER_UPDATE_EMAIL permission. Fails with EMAIL_DELIVERY_OFF while the instance does not send email.',
 		}),
 		async (ctx) => {
 			const adminService = ctx.get('adminService');
@@ -976,7 +1087,7 @@ export function UserAdminController(app: HonoApp) {
 		'/admin/users/:user_id/password-reset-link',
 		RateLimitMiddleware(RateLimitConfigs.ADMIN_USER_MODIFY),
 		requireAdminACL(AdminACLs.USER_CREATE_PASSWORD_RESET_LINK),
-		RequireUsernameAccountIdentity,
+		RequireUsernameIdentityOrNoEmailDelivery,
 		Validator('param', UserIdParam),
 		OpenAPI({
 			operationId: 'create_admin_user_password_reset_link',
@@ -986,7 +1097,7 @@ export function UserAdminController(app: HonoApp) {
 			security: 'adminApiKey',
 			tags: 'Admin',
 			description:
-				'Create a one-time password reset link on an instance where people sign in with a username. Hand the link to the user yourself. It works once and expires after an hour. Deletes the recovery kit of the account. Creates audit log entry. Requires USER_CREATE_PASSWORD_RESET_LINK permission and every ACL the target account holds. Fails with USERNAME_SIGN_IN_ONLY on email instances.',
+				'Create a one-time password reset link on an instance where people sign in with a username, or on an email instance that does not send email. Hand the link to the user yourself. It works once and expires after an hour. Deletes the recovery kit of the account. Creates audit log entry. Requires USER_CREATE_PASSWORD_RESET_LINK permission and every ACL the target account holds. Fails with USERNAME_SIGN_IN_ONLY on an email instance that sends email, where people reset their password themselves.',
 		}),
 		async (ctx) => {
 			const adminService = ctx.get('adminService');
@@ -1000,6 +1111,35 @@ export function UserAdminController(app: HonoApp) {
 					auditLogReason,
 					ctx.get('adminUserAcls'),
 				),
+			);
+		},
+	);
+	app.post(
+		'/admin/users/:user_id/sign-in-link',
+		RateLimitMiddleware(RateLimitConfigs.ADMIN_USER_MODIFY),
+		requireAdminACL(AdminACLs.WILDCARD),
+		Validator('param', UserIdParam),
+		OpenAPI({
+			operationId: 'create_admin_user_sign_in_link',
+			summary: 'Create admin sign-in link',
+			responseSchema: AdminSignInLinkResponse,
+			statusCode: 200,
+			security: 'adminApiKey',
+			tags: 'Admin',
+			description:
+				'Create a one-time sign-in link for an account that holds `*`. Opening the link signs that account in and authorizes the IP address of the browser, without a password or an email. It works once and expires after 15 minutes. Only served on the operator socket. Creates audit log entry, and using the link creates another.',
+		}),
+		async (ctx) => {
+			if (ctx.get('authTokenType') !== 'operator') {
+				throw new AccessDeniedError();
+			}
+			const {user_id: userId} = ctx.req.valid('param');
+			return ctx.json(
+				await createSignInLink(ctx.get('apiContext'), ctx.get('adminService').auditService, {
+					userId: createUserID(userId),
+					adminUserId: ctx.get('adminUserId'),
+					auditLogReason: ctx.get('auditLogReason'),
+				}),
 			);
 		},
 	);
@@ -1045,7 +1185,7 @@ export function UserAdminController(app: HonoApp) {
 			security: 'adminApiKey',
 			tags: 'Admin',
 			description:
-				'Suspend the account for duration_hours, or permanently with a duration of zero, and record the enforcement decision behind it. The decision is written first, then the suspension, then linked reports are resolved and the notice is sent. The X-Audit-Log-Reason header is required and becomes the first note. remove_evidence queues removal of the evidence messages after they are snapshotted. block_networks blocks addresses the account used in the last 30 days, for 90 days unless days says otherwise, and only with a permanent suspension. Exempt and special-purpose addresses, and addresses already blocked permanently or by another decision, are skipped and listed in skipped_ips. An address on which another account that is not suspended or closed was last active is refused with ENFORCEMENT_NETWORK_SHARED. Returns 409 when the account is closed. Requires USER_TEMP_BAN permission, plus MESSAGE_LOOKUP for evidence, REPORT_VIEW and REPORT_RESOLVE for reports, MESSAGE_SHRED for remove_evidence, and BAN_IP_ADD and USER_VIEW_IP for block_networks.',
+				'Suspend the account for duration_hours, or permanently with a duration of zero, and record the enforcement decision behind it. The decision is written first, then the suspension, then linked reports are resolved and the notice is sent. The X-Audit-Log-Reason header is required and becomes the first note. remove_evidence queues removal of the reported messages and the evidence you listed after they are snapshotted, and keeps the other messages from the reports. block_networks blocks addresses the account used in the last 30 days, for 90 days unless days says otherwise, and only with a permanent suspension. Exempt and special-purpose addresses, and addresses already blocked permanently or by another decision, are skipped and listed in skipped_ips. An address on which another account that is not suspended or closed was last active is refused with ENFORCEMENT_NETWORK_SHARED. Returns 409 when the account is closed. Requires USER_TEMP_BAN permission, plus MESSAGE_LOOKUP for evidence, REPORT_VIEW and REPORT_RESOLVE for reports, MESSAGE_SHRED for remove_evidence, and BAN_IP_ADD and USER_VIEW_IP for block_networks.',
 		}),
 		async (ctx) => {
 			const {user_id: userId} = ctx.req.valid('param');
@@ -1090,7 +1230,7 @@ export function UserAdminController(app: HonoApp) {
 			security: 'adminApiKey',
 			tags: 'Admin',
 			description:
-				'Record a warning decision and send its notice by email and system DM. Nothing about the account changes. The X-Audit-Log-Reason header is required and becomes the first note. Refused for reasons that only allow a suspension or content removal. Requires USER_UPDATE_FLAGS permission, plus MESSAGE_LOOKUP for evidence and REPORT_VIEW and REPORT_RESOLVE for reports.',
+				'Record a warning decision and send its notice by email and system DM, leaving out the system DM when the instance has direct messages turned off. Nothing about the account changes. The X-Audit-Log-Reason header is required and becomes the first note. Refused for reasons that only allow a suspension or content removal. Requires USER_UPDATE_FLAGS permission, plus MESSAGE_LOOKUP for evidence and REPORT_VIEW and REPORT_RESOLVE for reports.',
 		}),
 		async (ctx) => {
 			const {user_id: userId} = ctx.req.valid('param');
@@ -1115,7 +1255,7 @@ export function UserAdminController(app: HonoApp) {
 			security: 'adminApiKey',
 			tags: 'Admin',
 			description:
-				'Record an enforcement decision that limits one feature and send its notice by email and system DM. Direct messages set SPAMMER and are allowed for spam, automation, fraud and malware reasons only. Reports set REPORT_BANNED until ends_at, 90 days by default and at most 365, and expire on their own. Purchases set PURCHASE_DISABLED for payment reasons. The X-Audit-Log-Reason header is required and becomes the first note. Requires USER_UPDATE_FLAGS permission, plus MESSAGE_LOOKUP for evidence and REPORT_VIEW and REPORT_RESOLVE for reports.',
+				'Record an enforcement decision that limits one feature and send its notice by email and system DM, leaving out the system DM when the instance has direct messages turned off. Direct messages set SPAMMER and are allowed for spam, automation, fraud and malware reasons only. Reports set REPORT_BANNED until ends_at, 90 days by default and at most 365, and expire on their own. Purchases set PURCHASE_DISABLED for payment reasons. The X-Audit-Log-Reason header is required and becomes the first note. Requires USER_UPDATE_FLAGS permission, plus MESSAGE_LOOKUP for evidence and REPORT_VIEW and REPORT_RESOLVE for reports.',
 		}),
 		async (ctx) => {
 			const {user_id: userId} = ctx.req.valid('param');
@@ -1261,7 +1401,7 @@ export function UserAdminController(app: HonoApp) {
 			security: 'adminApiKey',
 			tags: 'Admin',
 			description:
-				'Set or update user trait attributes and profile metadata. Traits customize user display and features. Creates audit log entry. Requires USER_UPDATE_TRAITS permission.',
+				'Set or update user trait attributes and profile metadata. Traits customize user display and features. Trait names are stored in lowercase, and limit rules match them without regard to case. Creates audit log entry. Requires USER_UPDATE_TRAITS permission.',
 		}),
 		async (ctx) => {
 			const adminService = ctx.get('adminService');
@@ -1269,9 +1409,10 @@ export function UserAdminController(app: HonoApp) {
 			const auditLogReason = ctx.get('auditLogReason');
 			const adminUserAcls = ctx.get('adminUserAcls');
 			const {user_id: userId} = ctx.req.valid('param');
+			const {traits} = ctx.req.valid('json');
 			return ctx.json(
 				await adminService.userService.securityService.setUserTraits(
-					{user_id: userId, ...ctx.req.valid('json')},
+					{user_id: userId, traits: [...new Set(traits.map((trait) => trait.toLowerCase()))]},
 					adminUserId,
 					auditLogReason,
 					adminUserAcls,
@@ -1372,6 +1513,39 @@ export function UserAdminController(app: HonoApp) {
 					adminUserId,
 					auditLogReason,
 					acls: adminUserAcls,
+				}),
+			);
+		},
+	);
+	app.delete(
+		'/admin/users/:user_id/premium',
+		RateLimitMiddleware(RateLimitConfigs.ADMIN_USER_MODIFY),
+		requireAdminACL(AdminACLs.USER_UPDATE_FLAGS),
+		Validator('param', UserIdParam),
+		OpenAPI({
+			operationId: 'remove_admin_user_premium',
+			summary: 'Remove user premium',
+			responseSchema: UserMutationResponse,
+			statusCode: 200,
+			security: 'adminApiKey',
+			tags: 'Admin',
+			description:
+				'End the premium of an account right away, the same way premium ends when it expires. The premium fields are cleared, ENABLED_OVERRIDE is removed, the guild profile perks of the account are sanitized and PERKS_SANITIZED is set. Returns 400 with a message that says what to do instead when the account has a Stripe subscription, an App Store or Google Play subscription, Visionary lifetime premium on the hosted instance, or no premium, when it is a bot, and when the premium mode is everyone. The X-Audit-Log-Reason header is required. Creates audit log entry. Requires USER_UPDATE_FLAGS permission.',
+		}),
+		async (ctx) => {
+			const auditLogReason = ctx.get('auditLogReason');
+			if (!auditLogReason) {
+				throw InputValidationError.fromCode(
+					'X-Audit-Log-Reason',
+					ValidationErrorCodes.ENFORCEMENT_INTERNAL_NOTE_REQUIRED,
+				);
+			}
+			return ctx.json(
+				await ctx.get('adminService').userService.securityService.removePremium({
+					userId: createUserID(ctx.req.valid('param').user_id),
+					adminUserId: ctx.get('adminUserId'),
+					auditLogReason,
+					acls: ctx.get('adminUserAcls'),
 				}),
 			);
 		},

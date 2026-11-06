@@ -7,6 +7,7 @@ import {createUserID, type UserID} from '@app/api/BrandedTypes';
 import {Logger} from '@app/api/Logger';
 import type {Relationship} from '@app/api/models/Relationship';
 import {GameActivityPolicyService} from '@app/api/user/services/GameActivityPolicyService';
+import type {UserRelationshipService} from '@app/api/user/services/UserRelationshipService';
 import {RelationshipTypes} from '@fluxer/constants/src/UserConstants';
 import {ServiceUnavailableError} from '@fluxer/errors/src/domains/core/ServiceUnavailableError';
 import {UnknownUserError} from '@fluxer/errors/src/domains/user/UnknownUserError';
@@ -23,6 +24,7 @@ import type {
 interface AdminUserRelationshipServiceDeps {
 	apiContext: ApiContext;
 	auditService: AdminAuditService;
+	userRelationshipService: Pick<UserRelationshipService, 'endFriendship'>;
 }
 
 const CATEGORY_TO_TYPE: Record<RelationshipCategory, number> = {
@@ -44,10 +46,7 @@ export class AdminUserRelationshipService {
 	async listRelationships(data: ListUserRelationshipsRequest): Promise<ListUserRelationshipsResponse> {
 		const {users: userRepository} = this.deps.apiContext.services;
 		const userId = createUserID(data.user_id);
-		const user = await userRepository.findUnique(userId);
-		if (!user) {
-			throw new UnknownUserError();
-		}
+		await userRepository.findUniqueAssert(userId);
 		const relationships = await userRepository.listRelationships(userId);
 		const targetUserIds = new Set<UserID>();
 		for (const rel of relationships) {
@@ -100,10 +99,7 @@ export class AdminUserRelationshipService {
 		const {users: userRepository} = this.deps.apiContext.services;
 		const userId = createUserID(data.user_id);
 		const targetUserId = createUserID(data.target_user_id);
-		const user = await userRepository.findUnique(userId);
-		if (!user) {
-			throw new UnknownUserError();
-		}
+		await userRepository.findUniqueAssert(userId);
 		const type = CATEGORY_TO_TYPE[data.category];
 		const relationship = await userRepository.getRelationship(userId, targetUserId, type);
 		if (!relationship) {
@@ -136,10 +132,7 @@ export class AdminUserRelationshipService {
 		const {auditService} = this.deps;
 		const {users: userRepository} = this.deps.apiContext.services;
 		const userId = createUserID(data.user_id);
-		const user = await userRepository.findUnique(userId);
-		if (!user) {
-			throw new UnknownUserError();
-		}
+		await userRepository.findUniqueAssert(userId);
 		const type = CATEGORY_TO_TYPE[data.category];
 		const allRelationships = await userRepository.listRelationships(userId);
 		const matching: Array<Relationship> = allRelationships.filter((rel) => rel.type === type);
@@ -199,8 +192,7 @@ export class AdminUserRelationshipService {
 			case 'friend': {
 				const policyService = new GameActivityPolicyService({users: userRepository, gateway: gatewayService});
 				const fences = await policyService.fencePair(userId, targetUserId);
-				await userRepository.deleteRelationship(userId, targetUserId, RelationshipTypes.FRIEND);
-				await userRepository.deleteRelationship(targetUserId, userId, RelationshipTypes.FRIEND);
+				await this.deps.userRelationshipService.endFriendship(userId, targetUserId);
 				let auditFailed = false;
 				let auditError: unknown;
 				try {

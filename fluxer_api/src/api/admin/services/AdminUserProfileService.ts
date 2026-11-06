@@ -4,8 +4,10 @@ import type {ApiContext} from '@app/api/ApiContext';
 import {mapUserToAdminResponse} from '@app/api/admin/models/UserTypes';
 import type {AdminAuditService} from '@app/api/admin/services/AdminAuditService';
 import {EMAIL_CLEARABLE_SUSPICIOUS_ACTIVITY_FLAGS} from '@app/api/auth/AuthEmail';
+import {confirmEmailOwnership} from '@app/api/auth/EmailOwnership';
 import {createUserID, type UserID} from '@app/api/BrandedTypes';
 import {assertMutableUserId} from '@app/api/constants/Core';
+import {LocalDate} from '@app/api/database/LocalDate';
 import type {EnforcementDecisionRow} from '@app/api/database/types/EnforcementTypes';
 import type {EnforcementActor} from '@app/api/enforcement/EnforcementActor';
 import {decisionAuditMetadata, type EnforcementDecisionService} from '@app/api/enforcement/EnforcementDecisionService';
@@ -14,9 +16,10 @@ import {GuildMemberSearchIndexService} from '@app/api/guild/services/member/Guil
 import type {DiscriminatorService} from '@app/api/infrastructure/DiscriminatorService';
 import type {EntityAssetService, PreparedAssetUpload} from '@app/api/infrastructure/EntityAssetService';
 import type {UsernameMigrationConfig} from '@app/api/instance/AccountIdentityModeCache';
+import {getEmailDeliveryState} from '@app/api/instance/AccountsConfigCache';
 import {Logger} from '@app/api/Logger';
 import {getUsernameOwnershipService} from '@app/api/middleware/ServiceRegistry';
-import {getInstanceConfigRepository} from '@app/api/middleware/ServiceSingletons';
+import {getInstanceConfigRepository, getKVAccountDeletionQueue} from '@app/api/middleware/ServiceSingletons';
 import type {User} from '@app/api/models/User';
 import type {UserSettings} from '@app/api/models/UserSettings';
 import {enqueueStripeCustomerEmailSync} from '@app/api/stripe/StripeCustomer';
@@ -26,6 +29,7 @@ import {
 	type PartialUserChangePropagationDeps,
 	propagateUserUpdate,
 } from '@app/api/user/services/PartialUserChangePropagation';
+import {clearPendingDeletion} from '@app/api/user/services/PendingDeletionCoordinator';
 import {
 	assertBotUsernameAvailable,
 	assertNoDiscriminatorChange,
@@ -37,9 +41,13 @@ import {
 	type UsernameClaimResult,
 	type UsernameOwnershipService,
 } from '@app/api/user/username/UsernameOwnershipService';
+import {BELOW_MINIMUM_AGE_TRAIT, DOB_DEFERRED_TRAIT} from '@app/api/user/UserTraits';
 import {UsernamePolicyService} from '@app/api/user/username/UsernamePolicyService';
+import {EmailDeliveryStates} from '@fluxer/constants/src/AccountConfigConstants';
 import {AdminACLs} from '@fluxer/constants/src/AdminACLs';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
+import {DeletionReasons} from '@fluxer/constants/src/Core';
+import {isPlausibleDateOfBirth} from '@fluxer/constants/src/RegionalMinimumAge';
 import {ProfilePrivacyLevels, UserFlags} from '@fluxer/constants/src/UserConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import {AccessDeniedError} from '@fluxer/errors/src/domains/core/AccessDeniedError';
@@ -59,7 +67,6 @@ import type {
 	UserProfileField,
 	VerifyUserEmailRequest,
 } from '@fluxer/schema/src/domains/admin/AdminUserSchemas';
-import {types} from 'cassandra-driver';
 
 type UsernameAdminOwnershipService = Pick<
 	UsernameOwnershipService,
@@ -104,12 +111,17 @@ function profileValues(user: User, fields: ReadonlyArray<UserProfileField>): Map
 	return new Map(fields.flatMap((field) => (current[field] ? [[field, current[field]] as const] : [])));
 }
 
-export class AdminUserProfileService {
-	private readonly searchIndexService: GuildMemberSearchIndexService;
+function isPlausibleAdminDateOfBirth(value: string): boolean {
+	const [year, month, day] = value.split('-').map(Number);
+	const now = new Date();
+	return isPlausibleDateOfBirth(
+		{year: year!, month: month!, day: day!},
+		{year: now.getUTCFullYear(), month: now.getUTCMonth() + 1, day: now.getUTCDate()},
+	);
+}
 
-	constructor(private readonly deps: AdminUserProfileServiceDeps) {
-		this.searchIndexService = new GuildMemberSearchIndexService();
-	}
+export class AdminUserProfileService {
+	constructor(private readonly deps: AdminUserProfileServiceDeps) {}
 
 	private getUsernameOwnership(): UsernameAdminOwnershipService {
 		try {
@@ -216,10 +228,7 @@ export class AdminUserProfileService {
 
 	async clearUserFields(userId: UserID, {fields, basis}: AdminUserClearFieldsRequest, actor: EnforcementActor) {
 		const {users: userRepository, cache: cacheService} = this.deps.apiContext.services;
-		const user = await userRepository.findUnique(userId);
-		if (!user) {
-			throw new UnknownUserError();
-		}
+		const user = await userRepository.findUniqueAssert(userId);
 		const resetFields = [...new Set(fields)];
 		let updatedUser = user;
 		const clear = async () => {
@@ -292,10 +301,7 @@ export class AdminUserProfileService {
 		const {users: userRepository, cache: cacheService} = this.deps.apiContext.services;
 		const {auditService, userUpdateDeps} = this.deps;
 		const userId = createUserID(data.user_id);
-		const user = await userRepository.findUnique(userId);
-		if (!user) {
-			throw new UnknownUserError();
-		}
+		const user = await userRepository.findUniqueAssert(userId);
 		if (data.bot && user.acls.size > 0) {
 			throw new AccessDeniedError();
 		}
@@ -327,10 +333,7 @@ export class AdminUserProfileService {
 		const {users: userRepository, cache: cacheService} = this.deps.apiContext.services;
 		const {auditService, userUpdateDeps} = this.deps;
 		const userId = createUserID(data.user_id);
-		const user = await userRepository.findUnique(userId);
-		if (!user) {
-			throw new UnknownUserError();
-		}
+		const user = await userRepository.findUniqueAssert(userId);
 		if (data.system && !user.isBot) {
 			throw InputValidationError.fromCode(
 				'system',
@@ -361,26 +364,21 @@ export class AdminUserProfileService {
 		const {users: userRepository, cache: cacheService} = this.deps.apiContext.services;
 		const {auditService, userUpdateDeps} = this.deps;
 		const userId = createUserID(data.user_id);
-		const user = await userRepository.findUnique(userId);
-		if (!user) {
-			throw new UnknownUserError();
-		}
-		const updates: {
-			email_verified: boolean;
-			email_bounced: boolean;
-			suspicious_activity_flags?: number;
-		} = {
-			email_verified: true,
-			email_bounced: false,
-		};
-		if (user.suspiciousActivityFlags !== null && user.suspiciousActivityFlags !== 0) {
-			const newFlags = user.suspiciousActivityFlags & ~EMAIL_CLEARABLE_SUSPICIOUS_ACTIVITY_FLAGS;
-			if (newFlags !== user.suspiciousActivityFlags) {
-				updates.suspicious_activity_flags = newFlags;
+		const user = await userRepository.findUniqueAssert(userId);
+		let updatedUser = await confirmEmailOwnership(this.deps.apiContext, user);
+		// Micup: verifying the email also clears the suspicious-activity flags an email confirmation answers.
+		if (updatedUser.suspiciousActivityFlags !== null && updatedUser.suspiciousActivityFlags !== 0) {
+			const newFlags = updatedUser.suspiciousActivityFlags & ~EMAIL_CLEARABLE_SUSPICIOUS_ACTIVITY_FLAGS;
+			if (newFlags !== updatedUser.suspiciousActivityFlags) {
+				updatedUser = await userRepository.patchUpsert(
+					userId,
+					{suspicious_activity_flags: newFlags},
+					updatedUser.toRow(),
+				);
 			}
 		}
-		const updatedUser = await userRepository.patchUpsert(userId, updates, user.toRow());
 		await propagateUserUpdate(userUpdateDeps, user, updatedUser);
+		await enqueueStripeCustomerEmailSync(this.deps.apiContext.services.worker, user, updatedUser);
 		await auditService.createAuditLog({
 			adminUserId,
 			targetType: 'user',
@@ -474,6 +472,7 @@ export class AdminUserProfileService {
 						username: data.username,
 						requestedDiscriminator: data.discriminator,
 						user,
+						adminOverride: true,
 					});
 			if (!discriminatorResult.available || discriminatorResult.discriminator === -1) {
 				throw new TagAlreadyTakenError();
@@ -495,6 +494,7 @@ export class AdminUserProfileService {
 			reason: 'admin_action',
 			actorUserId: adminUserId,
 		});
+		void this.reindexGuildMembersForUser(updatedUser);
 		await auditService.createAuditLog({
 			adminUserId,
 			targetType: 'user',
@@ -504,10 +504,9 @@ export class AdminUserProfileService {
 			metadata: new Map([
 				['old_username', user.username],
 				['new_username', data.username],
-				['discriminator', discriminatorResult.discriminator.toString()],
+				['discriminator', updatedUser.discriminator.toString()],
 			]),
 		});
-		void this.reindexGuildMembersForUser(updatedUser);
 		return {
 			user: await mapUserToAdminResponse(updatedUser, cacheService, acls),
 		};
@@ -527,15 +526,12 @@ export class AdminUserProfileService {
 		} = this.deps.apiContext.services;
 		const {auditService, userUpdateDeps} = this.deps;
 		const userId = createUserID(data.user_id);
-		const user = await userRepository.findUnique(userId);
-		if (!user) {
-			throw new UnknownUserError();
-		}
+		const user = await userRepository.findUniqueAssert(userId);
 		const updatedUser = await userRepository.patchUpsert(
 			userId,
 			{
 				email: data.email,
-				email_verified: false,
+				email_verified: getEmailDeliveryState() !== EmailDeliveryStates.ON,
 			},
 			user.toRow(),
 		);
@@ -568,7 +564,7 @@ export class AdminUserProfileService {
 			const {users: userRepository} = this.deps.apiContext.services;
 			const {guildRepository} = this.deps;
 			const guildIds = await userRepository.getUserGuildIds(updatedUser.id);
-			await this.searchIndexService.updateUserMembers(updatedUser, guildIds, guildRepository);
+			await new GuildMemberSearchIndexService().updateUserMembers(updatedUser, guildIds, guildRepository);
 		} catch (error) {
 			Logger.error(
 				{userId: updatedUser.id.toString(), error},
@@ -615,10 +611,10 @@ export class AdminUserProfileService {
 		const {users: userRepository, cache: cacheService} = this.deps.apiContext.services;
 		const {auditService, userUpdateDeps} = this.deps;
 		const userId = createUserID(data.user_id);
-		const user = await userRepository.findUnique(userId);
-		if (!user) {
-			throw new UnknownUserError();
-		}
+		const user = await userRepository.findUniqueAssert(userId);
+		const traits = user.traits;
+		traits.delete(DOB_DEFERRED_TRAIT);
+		const clearedBelowMinimumAge = traits.delete(BELOW_MINIMUM_AGE_TRAIT);
 		const policyService = new GameActivityPolicyService({
 			users: userRepository,
 			gateway: this.deps.apiContext.services.gateway,
@@ -627,13 +623,24 @@ export class AdminUserProfileService {
 		const fence = await policyService.fenceUserPolicy(userId, settings, {
 			expectedPolicyRevision: settings?.gameActivityPolicyRevision ?? 0n,
 		});
-		const updatedUser = await userRepository.patchUpsert(
+		let updatedUser = await userRepository.patchUpsert(
 			userId,
 			{
-				date_of_birth: types.LocalDate.fromString(data.date_of_birth),
+				date_of_birth: LocalDate.fromString(data.date_of_birth),
+				traits: traits.size > 0 ? traits : null,
 			},
 			user.toRow(),
 		);
+		if (clearedBelowMinimumAge && updatedUser.deletionReasonCode === DeletionReasons.BELOW_MINIMUM_AGE) {
+			updatedUser = await userRepository.updateDeletionSchedule(updatedUser, {
+				flags: updatedUser.flags & ~UserFlags.DELETED,
+				pending_deletion_at: null,
+				deletion_reason_code: null,
+				deletion_public_reason: null,
+				deletion_audit_log_reason: null,
+			});
+			await clearPendingDeletion({userId, deletionQueue: getKVAccountDeletionQueue()});
+		}
 		let auditFailed = false;
 		let auditError: unknown;
 		try {
@@ -646,6 +653,8 @@ export class AdminUserProfileService {
 				metadata: new Map([
 					['old_dob', user.dateOfBirth ?? 'null'],
 					['new_dob', data.date_of_birth],
+					['cleared_below_minimum_age', clearedBelowMinimumAge ? 'true' : 'false'],
+					['outside_plausible_range', isPlausibleAdminDateOfBirth(data.date_of_birth) ? 'false' : 'true'],
 				]),
 			});
 		} catch (error) {

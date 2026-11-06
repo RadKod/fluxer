@@ -4,7 +4,7 @@
 
 -typing([eqwalizer]).
 
--export([request_voice_token/8]).
+-export([request_voice_token/8, voice_error_for/1]).
 -export([request_voice_token/10]).
 
 -spec request_voice_token(
@@ -142,6 +142,12 @@ handle_sfu_token_success(GuildId, ChannelId, UserId, Data) ->
 token_success_log_message() ->
     "guild_voice_request_token_ok: guild_id=~p channel_id=~p "
     "user_id=~p connection_id=~p endpoint=~p".
+
+-spec voice_error_for(term()) ->
+    voice_unclaimed_account | voice_account_verification_required | voice_token_failed.
+voice_error_for(voice_unclaimed_account) -> voice_unclaimed_account;
+voice_error_for(voice_account_verification_required) -> voice_account_verification_required;
+voice_error_for(_) -> voice_token_failed.
 
 -spec handle_token_rpc_error(integer(), integer(), integer(), binary() | null, term(), term()) ->
     {error, atom()}.

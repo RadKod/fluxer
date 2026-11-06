@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {getElectronAPI, isDesktop} from '@app/features/ui/utils/NativeUtils';
+import {shouldShowDirectMessageSettings} from '@app/features/user/components/settings_utils/SettingsVisibility';
 import type {SearchableSettingDescriptor} from '@app/features/user/components/settings_utils/search_index/SearchIndexTypes';
 import {
 	ANIMATIONS_DESCRIPTOR,
@@ -177,11 +178,11 @@ const ALLOW_PRESSING_ESCAPE_TO_EXIT_KEYBOARD_NAVIGATION_MODE_DESCRIPTOR = msg({
 });
 
 const MENU_SHORTCUTS_DESCRIPTOR = msg({
-	message: 'Menu shortcuts',
+	message: 'Menu keybinds',
 	comment: 'Settings search synonym. Used to match this term when the user types it in the settings search bar.',
 });
 const DISPLAY_KEYBOARD_SHORTCUT_INDICATORS_NEXT_TO_CONTEXT_MENU_DESCRIPTOR = msg({
-	message: 'Display keyboard shortcut indicators next to context menu items',
+	message: 'Display keybind indicators next to context menu items',
 	comment: 'Settings search entry description. One-line summary of what the settings search entry controls.',
 });
 
@@ -322,6 +323,7 @@ export const accessibilityIndex: Array<SearchableSettingDescriptor> = [
 		id: 'accessibility-dm-message-previews',
 		tabType: 'accessibility',
 		sectionId: 'visual',
+		isVisible: shouldShowDirectMessageSettings,
 		label: DM_MESSAGE_PREVIEWS_DESCRIPTOR,
 		keywords: [
 			DIRECT_MESSAGE_PREVIEW_DESCRIPTOR,

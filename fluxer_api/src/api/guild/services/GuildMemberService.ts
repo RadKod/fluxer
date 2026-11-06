@@ -2,6 +2,7 @@
 
 import type {GuildID, InviteCode, RoleID, UserID} from '@app/api/BrandedTypes';
 import type {ChannelService} from '@app/api/channel/services/ChannelService';
+import {SYSTEM_USER_ID} from '@app/api/constants/Core';
 import type {GuildAuditLogService} from '@app/api/guild/GuildAuditLogService';
 import type {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
 import {GuildMemberAuditService} from '@app/api/guild/services/member/GuildMemberAuditService';
@@ -17,6 +18,8 @@ import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
 import type {Guild} from '@app/api/models/Guild';
 import type {GuildMember} from '@app/api/models/GuildMember';
+import {recordOperatorPassLabsDeparture} from '@app/api/operator_pass/OperatorPassLabsRole';
+import type {TierContext} from '@app/api/user/AccountTier';
 import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {AuditLogActionType} from '@fluxer/constants/src/AuditLogActionType';
 import type {JoinSourceType} from '@fluxer/constants/src/GuildConstants';
@@ -216,6 +219,58 @@ export class GuildMemberService {
 		});
 	}
 
+	async systemSyncManagedRoles(params: {
+		targetId: UserID;
+		guildId: GuildID;
+		managedRoleIds: ReadonlySet<RoleID>;
+		grantedRoleIds: ReadonlySet<RoleID>;
+		requestCache: RequestCache;
+	}): Promise<void> {
+		const {targetId, guildId, managedRoleIds, grantedRoleIds, requestCache} = params;
+		const member = await this.guildRepository.getMember(guildId, targetId);
+		if (!member) return;
+		const existingRoleIds = new Set((await this.guildRepository.listRoles(guildId)).map((role) => role.id));
+		const nextRoleIds = new Set([...member.roleIds].filter((roleId) => !managedRoleIds.has(roleId)));
+		for (const roleId of grantedRoleIds) {
+			if (managedRoleIds.has(roleId) && existingRoleIds.has(roleId)) nextRoleIds.add(roleId);
+		}
+		if (nextRoleIds.size === member.roleIds.size && [...nextRoleIds].every((roleId) => member.roleIds.has(roleId))) {
+			return;
+		}
+		const previousSnapshot = this.auditService.serializeMemberForAudit(member);
+		await this.guildRepository.upsertMember({...member.toRow(), role_ids: nextRoleIds});
+		const updatedMember = await this.guildRepository.getMember(guildId, targetId);
+		if (!updatedMember) return;
+		await this.eventService.dispatchGuildMemberUpdate({guildId, member: updatedMember, requestCache});
+		await this.refreshMemberSearchIndex(updatedMember);
+		await this.guildAuditLogService.record({
+			guildId,
+			userId: SYSTEM_USER_ID,
+			action: AuditLogActionType.MEMBER_ROLE_UPDATE,
+			targetId,
+			auditLogReason: null,
+			changes: this.guildAuditLogService.computeChanges(
+				previousSnapshot,
+				this.auditService.serializeMemberForAudit(updatedMember),
+			),
+		});
+	}
+
+	async systemRemoveMemberRole(params: {
+		targetId: UserID;
+		guildId: GuildID;
+		roleId: RoleID;
+		initiatorId: UserID;
+		requestCache: RequestCache;
+	}): Promise<void> {
+		await this.applyRoleChange({
+			...params,
+			actorId: params.initiatorId,
+			auditLogReason: null,
+			mutate: () => this.roleService.systemRemoveMemberRole(params),
+		});
+	}
+
 	async removeMemberRole(
 		params: {
 			userId: UserID;
@@ -246,6 +301,20 @@ export class GuildMemberService {
 		const targetMember = await this.guildRepository.getMember(guildId, targetId);
 		if (!targetMember) throw new UnknownGuildMemberError();
 		await this.operationsService.removeMember(params);
+		await recordOperatorPassLabsDeparture(guildId, targetId, 'kicked');
+		await this.finishMemberKick({guildId, targetId, actorId: userId}, auditLogReason ?? null);
+	}
+
+	async removeMemberAsSystem(params: {targetId: UserID; guildId: GuildID}): Promise<void> {
+		await this.operationsService.removeMemberAsSystem(params);
+		await recordOperatorPassLabsDeparture(params.guildId, params.targetId, 'kicked');
+		await this.finishMemberKick({...params, actorId: SYSTEM_USER_ID}, null);
+	}
+
+	private async finishMemberKick(
+		{guildId, targetId, actorId}: {guildId: GuildID; targetId: UserID; actorId: UserID},
+		auditLogReason: string | null,
+	): Promise<void> {
 		const guild = await this.guildRepository.findUnique(guildId);
 		const searchIndexOptions = this.getMemberSearchIndexOptions(guild);
 		if (searchIndexOptions) {
@@ -254,11 +323,11 @@ export class GuildMemberService {
 		await this.eventService.dispatchGuildMemberRemove({guildId, userId: targetId});
 		await this.guildAuditLogService.record({
 			guildId,
-			userId,
+			userId: actorId,
 			action: AuditLogActionType.MEMBER_KICK,
 			changes: null,
 			targetId: targetId,
-			auditLogReason: auditLogReason ?? null,
+			auditLogReason,
 		});
 	}
 
@@ -275,6 +344,8 @@ export class GuildMemberService {
 		inviterId?: UserID;
 		requestCache: RequestCache;
 		initiatorId?: UserID;
+		tierContext?: TierContext;
+		mentionsOnlyNotifications?: boolean;
 	}): Promise<GuildMember> {
 		return this.operationsService.addUserToGuild(params, this.eventService);
 	}
@@ -290,6 +361,7 @@ export class GuildMemberService {
 		const member = await this.guildRepository.getMember(guildId, userId);
 		if (!member) throw new UnknownGuildMemberError();
 		await this.operationsService.leaveGuild(params);
+		await recordOperatorPassLabsDeparture(guildId, userId, 'left');
 		const guild = await this.guildRepository.findUnique(guildId);
 		const searchIndexOptions = this.getMemberSearchIndexOptions(guild);
 		if (searchIndexOptions) {

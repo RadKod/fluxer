@@ -39,7 +39,9 @@ pub mod foundation;
 pub mod sck;
 
 #[cfg(target_os = "macos")]
+#[cfg_attr(test, allow(dead_code))]
 mod napi_surface_macos;
 
 #[cfg(not(target_os = "macos"))]
+#[cfg_attr(test, allow(dead_code))]
 mod napi_surface_stub;

@@ -1,54 +1,106 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {HonoEnv} from '@app/api/types/HonoEnv';
-import {FileSizeTooLargeError} from '@fluxer/errors/src/domains/core/FileSizeTooLargeError';
+import {ASSET_FORMAT_POLICY, type AssetKind} from '@fluxer/constants/src/AssetFormatPolicy';
+import {RequestBodyTooLargeError} from '@fluxer/errors/src/domains/core/RequestBodyTooLargeError';
+import type {Context, MiddlewareHandler} from 'hono';
+import {bodyLimit} from 'hono/body-limit';
 import {createMiddleware} from 'hono/factory';
+import {matchedRoutes} from 'hono/route';
+import {COMPOSED_HANDLER} from 'hono/utils/constants';
 
-function declaredContentLength(headers: Headers): number | null {
-	if (headers.has('transfer-encoding')) return null;
-	const value = headers.get('content-length');
-	if (value === null || !/^\d+$/.test(value.trim())) return null;
-	const length = Number(value);
-	return Number.isSafeInteger(length) ? length : null;
+const JSON_ASSET_ENVELOPE_BYTES = 1024 * 1024;
+
+export function jsonAssetBodyLimit(assets: Partial<Record<Exclude<AssetKind, 'attachment'>, number>>): number {
+	let rawBytes = 0;
+	for (const [kind, count] of Object.entries(assets) as Array<[AssetKind, number]>) {
+		rawBytes += ASSET_FORMAT_POLICY[kind].maxBytes * count;
+	}
+	return 4 * Math.ceil(rawBytes / 3) + JSON_ASSET_ENVELOPE_BYTES;
 }
 
-/**
- * Caps a request body at maxSize bytes and answers FILE_SIZE_TOO_LARGE above it.
- *
- * Replaces hono's bodyLimit, which reads `c.req.raw.body` directly whenever the request has no
- * Content-Length (chunked uploads, e.g. nginx with proxy_request_buffering off). App-level middleware
- * such as ContentFilterMiddleware may already have read the body through HonoRequest's cache, which
- * locks the raw stream; bodyLimit then fails with ERR_INVALID_STATE and the request turns into a 500.
- * This version measures the cached body in that case and otherwise reads the stream once, stopping
- * at the limit.
- */
-export function RequestBodyLimit(maxSize: number) {
-	return createMiddleware<HonoEnv>(async (ctx, next) => {
-		const raw = ctx.req.raw;
-		const declared = declaredContentLength(raw.headers);
-		if (declared !== null && declared > maxSize) throw new FileSizeTooLargeError(maxSize);
-		if (raw.body === null || declared !== null) return next();
-		if (Object.keys(ctx.req.bodyCache).length > 0) {
-			const text = await ctx.req.text();
-			if (Buffer.byteLength(text, 'utf8') > maxSize) throw new FileSizeTooLargeError(maxSize);
-			return next();
-		}
-		// Read outside HonoRequest's cache; the body validator reports the unreadable body as a 400.
-		if (raw.bodyUsed || raw.body.locked) return next();
-		const reader = raw.body.getReader();
-		const chunks: Array<Uint8Array> = [];
-		let size = 0;
-		for (;;) {
-			const {done, value} = await reader.read();
-			if (done) break;
-			size += value.byteLength;
-			if (size > maxSize) {
-				await reader.cancel().catch(() => undefined);
-				throw new FileSizeTooLargeError(maxSize);
-			}
-			chunks.push(value);
-		}
-		ctx.req.raw = new Request(raw, {body: Buffer.concat(chunks, size), duplex: 'half'} as RequestInit);
-		return next();
+const largestJsonAssetKind = (Object.keys(ASSET_FORMAT_POLICY) as Array<AssetKind>)
+	.filter((kind): kind is Exclude<AssetKind, 'attachment'> => kind !== 'attachment')
+	.reduce((largest, kind) =>
+		ASSET_FORMAT_POLICY[kind].maxBytes > ASSET_FORMAT_POLICY[largest].maxBytes ? kind : largest,
+	);
+
+export const DEFAULT_REQUEST_BODY_LIMIT = jsonAssetBodyLimit({[largestJsonAssetKind]: 1});
+
+const routeBodyLimits = new WeakMap<object, number>();
+const multipartUploadRoutes = new WeakSet<object>();
+const limiters = new Map<number, MiddlewareHandler>();
+
+export function RequestBodyLimit(maxBytes: number): MiddlewareHandler<HonoEnv> {
+	const marker: MiddlewareHandler<HonoEnv> = async (_ctx, next) => {
+		await next();
+	};
+	routeBodyLimits.set(marker, maxBytes);
+	return marker;
+}
+
+export function MultipartUploadRoute(): MiddlewareHandler<HonoEnv> {
+	const marker: MiddlewareHandler<HonoEnv> = async (_ctx, next) => {
+		await next();
+	};
+	multipartUploadRoutes.add(marker);
+	return marker;
+}
+
+export function isMultipartFormData(contentType: string | undefined): boolean {
+	return (contentType ?? '').split(';')[0]!.trim().toLowerCase() === 'multipart/form-data';
+}
+
+function matchedRouteHandlers(ctx: Context<HonoEnv>): Array<object> {
+	return matchedRoutes(ctx).map((route) => {
+		const handler = route.handler as MiddlewareHandler & {[COMPOSED_HANDLER]?: MiddlewareHandler};
+		return handler[COMPOSED_HANDLER] ?? handler;
 	});
 }
+
+function resolveRouteBodyLimit(ctx: Context<HonoEnv>): number {
+	for (const handler of matchedRouteHandlers(ctx)) {
+		const limit = routeBodyLimits.get(handler);
+		if (limit !== undefined) return limit;
+	}
+	return DEFAULT_REQUEST_BODY_LIMIT;
+}
+
+export function isMultipartUploadRequest(ctx: Context<HonoEnv>): boolean {
+	return (
+		isMultipartFormData(ctx.req.header('content-type')) &&
+		matchedRouteHandlers(ctx).some((handler) => multipartUploadRoutes.has(handler))
+	);
+}
+
+function limiterFor(maxSize: number): MiddlewareHandler {
+	let limiter = limiters.get(maxSize);
+	if (!limiter) {
+		limiter = bodyLimit({
+			maxSize,
+			onError: () => {
+				throw new RequestBodyTooLargeError(maxSize);
+			},
+		});
+		limiters.set(maxSize, limiter);
+	}
+	return limiter;
+}
+
+const limitedRequests = new WeakSet<Request>();
+
+export const RequestBodyLimitMiddleware = createMiddleware<HonoEnv>(async (ctx, next) => {
+	if (!ctx.req.raw.body || limitedRequests.has(ctx.req.raw)) {
+		await next();
+		return;
+	}
+	if (isMultipartUploadRequest(ctx)) {
+		await next();
+		return;
+	}
+	limitedRequests.add(ctx.req.raw);
+	await limiterFor(resolveRouteBodyLimit(ctx))(ctx, async () => {
+		limitedRequests.add(ctx.req.raw);
+		await next();
+	});
+});

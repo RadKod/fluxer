@@ -1,315 +1,29 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type {EmailConfig, EmailHtmlBranding, EmailMessage, IEmailProvider} from '@pkgs/email/src/EmailProviderTypes';
+import type {EmailConfig, EmailMessage, IEmailProvider} from '@pkgs/email/src/EmailProviderTypes';
 import {EmailService} from '@pkgs/email/src/EmailService';
+import {PDFDocument} from 'pdf-lib';
 import {describe, expect, it} from 'vitest';
 
 const CONFIG: EmailConfig = {
 	enabled: true,
-	fromEmail: 'noreply@example.test',
-	fromName: 'sanalyer',
-	appBaseUrl: 'https://app.example.test',
-	appealsEmail: 'info@sanalyer.com',
-	safetyEmail: 'info@sanalyer.com',
-	supportEmail: 'info@sanalyer.com',
-	productName: 'sanalyer',
-};
-const LOGO_URL = 'https://static.example.test/web/android-chrome-192x192.png';
-const HTML: EmailHtmlBranding = {
-	productName: 'sanalyer',
-	logoUrl: LOGO_URL,
-	headerColor: '#0B0B0C',
-	footer: {
-		tr: 'sanalyer, bireysel bir geliştirici tarafından işletilir. İletişim: pr@example.test',
-		'en-US': 'sanalyer is operated by an individual developer. Contact: pr@example.test',
-	},
+	fromEmail: 'noreply@example.com',
+	fromName: 'Fluxer',
+	appBaseUrl: 'https://example.com',
+	apiBaseUrl: 'https://api.example.com',
+	appealsEmail: 'appeals@fluxer.com',
+	privacyEmail: 'privacy@fluxer.com',
+	safetyEmail: 'safety@fluxer.com',
+	supportEmail: 'support@fluxer.com',
+	productName: 'Fluxer',
+	marketingBaseUrl: 'https://example.com',
+	staticCdnBaseUrl: 'https://static.example.com',
+	legalAddress:
+		'Fluxer Platform AB (org. no. 559537-3993, registered office Haninge, Sweden), c/o Embassy House, Östgötagatan 12, 116 25 Stockholm, Sweden',
+	brandLogo: true,
 };
 
-async function capture(config: EmailConfig, send: (service: EmailService) => Promise<boolean>): Promise<EmailMessage> {
-	const sent: Array<EmailMessage> = [];
-	await send(
-		new EmailService(config, {
-			sendEmail: async (message) => {
-				sent.push(message);
-				return true;
-			},
-		}),
-	);
-	return sent[0];
-}
-
-function sendIpAuthorization(config: EmailConfig, locale: string, username = 'ayse'): Promise<EmailMessage> {
-	return capture(config, (service) =>
-		service.sendIpAuthorizationEmail('user@example.test', username, 'tok123', '203.0.113.7', 'Istanbul', locale),
-	);
-}
-
-describe('EmailService HTML part', () => {
-	it('sends the upstream text-only message when no HTML branding is configured', async () => {
-		const message = await sendIpAuthorization(CONFIG, 'tr');
-		expect(Object.keys(message).sort()).toEqual(['from', 'subject', 'text', 'to']);
-	});
-
-	it('leaves the text part unchanged when the HTML part is added', async () => {
-		const plain = await sendIpAuthorization(CONFIG, 'tr');
-		const branded = await sendIpAuthorization({...CONFIG, html: HTML}, 'tr');
-		expect(branded.text).toBe(plain.text);
-		expect(branded.subject).toBe(plain.subject);
-	});
-
-	it('brands the HTML part with the logo, product name, header colour and action link', async () => {
-		const html = (await sendIpAuthorization({...CONFIG, html: HTML}, 'tr')).html ?? '';
-		expect(html).toContain(`src="${LOGO_URL}"`);
-		expect(html).toContain('>sanalyer<');
-		expect(html).toContain('background-color:#0B0B0C');
-		expect(html).toContain('href="https://app.example.test/authorize-ip#token=tok123"');
-		expect(html.toLowerCase()).not.toContain('fluxer');
-	});
-
-	it('names the header after the instance product name, not the sender name', async () => {
-		const html = (await sendIpAuthorization({...CONFIG, fromName: 'sanalyer Bildirim', html: HTML}, 'tr')).html ?? '';
-		expect(html).toContain('>sanalyer</span>');
-		expect(html).not.toContain('sanalyer Bildirim');
-	});
-
-	it('picks the footer for the message locale and falls back to en-US', async () => {
-		const tr = (await sendIpAuthorization({...CONFIG, html: HTML}, 'tr')).html ?? '';
-		const de = (await sendIpAuthorization({...CONFIG, html: HTML}, 'de')).html ?? '';
-		expect(tr).toContain('bireysel bir geliştirici');
-		expect(de).toContain('operated by an individual developer');
-		expect(de).not.toContain('bireysel');
-	});
-
-	it('lays out Arabic and Hebrew right-to-left and other locales left-to-right', async () => {
-		const ar = (await sendIpAuthorization({...CONFIG, html: HTML}, 'ar')).html ?? '';
-		const he = (await sendIpAuthorization({...CONFIG, html: HTML}, 'he')).html ?? '';
-		const tr = (await sendIpAuthorization({...CONFIG, html: HTML}, 'tr')).html ?? '';
-		expect(ar).toContain('<html lang="ar" dir="rtl">');
-		expect(ar).toMatch(/<td dir="rtl"[^>]*><h1 /);
-		expect(he).toContain('<html lang="he" dir="rtl">');
-		expect(tr).toContain('<html lang="tr" dir="ltr">');
-		expect(tr).toMatch(/<td dir="ltr"[^>]*><h1 /);
-		expect(tr).not.toContain('rtl');
-	});
-
-	it('keeps an English fallback footer left-to-right inside a right-to-left email', async () => {
-		const ar = (await sendIpAuthorization({...CONFIG, html: HTML}, 'ar')).html ?? '';
-		const arFooter = (await sendIpAuthorization({...CONFIG, html: {...HTML, footer: {ar: 'تذييل'}}}, 'ar')).html ?? '';
-		expect(ar).toMatch(/<p dir="ltr"[^>]*>sanalyer is operated/);
-		expect(arFooter).toMatch(/<p dir="rtl"[^>]*>تذييل/);
-	});
-
-	it('escapes user text in the HTML part', async () => {
-		const html = (await sendIpAuthorization({...CONFIG, html: HTML}, 'tr', '<img src=x onerror=alert(1)>')).html ?? '';
-		expect(html).not.toContain('<img src=x');
-		expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
-	});
-
-	it('drops a logo that is not https and a header colour that is not hex', async () => {
-		const html =
-			(
-				await sendIpAuthorization(
-					{...CONFIG, html: {...HTML, logoUrl: 'http://static.example.test/logo.png', headerColor: 'red;x:y'}},
-					'tr',
-				)
-			).html ?? '';
-		expect(html).toContain('>sanalyer<');
-		expect(html).not.toContain('<img');
-		expect(html).not.toContain('red;x:y');
-		expect(html).toContain('background-color:#0B0B0C');
-	});
-});
-
-const VERIFY_URL = 'https://app.example.test/verify#token=tok123';
-const BUTTON_CELL = 'bgcolor="#5764ef"';
-const HARVEST_URL = 'https://cdn.example.test/exports/abc.zip';
-
-function visibleText(html: string): string {
-	return html.replace(/<[^>]*>/g, '');
-}
-
-function sendVerification(config: EmailConfig, locale: string, username = 'ayse', token = 'tok123') {
-	return capture(config, (service) => service.sendEmailVerification('user@example.test', username, token, locale));
-}
-
-function sendHarvest(config: EmailConfig, downloadUrl = HARVEST_URL) {
-	return capture(config, (service) =>
-		service.sendHarvestCompletedEmail(
-			'user@example.test',
-			'ayse',
-			downloadUrl,
-			1200,
-			5 * 1024 * 1024,
-			new Date('2026-10-20T00:00:00Z'),
-			'tr',
-		),
-	);
-}
-
-describe('EmailService action button', () => {
-	it('turns the Turkish verification link into a labelled button with a small fallback link under it', async () => {
-		const html = (await sendVerification({...CONFIG, html: HTML}, 'tr')).html ?? '';
-		expect(html).toMatch(/<a href="https:\/\/app\.example\.test\/verify#token=tok123"[^>]*>E-postamı doğrula<\/a>/);
-		expect(html.split(BUTTON_CELL)).toHaveLength(2);
-		expect(html).toMatch(
-			/<\/table><p style="[^"]*font-size:13px;[^"]*word-break:break-all;[^"]*"><a href="https:\/\/app\.example\.test\/verify#token=tok123"[^>]*>https:\/\/app\.example\.test\/verify#token=tok123<\/a><\/p>/,
-		);
-		expect(visibleText(html).split(VERIFY_URL)).toHaveLength(2);
-	});
-
-	it('labels the English verification button', async () => {
-		const html = (await sendVerification({...CONFIG, html: HTML}, 'en-US')).html ?? '';
-		expect(html).toMatch(/<a href="https:\/\/app\.example\.test\/verify#token=tok123"[^>]*>Verify email<\/a>/);
-	});
-
-	it('styles the button like the app add friend button', async () => {
-		const html = (await sendVerification({...CONFIG, html: HTML}, 'tr')).html ?? '';
-		expect(html).toMatch(
-			/<td bgcolor="#5764ef" style="background-color:#5764ef;border-radius:8px;[^"]*"><a [^>]*font-weight:600;color:#ffffff;[^>]*border-radius:8px;/,
-		);
-	});
-
-	it('leaves the verification text part byte for byte unchanged', async () => {
-		const plain = await sendVerification(CONFIG, 'tr');
-		const branded = await sendVerification({...CONFIG, html: HTML}, 'tr');
-		expect(branded.text).toBe(plain.text);
-		expect(branded.text).toContain(`\n\n${VERIFY_URL}\n\n`);
-	});
-
-	it('escapes the username and the button URL', async () => {
-		const html = (await sendVerification({...CONFIG, html: HTML}, 'tr', '<b>ayse</b>', 'a&b"c<d')).html ?? '';
-		expect(html).toContain('&lt;b&gt;ayse&lt;/b&gt;');
-		expect(html).not.toContain('<b>ayse');
-		expect(html).toContain('href="https://app.example.test/verify#token=a&amp;b&quot;c&lt;d"');
-		expect(html).toContain('>https://app.example.test/verify#token=a&amp;b&quot;c&lt;d</a>');
-		expect(html).not.toContain('b"c');
-	});
-
-	it('never renders a javascript: action URL as a button or link', async () => {
-		const html = (await sendHarvest({...CONFIG, html: HTML}, 'javascript:alert(1)')).html ?? '';
-		expect(html).not.toContain('href="javascript');
-		expect(html).not.toContain(BUTTON_CELL);
-		expect(html).not.toContain('Verilerimi indir');
-	});
-
-	it('replaces the URL under the download label with a button and keeps the label text', async () => {
-		const plain = await sendHarvest(CONFIG);
-		const message = await sendHarvest({...CONFIG, html: HTML});
-		const html = message.html ?? '';
-		expect(message.text).toBe(plain.text);
-		expect(html).toContain('İndirme bağlantısı:');
-		expect(html).toMatch(/<a href="https:\/\/cdn\.example\.test\/exports\/abc\.zip"[^>]*>Verilerimi indir<\/a>/);
-		expect(visibleText(html).split(HARVEST_URL)).toHaveLength(2);
-		expect(html.split(BUTTON_CELL)).toHaveLength(2);
-	});
-});
-
-describe('EmailService dark layout', () => {
-	it('declares a dark colour scheme on the sanalyer dark surfaces', async () => {
-		const html = (await sendVerification({...CONFIG, html: HTML}, 'tr')).html ?? '';
-		expect(html).toContain('<meta name="color-scheme" content="dark">');
-		expect(html).toContain('<meta name="supported-color-schemes" content="dark">');
-		expect(html).toContain('background-color:#060608');
-		expect(html).toContain('background-color:#141519');
-		expect(html).toContain('border:1px solid #232329');
-		expect(html).toContain('max-width:560px');
-	});
-
-	it('puts the subject in the card as the heading and mutes the signature', async () => {
-		const html = (await sendVerification({...CONFIG, html: HTML}, 'tr')).html ?? '';
-		expect(html).toMatch(/<h1 [^>]*color:#f2f2f4;[^>]*>sanalyer e-posta adresini doğrula<\/h1>/);
-		expect(html).toMatch(/<p [^>]*color:#8e8e98;[^>]*>– sanalyer Ekibi<\/p>/);
-	});
-
-	it('mutes the Hebrew team signature, which has no leading dash', async () => {
-		const html = (await sendVerification({...CONFIG, html: HTML}, 'he')).html ?? '';
-		expect(html).toMatch(/<p [^>]*color:#8e8e98;[^>]*>צוות sanalyer<\/p>/);
-	});
-
-	it('sets a verification code in a monospace code box', async () => {
-		const message = await capture({...CONFIG, html: HTML}, (service) =>
-			service.sendEmailChangeNew('user@example.test', 'ayse', 'K7QP-2XMD', 'tr'),
-		);
-		const html = message.html ?? '';
-		expect(html).toMatch(/<td [^>]*background-color:#0c0c0f;[^>]*border:1px solid #232329;[^>]*>K7QP-2XMD<\/td>/);
-		expect(html).toMatch(/<td [^>]*font-family:ui-monospace,[^>]*font-size:28px;[^>]*>K7QP-2XMD<\/td>/);
-		expect(html).not.toContain(BUTTON_CELL);
-	});
-});
-
-describe('EmailService contact address', () => {
-	it('names info@sanalyer.com as the appeals and safety contact', async () => {
-		const report = await capture(CONFIG, (service) =>
-			service.sendReportResolvedEmail('user@example.test', 'ayse', '123', '', 'action_taken' as never, 'tr'),
-		);
-		expect(report.text).toContain('info@sanalyer.com');
-		expect(report.text).not.toContain('destek@micup.gg');
-	});
-});
-
-describe('EmailService referral reward email', () => {
-	it('sendReferralRewardReadyEmail renders tr subject/body with username', async () => {
-		const message = await capture(CONFIG, (service) =>
-			service.sendReferralRewardReadyEmail('user@example.test', 'ayse', 'tr'),
-		);
-		expect(message.subject).toBe('Referans ödülün hazır');
-		expect(message.text).toContain('Merhaba Ayse,');
-		expect(message.text).toContain('Ayarlar → Referans');
-	});
-
-	it('template params have no code', async () => {
-		const message = await capture(CONFIG, (service) =>
-			service.sendReferralRewardReadyEmail('user@example.test', 'ayse', 'en-GB'),
-		);
-		expect(message.text).toContain('Hello Ayse,');
-		expect(message.text).not.toMatch(/https?:\/\//);
-	});
-});
-
-describe('EmailService username capitalisation', () => {
-	it('capitalises the first letter with Turkish rules in Turkish emails', async () => {
-		const message = await sendVerification({...CONFIG, html: HTML}, 'tr', 'ismail');
-		expect(message.text).toContain('Merhaba İsmail,');
-		expect(message.html).toContain('Merhaba İsmail,');
-		expect((await sendVerification(CONFIG, 'tr', 'ayşe')).text).toContain('Merhaba Ayşe,');
-	});
-
-	it('uses the default rules elsewhere and leaves the rest of the name alone', async () => {
-		expect((await sendVerification(CONFIG, 'en-US', 'ismail')).text).toContain('Hello Ismail,');
-		expect((await sendVerification(CONFIG, 'tr', 'aYSE_42')).text).toContain('Merhaba AYSE_42,');
-		expect((await sendVerification(CONFIG, 'not a locale', 'ayse')).text).toContain('Hello Ayse,');
-	});
-
-	it('leaves a name that starts with an emoji or a symbol unchanged', async () => {
-		expect((await sendVerification(CONFIG, 'tr', '\u{1F600}ayse')).text).toContain('Merhaba \u{1F600}ayse,');
-		expect((await sendVerification(CONFIG, 'tr', '_ayse')).text).toContain('Merhaba _ayse,');
-	});
-
-	it('changes only the username, not other values such as the new email address', async () => {
-		const message = await capture(CONFIG, (service) =>
-			service.sendEmailChangeRevert('user@example.test', 'ayse', 'yeni@example.test', 'tok', 'tr'),
-		);
-		expect(message.text).toContain('Merhaba Ayse,');
-		expect(message.text).toContain('yeni@example.test');
-	});
-});
-
-describe('EmailService welcome greeting', () => {
-	it('opens welcome emails with the party popper in the text and HTML parts', async () => {
-		const message = await sendVerification({...CONFIG, html: HTML}, 'tr');
-		expect(message.text.startsWith('\u{1F389} Merhaba Ayse,')).toBe(true);
-		expect(message.html).toContain('<p style="margin:0 0 16px;">\u{1F389} Merhaba Ayse,</p>');
-	});
-
-	it('keeps other emails without an emoji', async () => {
-		const message = await capture(CONFIG, (service) =>
-			service.sendPasswordResetEmail('user@example.test', 'ayse', 'tok', 'tr'),
-		);
-		expect(message.text.startsWith('Merhaba Ayse,')).toBe(true);
-	});
-});
-
-async function sendWith(config: EmailConfig): Promise<EmailMessage> {
+function createCapturingServiceFor(config: EmailConfig): {service: EmailService; sent: Array<EmailMessage>} {
 	const sent: Array<EmailMessage> = [];
 	const provider: IEmailProvider = {
 		sendEmail: async (message) => {
@@ -317,21 +31,306 @@ async function sendWith(config: EmailConfig): Promise<EmailMessage> {
 			return true;
 		},
 	};
-	const service = new EmailService(config, provider);
-	await expect(service.sendRegistrationApprovedEmail('user@example.com', 'testuser', 'en-US')).resolves.toBe(true);
-	expect(sent).toHaveLength(1);
-	return sent[0];
+	return {service: new EmailService(config, provider), sent};
 }
 
-describe('EmailService reply-to', () => {
-	it('sets the configured reply-to address on every message', async () => {
-		const message = await sendWith({...CONFIG, replyTo: 'support@example.com'});
-		expect(message.replyTo).toBe('support@example.com');
-		expect(message.from).toEqual({email: CONFIG.fromEmail, name: CONFIG.fromName});
+describe('EmailService', () => {
+	it('keeps the HTML part on a plain-http instance whose links stay on its own origins', async () => {
+		const {service, sent} = createCapturingServiceFor({
+			...CONFIG,
+			appBaseUrl: 'http://chat.example.org',
+			apiBaseUrl: 'http://chat.example.org/api',
+			marketingBaseUrl: 'http://chat.example.org',
+			staticCdnBaseUrl: 'http://static.chat.example.org:8080',
+		});
+		await service.send('password_reset', 'user@example.com', {resetToken: 'tok.abc'}, 'en-US');
+		const html = sent[0].html ?? '';
+		expect(html).toContain('href="http://chat.example.org/reset#token=tok.abc"');
+		expect(html).toContain('src="http://static.chat.example.org:8080/email/brand/v1/logo-color.png"');
+		expect(html).not.toContain('%%');
 	});
 
-	it.each([undefined, null, ''])('omits the reply-to address when it is %j', async (replyTo) => {
-		const message = await sendWith({...CONFIG, replyTo});
-		expect(message).not.toHaveProperty('replyTo');
+	it('sends the purchase confirmation and the terms in Portuguese whenever the Brazilian rule applies', async () => {
+		const {service, sent} = createCapturingServiceFor(CONFIG);
+		await service.send(
+			'operator_pass_purchase_confirmation',
+			'buyer@example.com',
+			{
+				invoiceNumber: null,
+				orderDate: new Date('2026-11-02T14:00:00Z'),
+				quantity: 1,
+				totals: {totalMinor: 102000, paidMinor: 102000, currency: 'BRL', tax: null, reverseCharge: false},
+				document: null,
+				business: false,
+				consentAt: new Date('2026-11-02T13:59:00Z'),
+				withdrawalEndsOn: '2026-11-09',
+				withdrawalCountry: 'BR',
+				wallName: null,
+				unitAmountMinor: 102000,
+				paymentMethod: null,
+				deliveryBoxText: null,
+				termsVersion: '2026-11-01',
+			},
+			'en-US',
+		);
+		expect(sent[0].text).toContain('Direito de arrependimento');
+		expect(sent[0].attachments?.map((attachment) => attachment.filename)).toEqual([
+			'fluxer-operator-pass-terms-2026-11-01-pt-BR.pdf',
+		]);
+	});
+	it('attaches the terms of the version the purchase accepted, or sends nothing when that text is missing', async () => {
+		const {service, sent} = createCapturingServiceFor(CONFIG);
+		const params = {
+			invoiceNumber: null,
+			orderDate: new Date('2026-11-02T14:00:00Z'),
+			quantity: 1,
+			totals: {totalMinor: 1000, paidMinor: 1000, currency: 'EUR', tax: null, reverseCharge: false},
+			document: null,
+			business: false,
+			consentAt: new Date('2026-11-02T13:59:00Z'),
+			withdrawalEndsOn: null,
+			withdrawalCountry: null,
+			wallName: null,
+			unitAmountMinor: 1000,
+			paymentMethod: null,
+			deliveryBoxText: null,
+		};
+		expect(
+			await service.send(
+				'operator_pass_purchase_confirmation',
+				'buyer@example.com',
+				{...params, termsVersion: '2026-11-01'},
+				'en-US',
+			),
+		).toBe(true);
+		const [attachment] = sent[0].attachments ?? [];
+		expect(attachment.filename).toBe('fluxer-operator-pass-terms-2026-11-01-en-US.pdf');
+		expect((await PDFDocument.load(attachment.content)).getTitle()).toBe('Fluxer Operator Pass terms (2026-11-01)');
+		expect(sent[0].text).toContain('(version 2026-11-01)');
+		expect(
+			await service.send(
+				'operator_pass_purchase_confirmation',
+				'buyer@example.com',
+				{...params, termsVersion: '2026-10-18'},
+				'en-US',
+			),
+		).toBe(false);
+		expect(sent).toHaveLength(1);
+	});
+	it('puts the Fluxer invoice with its tax line and PDF in the purchase confirmation, with no Stripe link', async () => {
+		const {service, sent} = createCapturingServiceFor(CONFIG);
+		const invoicePdf = {filename: 'Fluxer-OP-000001.pdf', content: new Uint8Array([1]), contentType: 'application/pdf'};
+		await service.send(
+			'operator_pass_purchase_confirmation',
+			'buyer@example.com',
+			{
+				invoiceNumber: 'OP-000001',
+				orderDate: new Date('2026-11-02T14:00:00Z'),
+				quantity: 1,
+				totals: {
+					totalMinor: 19900,
+					paidMinor: 19900,
+					currency: 'EUR',
+					tax: {amountMinor: 3980, behavior: 'inclusive'},
+					reverseCharge: false,
+				},
+				document: {number: 'OP-000001', issuedAt: new Date('2026-11-02T14:00:00Z'), pdf: invoicePdf},
+				business: true,
+				consentAt: new Date('2026-11-02T13:59:00Z'),
+				withdrawalEndsOn: null,
+				withdrawalCountry: null,
+				wallName: null,
+				unitAmountMinor: 19900,
+				paymentMethod: null,
+				deliveryBoxText: null,
+				termsVersion: '2026-11-01',
+			},
+			'en-US',
+		);
+		expect(sent[0].text).toContain('Includes €39.80 tax');
+		expect(sent[0].text).toContain('Your invoice OP-000001 is attached to this email as a PDF.');
+		expect(sent[0].html).not.toContain('stripe.com');
+		expect(sent[0].attachments?.map((attachment) => attachment.filename)).toEqual([
+			'fluxer-operator-pass-terms-2026-11-01-en-US.pdf',
+			'Fluxer-OP-000001.pdf',
+		]);
+	});
+	it('attaches the credit note to an Operator Pass refund receipt', async () => {
+		const {service, sent} = createCapturingServiceFor(CONFIG);
+		const creditNotePdf = {
+			filename: 'CreditNote-CN-1.pdf',
+			content: new Uint8Array([1]),
+			contentType: 'application/pdf',
+		};
+		await service.send(
+			'operator_pass_refund_receipt',
+			'buyer@example.com',
+			{
+				invoiceNumber: 'A1B2-0001',
+				orderDate: new Date('2026-11-02T14:00:00Z'),
+				refundedAt: new Date('2026-11-03T14:00:00Z'),
+				amountMinor: 19900,
+				currency: 'EUR',
+				delivered: true,
+				passCount: 1,
+				lastPass: false,
+				visionary: false,
+				creditNote: {number: 'CN-1', issuedAt: new Date('2026-11-03T14:00:00Z'), pdf: creditNotePdf},
+			},
+			'en-US',
+		);
+		expect(sent[0].text).toContain('Credit note number');
+		expect(sent[0].text).toContain('CN-1');
+		expect(sent[0].text).toContain('The pass has ended. Your other passes stay.');
+		expect(sent[0].text).toContain('The credit note for this refund is attached to this email as a PDF.');
+		expect(sent[0].attachments?.map((attachment) => attachment.filename)).toEqual(['CreditNote-CN-1.pdf']);
+	});
+	it.each([
+		[
+			1,
+			true,
+			'The pass has ended. Your badge and wall listing have ended too. You keep #operators through your Visionary',
+		],
+		[2, false, '2 passes have ended. Your other passes stay.'],
+		[0, true, "This refund didn't end any of your passes, so nothing else on your account changes."],
+	])('says what a refund that ended %i passes did to the account', async (passCount, lastPass, text) => {
+		const {service, sent} = createCapturingServiceFor(CONFIG);
+		await service.send(
+			'operator_pass_refund_receipt',
+			'buyer@example.com',
+			{
+				invoiceNumber: 'A1B2-0001',
+				orderDate: new Date('2026-11-02T14:00:00Z'),
+				refundedAt: new Date('2026-11-03T14:00:00Z'),
+				amountMinor: 19900,
+				currency: 'EUR',
+				delivered: true,
+				passCount,
+				lastPass,
+				visionary: true,
+				creditNote: null,
+			},
+			'en-US',
+		);
+		expect(sent[0].text).toContain(text);
+	});
+	it('tells a Visionary whose pass bonus is removed that #operators stays through Visionary', async () => {
+		const {service, sent} = createCapturingServiceFor(CONFIG);
+		const params = {
+			until: null,
+			rule: 'Community guidelines section 4, advertising',
+			facts: 'Posted ads in #operators three times.',
+			automated: false,
+			dispute: null,
+		};
+		await service.send('operator_pass_perks_removed', 'visionary@example.com', {...params, visionary: true}, 'en-US');
+		await service.send('operator_pass_perks_removed', 'operator@example.com', {...params, visionary: false}, 'en-US');
+		const [visionary, operator] = sent.map((message) => message.text ?? '');
+		expect(visionary).toContain('This includes your wall listing, badge and the Operator role.');
+		expect(visionary).toContain('You keep #operators through your Visionary.');
+		expect(operator).toContain('This includes your wall listing, badge, #operators and the Operator role.');
+		expect(operator).not.toContain('through your Visionary');
+	});
+	it('explains a dispute bar in the recipient language and says the disputed pages are canceled', async () => {
+		const {service, sent} = createCapturingServiceFor(CONFIG);
+		const params = {
+			until: null,
+			rule: 'Section 9 of the Operator Pass terms',
+			facts: 'Payment dispute dp_test was found unjustified',
+			automated: false,
+			visionary: false,
+			dispute: {id: 'dp_test_sv', deadline: new Date('2026-12-01T12:00:00Z')},
+		};
+		await service.send('operator_pass_perks_removed', 'buyer@example.com', params, 'sv-SE');
+		await service.send('operator_pass_perks_removed', 'buyer@example.com', {...params, dispute: null}, 'sv-SE');
+		const [dispute, other] = sent.map((message) => message.text ?? '');
+		expect(dispute).toContain('Avsnitt 9 i villkoren för Operator Pass');
+		expect(dispute).toContain('betalningstvisten dp_test_sv');
+		expect(dispute).toContain('1 december 2026');
+		expect(dispute).toContain('Certifikatsidorna som den betalningen avsåg har makulerats');
+		expect(dispute).not.toContain('Payment dispute');
+		expect(dispute).not.toContain('påverkas inte');
+		expect(other).toContain('Ditt Operator-certifikat påverkas inte');
+		expect(other).toContain('Payment dispute dp_test was found unjustified');
+	});
+	it('puts the credit note number and attachment in a refusal email', async () => {
+		const {service, sent} = createCapturingServiceFor(CONFIG);
+		await service.send(
+			'operator_pass_purchase_refused',
+			'buyer@example.com',
+			{
+				creditNote: {
+					number: 'CN-0001',
+					issuedAt: new Date('2026-11-03T14:00:00Z'),
+					pdf: {filename: 'CN-0001.pdf', content: Buffer.from('%PDF-1.7'), contentType: 'application/pdf'},
+				},
+			},
+			'de',
+		);
+		expect(sent[0].text).toContain('Gutschriftnummer');
+		expect(sent[0].text).toContain('CN-0001');
+		expect(sent[0].text).toContain('Die Gutschrift zu dieser Rückerstattung findest du als PDF im Anhang.');
+		expect(sent[0].attachments?.map((attachment) => attachment.filename)).toContain('CN-0001.pdf');
+	});
+	it('keeps the # in #operators when a pass leaves the last one on an account', async () => {
+		const {service, sent} = createCapturingServiceFor(CONFIG);
+		await service.send(
+			'operator_pass_offer_accepted',
+			'sender@example.com',
+			{recipientName: 'Grace', remainingCount: 0, visionary: false},
+			'en-US',
+		);
+		expect(sent[0].text).toContain('your badge, wall listing and #operators are gone.');
+	});
+	it('tells a buyer who withdraws before delivery that nothing else on the account changes', async () => {
+		const {service, sent} = createCapturingServiceFor(CONFIG);
+		const params = {
+			name: 'Ada Lovelace',
+			receivedAt: new Date('2026-11-02T14:00:00Z'),
+			invoiceNumber: null,
+			orderDate: new Date('2026-11-02T13:00:00Z'),
+			amountMinor: 59700,
+			currency: 'USD',
+			passCount: 3,
+			lastPass: true,
+			visionary: false,
+			refund: 'started' as const,
+			creditNote: null,
+		};
+		await service.send('operator_pass_withdrawal_receipt', 'buyer@example.com', {...params, delivered: false}, 'en-US');
+		await service.send('operator_pass_withdrawal_receipt', 'holder@example.com', {...params, delivered: true}, 'en-US');
+		const [undelivered, delivered] = sent.map((message) => message.text ?? '');
+		expect(undelivered).toContain(
+			"We hadn't delivered your certificates yet, so nothing else on your account changes.",
+		);
+		expect(undelivered).not.toContain('passes have ended');
+		expect(undelivered).not.toContain('Your badge, wall listing and #operators have ended too.');
+		expect(delivered).toContain('3 passes have ended.');
+		expect(delivered).toContain('Your badge, wall listing and #operators have ended too.');
+	});
+	it('says no new refund was needed when the payment was already refunded', async () => {
+		const {service, sent} = createCapturingServiceFor(CONFIG);
+		await service.send(
+			'operator_pass_withdrawal_receipt',
+			'buyer@example.com',
+			{
+				name: 'Ada Lovelace',
+				receivedAt: new Date('2026-11-02T14:00:00Z'),
+				invoiceNumber: null,
+				orderDate: new Date('2026-11-02T13:00:00Z'),
+				amountMinor: 19900,
+				currency: 'USD',
+				delivered: true,
+				passCount: 1,
+				lastPass: true,
+				visionary: false,
+				refund: 'already',
+				creditNote: null,
+			},
+			'en-US',
+		);
+		const text = sent[0]?.text ?? '';
+		expect(text).toContain('so no new refund was needed.');
+		expect(text).not.toContain('We started a full refund');
 	});
 });

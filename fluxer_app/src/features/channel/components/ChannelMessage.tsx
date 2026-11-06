@@ -24,6 +24,7 @@ import {
 } from '@app/features/channel/components/MessageViewContext';
 import type {Channel} from '@app/features/channel/models/Channel';
 import DeveloperOptions from '@app/features/devtools/state/DeveloperOptions';
+import type {GuildRole} from '@app/features/guild/models/GuildRole';
 import {parse} from '@app/features/messaging/components/markdown/renderers';
 import {MarkdownContext} from '@app/features/messaging/components/markdown/renderers/RendererTypes';
 import type {Message as MessageModel} from '@app/features/messaging/models/MessagingMessage';

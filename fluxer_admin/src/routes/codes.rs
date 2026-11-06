@@ -4,7 +4,7 @@ use crate::{
     acl,
     api::{
         client::{AdminApiClient, ApiError, ApiResultExt},
-        generated::types::GiftCodeDurationTypeSchema,
+        codes::GIFT_DURATION_TYPES,
         types::{CosmeticItem, PremiumMode},
     },
     middleware::{
@@ -44,7 +44,7 @@ struct GiftCodesForm {
     #[serde(default)]
     count: Option<u32>,
     #[serde(default)]
-    duration_type: Option<GiftCodeDurationTypeSchema>,
+    duration_type: Option<String>,
     #[serde(default)]
     duration_quantity: Option<u32>,
     #[serde(default)]
@@ -63,7 +63,7 @@ struct GeneratedCode {
 
 // Item codes: what every code of one batch gives.
 enum CodeGrant<'a> {
-    Premium(GiftCodeDurationTypeSchema, u32),
+    Premium(&'a str, u32),
     Item(&'a CosmeticItem),
 }
 
@@ -152,10 +152,10 @@ async fn gift_codes_post(
         Ok(Form(f)) => f,
         Err(error) => {
             tracing::warn!(%error, "failed to parse gift codes form");
-            return flash::redirect_with_flash(
+            return flash::redirect_error(
+                config,
                 &format!("{base}/gift-codes"),
-                FlashData::error("Invalid form data"),
-                config.secure_cookies(),
+                "Invalid form data",
             );
         }
     };
@@ -176,11 +176,12 @@ async fn gift_codes_post(
         };
         CodeGrant::Item(item)
     } else {
-        CodeGrant::Premium(
-            form.duration_type
-                .unwrap_or(GiftCodeDurationTypeSchema::Months),
-            form.duration_quantity.unwrap_or(1),
-        )
+        let duration_type = form
+            .duration_type
+            .as_deref()
+            .and_then(|value| GIFT_DURATION_TYPES.iter().copied().find(|known| *known == value))
+            .unwrap_or("months");
+        CodeGrant::Premium(duration_type, form.duration_quantity.unwrap_or(1).max(1))
     };
     let (codes, error) = generate_in_chunks(&client, count, &grant).await;
     if error.is_none() && form.format.as_deref() == Some("csv") {
@@ -224,7 +225,7 @@ async fn generate_in_chunks(
         let result = match grant {
             CodeGrant::Premium(duration_type, duration_quantity) => {
                 client
-                    .generate_gift_codes(chunk, *duration_type, *duration_quantity)
+                    .generate_gift_codes(chunk, duration_type, *duration_quantity)
                     .await
             }
             CodeGrant::Item(item) => client.create_cosmetic_gift_codes(chunk, &item.id).await,

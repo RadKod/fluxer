@@ -18,7 +18,6 @@ import styles from '@app/features/guild/components/modals/guild_tabs/GuildEmojiT
 import {UploadDropZone} from '@app/features/guild/components/UploadDropZone';
 import {UploadSlotInfo} from '@app/features/guild/components/UploadSlotInfo';
 import Guilds from '@app/features/guild/state/Guilds';
-import {OKAY_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
 import {openFilePicker} from '@app/features/messaging/utils/FilePickerUtils';
 import {formatFileSize} from '@app/features/messaging/utils/FileUtils';
 import Permission from '@app/features/permissions/state/Permission';
@@ -50,7 +49,7 @@ const NO_EMOJI_SLOTS_AVAILABLE_DESCRIPTOR = msg({
 	comment: 'Empty-state text in the guild emoji tab.',
 });
 const EMOJI_SLOTS_FULL_DESCRIPTION_DESCRIPTOR = msg({
-	message: "You've reached the maximum number of emojis. Delete some existing emojis to make room.",
+	message: "You can't add more emojis. Delete some existing emojis to make room.",
 	comment: 'Emoji upload limit message in community emoji settings. Do not suggest that communities can be upgraded.',
 });
 const FAILED_TO_PREPARE_EMOJIS_DESCRIPTOR = msg({
@@ -273,9 +272,6 @@ const GuildEmojiTab: React.FC<{guildId: string}> = observer(function GuildEmojiT
 								<Trans>Unable to prepare any emojis for upload. The following errors occurred:</Trans>,
 								validationFailures,
 							)}
-							primaryText={i18n._(OKAY_DESCRIPTOR)}
-							primaryVariant="primary"
-							onPrimary={() => {}}
 							data-flx="guild.guild-tabs.guild-emoji-tab.handle-file-select.unsupported-files-confirm-modal"
 						/>
 					)),
@@ -328,9 +324,6 @@ const GuildEmojiTab: React.FC<{guildId: string}> = observer(function GuildEmojiT
 								<Trans>Unable to prepare any emojis for upload. The following errors occurred:</Trans>,
 								preparationFailures,
 							)}
-							primaryText={i18n._(OKAY_DESCRIPTOR)}
-							primaryVariant="primary"
-							onPrimary={() => {}}
 							data-flx="guild.guild-tabs.guild-emoji-tab.handle-file-select.confirm-modal--2"
 						/>
 					)),
@@ -390,9 +383,6 @@ const GuildEmojiTab: React.FC<{guildId: string}> = observer(function GuildEmojiT
 								i18n._(SOME_EMOJIS_COULD_NOT_BE_ADDED_BODY_DESCRIPTOR),
 								failures,
 							)}
-							primaryText={i18n._(OKAY_DESCRIPTOR)}
-							primaryVariant="primary"
-							onPrimary={() => {}}
 							data-flx="guild.guild-tabs.guild-emoji-tab.handle-file-select.partial-failure-modal"
 						/>
 					)),

@@ -1,51 +1,42 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {createUserID, type UserID} from '@app/api/BrandedTypes';
-import {Config} from '@app/api/Config';
 import type {BillingSubscriptionRow} from '@app/api/database/types/BillingTypes';
 import type {UserRow} from '@app/api/database/types/UserTypes';
 import type {DonationRepository} from '@app/api/donation/DonationRepository';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import {Logger} from '@app/api/Logger';
-import {getBillingRepository} from '@app/api/middleware/ServiceRegistry';
+import {getBillingRepository, getWorkerService} from '@app/api/middleware/ServiceRegistry';
+import {getPaymentDisputeRepository} from '@app/api/middleware/ServiceSingletons';
 import type {Payment} from '@app/api/models/Payment';
 import type {User} from '@app/api/models/User';
+import {
+	isOperatorPassCheckoutSession,
+	type OperatorPassFulfilmentService,
+} from '@app/api/operator_pass/OperatorPassFulfilmentService';
+import {flagPurchaseDuringDispute} from '@app/api/payment_disputes/PaymentDisputeReviews';
 import type {ProductInfo, ProductRegistry} from '@app/api/stripe/ProductRegistry';
 import {mirrorBestEffort} from '@app/api/stripe/StripeMirror';
 import {
 	getFirstInvoicePaymentIntentId,
-	getPrimarySubscriptionItem,
 	getSubscriptionCurrentPeriodStart,
-	getSubscriptionItemPeriodEnd,
 	getSubscriptionPremiumPeriodEnd,
 } from '@app/api/stripe/StripeSubscriptionPeriod';
 import {extractId, isMissingOrCancelledSubscriptionError} from '@app/api/stripe/StripeUtils';
+import {enqueueBillingEmail} from '@app/api/stripe/services/BillingEmailService';
 import {EU_WITHDRAWAL_WAIVER_TEXT_VERSION} from '@app/api/stripe/services/StripeCheckoutService';
+import {StripeDonationCheckoutFulfilment} from '@app/api/stripe/services/StripeDonationCheckoutFulfilment';
 import type {StripeGiftService} from '@app/api/stripe/services/StripeGiftService';
 import type {StripePremiumService} from '@app/api/stripe/services/StripePremiumService';
 import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {dispatchUserUpdate} from '@app/api/user/UserMappers';
 import {UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
+import {DAYS_PER_MONTH, MS_PER_DAY} from '@fluxer/date_utils/src/DateConstants';
 import {StripeError} from '@fluxer/errors/src/domains/payment/StripeError';
 import type {ICacheService} from '@pkgs/cache/src/ICacheService';
 import type {IEmailService} from '@pkgs/email/src/IEmailService';
 import {seconds} from 'itty-time';
 import type Stripe from 'stripe';
-
-interface DonationCustomerDetails {
-	businessName: string | undefined;
-	taxId: string | undefined;
-	taxIdType: string | undefined;
-}
-
-interface DonationSubscriptionDetails {
-	amountCents: number | null;
-	currency: string | null;
-	interval: string | null;
-	currentPeriodEnd: Date | null;
-	cancelAt: Date | null;
-	status: string | null;
-}
 
 type CheckoutPremiumApplyResult = 'granted' | 'refunded_duplicate_subscription';
 type CheckoutSideEffectResult = 'continue' | 'stop';
@@ -71,21 +62,37 @@ interface CheckoutPremiumGrantContext extends CheckoutFulfilmentContext {
 }
 
 export class StripeCheckoutWebhookHandler {
-	static readonly CHECKOUT_EFFECTS_APPLIED_TTL_SECONDS = seconds('365 days');
+	private static readonly CHECKOUT_EFFECTS_APPLIED_TTL_SECONDS = seconds('365 days');
+	private donationFulfilment: StripeDonationCheckoutFulfilment;
 
 	constructor(
 		private stripe: Stripe | null,
 		private userRepository: UserRepository,
-		private emailService: IEmailService,
+		emailService: IEmailService,
 		private gatewayService: IGatewayService,
 		private productRegistry: ProductRegistry,
 		private cacheService: ICacheService,
 		private giftService: StripeGiftService,
 		private premiumService: StripePremiumService,
-		private donationRepository: DonationRepository,
-	) {}
+		donationRepository: DonationRepository,
+		private operatorPassFulfilment: OperatorPassFulfilmentService | null = null,
+	) {
+		this.donationFulfilment = new StripeDonationCheckoutFulfilment(
+			stripe,
+			donationRepository,
+			emailService,
+			cacheService,
+		);
+	}
 
 	async handleCheckoutSessionCompleted(session: Stripe.Checkout.Session): Promise<void> {
+		if (this.operatorPassFulfilment && isOperatorPassCheckoutSession(session)) {
+			await this.operatorPassFulfilment.handleCheckoutSessionCompleted(session);
+			if (session.payment_status !== 'unpaid') {
+				await this.flagOpenDisputes(session);
+			}
+			return;
+		}
 		if (session.metadata?.is_donation === 'true') {
 			await this.handleDonationCheckoutCompleted(session);
 			return;
@@ -107,7 +114,12 @@ export class StripeCheckoutWebhookHandler {
 		await this.fulfilCheckoutSession(session);
 	}
 
-	async handleAsyncPaymentSucceeded(session: Stripe.Checkout.Session): Promise<void> {
+	async handleAsyncPaymentSucceeded(session: Stripe.Checkout.Session, paidAt: Date): Promise<void> {
+		if (this.operatorPassFulfilment && isOperatorPassCheckoutSession(session)) {
+			await this.operatorPassFulfilment.handleAsyncPaymentSucceeded(session, paidAt);
+			await this.flagOpenDisputes(session);
+			return;
+		}
 		if (session.metadata?.is_donation === 'true') {
 			Logger.info({sessionId: session.id}, 'Processing async payment succeeded for donation checkout session');
 			await this.handleDonationCheckoutCompleted(session);
@@ -117,7 +129,17 @@ export class StripeCheckoutWebhookHandler {
 		await this.fulfilCheckoutSession(session);
 	}
 
+	async handleCheckoutSessionExpired(session: Stripe.Checkout.Session): Promise<void> {
+		if (this.operatorPassFulfilment && isOperatorPassCheckoutSession(session)) {
+			await this.operatorPassFulfilment.handleCheckoutSessionExpired(session);
+		}
+	}
+
 	async handleAsyncPaymentFailed(session: Stripe.Checkout.Session): Promise<void> {
+		if (this.operatorPassFulfilment && isOperatorPassCheckoutSession(session)) {
+			await this.operatorPassFulfilment.handleAsyncPaymentFailed(session);
+			return;
+		}
 		if (session.metadata?.is_donation === 'true') {
 			Logger.warn(
 				{
@@ -140,6 +162,19 @@ export class StripeCheckoutWebhookHandler {
 			{sessionId: session.id, paymentStatus: session.payment_status},
 			'Async payment failed for checkout session',
 		);
+	}
+
+	private async flagOpenDisputes(session: Stripe.Checkout.Session, userId?: UserID): Promise<void> {
+		const reference = session.client_reference_id;
+		const purchaserId = userId ?? (reference && /^\d+$/.test(reference) ? createUserID(BigInt(reference)) : null);
+		if (purchaserId === null) {
+			return;
+		}
+		try {
+			await flagPurchaseDuringDispute(getPaymentDisputeRepository(), purchaserId, `stripe_checkout:${session.id}`);
+		} catch (error) {
+			Logger.error({error, sessionId: session.id}, 'Could not flag open payment dispute reviews for a checkout');
+		}
 	}
 
 	private async fulfilCheckoutSession(session: Stripe.Checkout.Session): Promise<void> {
@@ -169,7 +204,7 @@ export class StripeCheckoutWebhookHandler {
 			Logger.debug({sessionId: session.id, status: payment.status}, 'Payment already processed');
 			return;
 		}
-		const productInfo = this.productRegistry.getProduct(payment.priceId!);
+		const productInfo = payment.priceId === null ? null : this.productRegistry.getProduct(payment.priceId);
 		if (!productInfo) {
 			Logger.error({sessionId: session.id, priceId: payment.priceId}, 'Unknown price ID');
 			throw new StripeError('Unknown price ID for checkout session');
@@ -179,6 +214,7 @@ export class StripeCheckoutWebhookHandler {
 			Logger.error({userId: payment.userId, sessionId: session.id}, 'User not found');
 			throw new StripeError('User not found for checkout session');
 		}
+		await this.flagOpenDisputes(session, user.id);
 		if (session.amount_total == null || !session.currency) {
 			Logger.error(
 				{sessionId: session.id, amountTotal: session.amount_total, currency: session.currency},
@@ -218,10 +254,13 @@ export class StripeCheckoutWebhookHandler {
 			payment.euWithdrawalWaiverAcceptedAt ??
 			(Number.isNaN(metadataWaiverAcceptedAt?.getTime() ?? Number.NaN) ? null : metadataWaiverAcceptedAt) ??
 			(stripeTermsAccepted ? new Date() : null);
+		if (payment.isGift) {
+			await enqueueBillingEmail(getWorkerService(), {kind: 'gift_paid', id: session.id});
+		}
 		await this.userRepository.updatePayment({
 			...payment.toRow(),
 			stripe_customer_id: customerId,
-			payment_intent_id: extractId(session.payment_intent),
+			payment_intent_id: extractId(session.payment_intent) ?? (await this.firstInvoicePaymentIntentId(session)),
 			subscription_id: subscriptionId,
 			invoice_id: typeof session.invoice === 'string' ? session.invoice : null,
 			amount_cents: session.amount_total,
@@ -253,6 +292,13 @@ export class StripeCheckoutWebhookHandler {
 			Logger.debug({sessionId: context.session.id}, 'Checkout side effects already applied, finishing payment commit');
 			return 'continue';
 		}
+		if (!context.payment.isGift && context.isRecurring && (await this.hasSubscriptionEnded(context.subscriptionId))) {
+			Logger.warn(
+				{sessionId: context.session.id, subscriptionId: context.subscriptionId, userId: context.payment.userId},
+				'Checkout subscription ended before fulfilment, so no premium is granted',
+			);
+			return 'continue';
+		}
 		await this.syncCheckoutUserFields(context);
 		const result = context.payment.isGift
 			? await this.applyGiftCheckoutEffects(context)
@@ -266,6 +312,17 @@ export class StripeCheckoutWebhookHandler {
 			StripeCheckoutWebhookHandler.CHECKOUT_EFFECTS_APPLIED_TTL_SECONDS,
 		);
 		return 'continue';
+	}
+
+	private async hasSubscriptionEnded(subscriptionId: string | null): Promise<boolean> {
+		if (!subscriptionId || !this.stripe) return false;
+		try {
+			const subscription = await this.stripe.subscriptions.retrieve(subscriptionId);
+			return subscription.status === 'canceled' || subscription.status === 'incomplete_expired';
+		} catch (error) {
+			Logger.warn({error, subscriptionId}, 'Failed to read the checkout subscription status before fulfilment');
+			return false;
+		}
 	}
 
 	private async syncCheckoutUserFields(context: CheckoutFulfilmentContext): Promise<void> {
@@ -386,9 +443,21 @@ export class StripeCheckoutWebhookHandler {
 		productInfo: ProductInfo,
 	): Promise<{existingSubscriptionId: string} | null> {
 		const billingRepo = getBillingRepository();
-		const customers = await billingRepo.customers.findByUserId(userId).catch(() => []);
+		const customers = await billingRepo.customers.findByUserId(userId).catch((error) => {
+			Logger.warn(
+				{error, userId, newSubscriptionId},
+				'Failed to load billing customers for duplicate checkout detection',
+			);
+			return [];
+		});
 		for (const customer of customers) {
-			const subs = await billingRepo.subscriptions.listByCustomer(customer.provider_id).catch(() => []);
+			const subs = await billingRepo.subscriptions.listByCustomer(customer.provider_id).catch((error) => {
+				Logger.warn(
+					{error, userId, customerId: customer.provider_id, newSubscriptionId},
+					'Failed to load billing subscriptions for duplicate checkout detection',
+				);
+				return [];
+			});
 			const duplicate = subs.find((sub) =>
 				this.isDuplicateRecurringSubscriptionCandidate(sub, newSubscriptionId, productInfo),
 			);
@@ -418,9 +487,13 @@ export class StripeCheckoutWebhookHandler {
 	}
 
 	private isSameProductRecurring(existingPriceId: string | null, productInfo: ProductInfo): boolean {
-		if (!existingPriceId) return false;
+		if (!existingPriceId) {
+			return false;
+		}
 		const existingProduct = this.productRegistry.getProduct(existingPriceId);
-		if (!existingProduct) return false;
+		if (!existingProduct) {
+			return false;
+		}
 		return existingProduct.type === productInfo.type;
 	}
 
@@ -469,8 +542,23 @@ export class StripeCheckoutWebhookHandler {
 		});
 	}
 
+	private async firstInvoicePaymentIntentId(session: Stripe.Checkout.Session): Promise<string | null> {
+		const invoiceId = extractId(session.invoice);
+		if (!invoiceId || !this.stripe) {
+			return null;
+		}
+		try {
+			return getFirstInvoicePaymentIntentId(await this.stripe.invoices.retrieve(invoiceId, {expand: ['payments']}));
+		} catch (err) {
+			Logger.warn({err, sessionId: session.id, invoiceId}, 'Failed to read the payment intent of a checkout invoice');
+			return null;
+		}
+	}
+
 	private async tryGetLatestChargeForSubscription(subscriptionId: string): Promise<string | null> {
-		if (!this.stripe) return null;
+		if (!this.stripe) {
+			return null;
+		}
 		try {
 			const subscription = await this.stripe.subscriptions.retrieve(subscriptionId, {
 				expand: ['latest_invoice.payments.data.payment'],
@@ -490,7 +578,9 @@ export class StripeCheckoutWebhookHandler {
 	}
 
 	private async refundChargeForDuplicateSubscription(chargeId: string, checkoutSessionId: string): Promise<void> {
-		if (!this.stripe) return;
+		if (!this.stripe) {
+			return;
+		}
 		const refund = await this.stripe.refunds.create(
 			{
 				charge: chargeId,
@@ -527,7 +617,7 @@ export class StripeCheckoutWebhookHandler {
 				);
 			}
 		}
-		const fallback = new Date(Date.now() + productInfo.durationMonths * 30 * 24 * 60 * 60 * 1000);
+		const fallback = new Date(Date.now() + productInfo.durationMonths * DAYS_PER_MONTH * MS_PER_DAY);
 		Logger.warn(
 			{sessionId: session.id, subscriptionId, durationMonths: productInfo.durationMonths},
 			'Using product duration fallback for subscription period_end on checkout fulfilment',
@@ -572,164 +662,11 @@ export class StripeCheckoutWebhookHandler {
 			Logger.error({sessionId: session.id}, 'Donation checkout missing email in metadata');
 			throw new StripeError('Donation checkout missing email');
 		}
-		const customerId = extractId(session.customer);
-		if (!customerId) {
-			Logger.error({sessionId: session.id}, 'Donation checkout missing customer');
-			throw new StripeError('Donation checkout missing customer id');
-		}
-		const donationLocale = session.metadata?.donation_locale ?? null;
-		const isRecurring = session.mode === 'subscription';
-		const subscriptionId = extractId(session.subscription);
-		if (isRecurring && !subscriptionId) {
-			Logger.error({sessionId: session.id}, 'Donation checkout missing subscription id');
-			throw new StripeError('Donation checkout missing subscription id');
-		}
-		const customerDetails = await this.loadDonationCustomerDetails(
-			customerId,
-			session.metadata?.is_business === 'true',
-		);
-		const subscriptionDetails = isRecurring
-			? await this.loadDonationSubscriptionDetails(subscriptionId)
-			: {amountCents: null, currency: null, interval: null, currentPeriodEnd: null, cancelAt: null, status: null};
-		const existingDonor = await this.donationRepository.findDonorByEmail(email);
-		const subscriptionUpdate = {
-			stripeSubscriptionId: subscriptionId,
-			subscriptionAmountCents: subscriptionDetails.amountCents,
-			subscriptionCurrency: subscriptionDetails.currency,
-			subscriptionInterval: subscriptionDetails.interval,
-			subscriptionCurrentPeriodEnd: subscriptionDetails.currentPeriodEnd,
-			subscriptionCancelAt: subscriptionDetails.cancelAt,
-			subscriptionStatus: subscriptionDetails.status,
-		};
-		if (existingDonor && isRecurring) {
-			await this.donationRepository.updateDonorSubscription(email, {
-				stripeCustomerId: customerId,
-				businessName: customerDetails.businessName,
-				taxId: customerDetails.taxId,
-				taxIdType: customerDetails.taxIdType,
-				...subscriptionUpdate,
-			});
-		} else if (existingDonor) {
-			const subscriptionCustomerId = existingDonor.stripeSubscriptionId ? existingDonor.stripeCustomerId : null;
-			await this.donationRepository.updateDonorCustomerDetails(email, {
-				stripeCustomerId: subscriptionCustomerId ?? customerId,
-				businessName: customerDetails.businessName,
-				taxId: customerDetails.taxId,
-				taxIdType: customerDetails.taxIdType,
-			});
-			await this.donationRepository.linkDonorStripeCustomer(email, customerId);
-		} else {
-			await this.donationRepository.createDonor({
-				email,
-				stripeCustomerId: customerId,
-				businessName: customerDetails.businessName,
-				taxId: customerDetails.taxId,
-				taxIdType: customerDetails.taxIdType,
-				...subscriptionUpdate,
-			});
-		}
-		if (session.payment_status === 'unpaid') {
-			Logger.info(
-				{sessionId: session.id, email, isRecurring, paymentStatus: session.payment_status},
-				'Donation checkout completed with unpaid status; deferring confirmation until settlement',
-			);
-			return;
-		}
-		const encodedEmail = encodeURIComponent(email);
-		const manageUrl = `${Config.endpoints.marketing}/donate/manage?email=${encodedEmail}`;
-		if (isRecurring) {
-			const recurringAmountCents = subscriptionDetails.amountCents;
-			const recurringCurrency = subscriptionDetails.currency;
-			const recurringInterval = subscriptionDetails.interval;
-			if (recurringAmountCents == null || !recurringCurrency || !recurringInterval) {
-				Logger.error({sessionId: session.id, subscriptionId}, 'Donation subscription details incomplete');
-				throw new StripeError('Donation subscription details incomplete');
-			}
-			await this.sendDonationConfirmationOnce({
-				sessionId: session.id,
-				email,
-				amountCents: recurringAmountCents,
-				currency: recurringCurrency,
-				interval: recurringInterval,
-				manageUrl,
-				locale: donationLocale,
-			});
-		} else {
-			const oneTimeAmountCents = session.amount_total;
-			const oneTimeCurrency = session.currency;
-			if (oneTimeAmountCents == null || !oneTimeCurrency) {
-				Logger.error(
-					{sessionId: session.id, amountTotal: session.amount_total, currency: session.currency},
-					'Donation checkout missing amount or currency',
-				);
-				throw new StripeError('Donation checkout missing amount or currency');
-			}
-			await this.sendDonationConfirmationOnce({
-				sessionId: session.id,
-				email,
-				amountCents: oneTimeAmountCents,
-				currency: oneTimeCurrency,
-				interval: 'once',
-				manageUrl,
-				locale: donationLocale,
-			});
-		}
-		Logger.info(
-			{
-				email,
-				customerId,
-				subscriptionId,
-				businessName: customerDetails.businessName,
-				taxId: customerDetails.taxId,
-				taxIdType: customerDetails.taxIdType,
-				isRecurring,
-				amountCents: isRecurring ? subscriptionDetails.amountCents : session.amount_total,
-				currency: isRecurring ? subscriptionDetails.currency : session.currency,
-				interval: subscriptionDetails.interval,
-			},
-			'Donation checkout completed',
-		);
-	}
-
-	private async sendDonationConfirmationOnce({
-		sessionId,
-		email,
-		amountCents,
-		currency,
-		interval,
-		manageUrl,
-		locale,
-	}: {
-		sessionId: string;
-		email: string;
-		amountCents: number;
-		currency: string;
-		interval: string;
-		manageUrl: string;
-		locale: string | null;
-	}): Promise<void> {
-		const confirmationSentKey = this.getDonationConfirmationSentKey(sessionId);
-		if (await this.cacheService.get<boolean>(confirmationSentKey)) {
-			Logger.debug({sessionId}, 'Donation confirmation already sent for checkout session');
-			return;
-		}
-		const sent = await this.emailService.sendDonationConfirmation(
+		await this.donationFulfilment.registerDonation(session, {
 			email,
-			amountCents,
-			currency,
-			interval,
-			manageUrl,
-			locale,
-		);
-		if (!sent) {
-			Logger.error({sessionId, email, interval}, 'Failed to send donation confirmation email');
-			throw new StripeError('Failed to send donation confirmation email');
-		}
-		await this.cacheService.set(
-			confirmationSentKey,
-			true,
-			StripeCheckoutWebhookHandler.CHECKOUT_EFFECTS_APPLIED_TTL_SECONDS,
-		);
+			locale: session.metadata?.donation_locale ?? null,
+			isBusiness: session.metadata?.is_business === 'true',
+		});
 	}
 
 	private async cancelStripeSubscriptionById(
@@ -792,7 +729,7 @@ export class StripeCheckoutWebhookHandler {
 			return null;
 		}
 		try {
-			await this.userRepository.createPayment({
+			const payment = {
 				checkout_session_id: session.id,
 				user_id: userId,
 				price_id: priceId,
@@ -804,11 +741,14 @@ export class StripeCheckoutWebhookHandler {
 				purchase_client_country_code: session.metadata?.purchase_client_country_code ?? null,
 				eu_withdrawal_waiver_required: euWithdrawalWaiverRequired,
 				eu_withdrawal_waiver_accepted: euWithdrawalWaiverAccepted,
-				eu_withdrawal_waiver_accepted_at: Number.isNaN(euWithdrawalWaiverAcceptedAt?.getTime() ?? Number.NaN)
-					? session.consent?.terms_of_service === 'accepted'
-						? new Date()
-						: null
-					: euWithdrawalWaiverAcceptedAt,
+			};
+			let waiverAcceptedAt = euWithdrawalWaiverAcceptedAt;
+			if (Number.isNaN(waiverAcceptedAt?.getTime() ?? Number.NaN)) {
+				waiverAcceptedAt = session.consent?.terms_of_service === 'accepted' ? new Date() : null;
+			}
+			await this.userRepository.createPayment({
+				...payment,
+				eu_withdrawal_waiver_accepted_at: waiverAcceptedAt,
 				eu_withdrawal_waiver_text_version:
 					session.metadata?.eu_withdrawal_waiver_text_version ?? EU_WITHDRAWAL_WAIVER_TEXT_VERSION,
 			});
@@ -836,69 +776,5 @@ export class StripeCheckoutWebhookHandler {
 
 	private getCheckoutGiftFinalisedKey(checkoutSessionId: string): string {
 		return `stripe:checkout:gift:finalised:${checkoutSessionId}`;
-	}
-
-	private getDonationConfirmationSentKey(checkoutSessionId: string): string {
-		return `stripe:checkout:donation:confirmation:sent:${checkoutSessionId}`;
-	}
-
-	private async loadDonationCustomerDetails(customerId: string, isBusiness: boolean): Promise<DonationCustomerDetails> {
-		if (!this.stripe) {
-			throw new StripeError('Stripe client not available for donation customer lookup');
-		}
-		try {
-			const customer = await this.stripe.customers.retrieve(customerId, {expand: ['tax_ids']});
-			if (customer && !customer.deleted) {
-				const primaryTaxId = customer.tax_ids?.data?.[0] ?? null;
-				const isBusinessDonor = isBusiness || primaryTaxId !== null;
-				return {
-					businessName: isBusinessDonor ? (customer.name ?? undefined) : undefined,
-					taxId: primaryTaxId?.value ?? undefined,
-					taxIdType: primaryTaxId?.type ?? undefined,
-				};
-			}
-		} catch (error) {
-			Logger.error({error, customerId}, 'Failed to retrieve customer details');
-			throw error;
-		}
-		throw new StripeError('Donation customer not found');
-	}
-
-	private async loadDonationSubscriptionDetails(subscriptionId: string | null): Promise<DonationSubscriptionDetails> {
-		if (!subscriptionId) {
-			throw new StripeError('Donation subscription id missing for lookup');
-		}
-		if (!this.stripe) {
-			throw new StripeError('Stripe client not available for donation subscription lookup');
-		}
-		try {
-			const subscription = await this.stripe.subscriptions.retrieve(subscriptionId);
-			const item = getPrimarySubscriptionItem(subscription);
-			if (!item) {
-				Logger.error({subscriptionId}, 'Subscription has no items for donation checkout');
-				throw new StripeError('Donation subscription has no items');
-			}
-			if (!item.price?.recurring || item.price.unit_amount == null || !item.price.currency) {
-				Logger.error({subscriptionId}, 'Donation subscription missing pricing details');
-				throw new StripeError('Donation subscription missing pricing details');
-			}
-			const currentPeriodEnd = getSubscriptionItemPeriodEnd(item);
-			if (!currentPeriodEnd) {
-				Logger.error({subscriptionId}, 'Donation subscription missing period end');
-				throw new StripeError('Donation subscription missing period end');
-			}
-			const cancelAt = subscription.cancel_at ? new Date(subscription.cancel_at * 1000) : null;
-			return {
-				amountCents: item.price.unit_amount,
-				currency: item.price.currency,
-				interval: item.price.recurring.interval,
-				currentPeriodEnd,
-				cancelAt,
-				status: subscription.status,
-			};
-		} catch (error) {
-			Logger.error({error, subscriptionId}, 'Failed to retrieve subscription details');
-			throw error;
-		}
 	}
 }

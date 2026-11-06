@@ -47,7 +47,6 @@ start_cowboy() ->
             },
             #{
                 env => #{dispatch => Dispatch},
-                max_frame_size => 4096,
                 connection_type => supervisor,
                 dynamic_buffer => {512, 131072}
             }
@@ -59,6 +58,7 @@ start_cowboy() ->
 
 -spec prep_stop(term()) -> term().
 prep_stop(State) ->
+    ok = gateway_shutdown_drain:run(),
     State.
 
 -spec stop(term()) -> ok.

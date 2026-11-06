@@ -277,7 +277,7 @@ function isRejectedManifestError(error: unknown): boolean {
 }
 
 export class ModuleUpdater {
-	public readonly store: ModuleStore;
+	private readonly store: ModuleStore;
 	private readonly platform: string;
 	private readonly manifestFeed: ModuleManifestFeedIdentity;
 	private readonly manifestRepository: ModuleManifestRepository;

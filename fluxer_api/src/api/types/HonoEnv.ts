@@ -41,6 +41,7 @@ import type {GuildDiscoveryService} from '@app/api/guild/services/GuildDiscovery
 import type {GuildService} from '@app/api/guild/services/GuildService';
 import type {GuildSoundboardPlayService} from '@app/api/guild/soundboard/GuildSoundboardPlayService';
 import type {GuildSoundboardService} from '@app/api/guild/soundboard/GuildSoundboardService';
+import type {GuildVisitService} from '@app/api/guild/visits/GuildVisitService';
 import type {EntityAssetService} from '@app/api/infrastructure/EntityAssetService';
 import type {ErrorI18nService} from '@app/api/infrastructure/ErrorI18nService';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
@@ -65,6 +66,8 @@ import type {OAuth2ApplicationsRequestService} from '@app/api/oauth/OAuth2Applic
 import type {OAuth2RequestService} from '@app/api/oauth/OAuth2RequestService';
 import type {OAuth2Service} from '@app/api/oauth/OAuth2Service';
 import type {OAuth2TokenRepository} from '@app/api/oauth/repositories/OAuth2TokenRepository';
+import type {OperatorPassCheckoutService} from '@app/api/operator_pass/OperatorPassCheckoutService';
+import type {OperatorPassEntitlementService} from '@app/api/operator_pass/OperatorPassEntitlementService';
 import type {PremiumLedgerService} from '@app/api/premium/ledger/PremiumLedgerService';
 import type {PremiumTrialService} from '@app/api/premium/trial/PremiumTrialService';
 import type {VisionaryService} from '@app/api/premium/visionary/VisionaryService';
@@ -80,7 +83,6 @@ import type {ShopCatalogService} from '@app/api/shop/ShopCatalogService';
 import type {ShopOrderService} from '@app/api/shop/ShopOrderService';
 import type {StoreEntitlementService} from '@app/api/store_billing/StoreEntitlementService';
 import type {StripeService} from '@app/api/stripe/StripeService';
-import type {AgeVerificationService} from '@app/api/stripe/services/AgeVerificationService';
 import type {TableGameService} from '@app/api/table_game/TableGameService';
 import type {ThemeService} from '@app/api/theme/ThemeService';
 import type {EntranceSoundPlayService} from '@app/api/user/entrance_sound/EntranceSoundPlayService';
@@ -110,6 +112,8 @@ import type {IRateLimitService} from '@pkgs/rate_limit/src/IRateLimitService';
 import type {IWorkerService} from '@pkgs/worker/src/contracts/IWorkerService';
 import type {Hono} from 'hono';
 
+export type AuthTokenType = 'session' | 'bearer' | 'bot' | 'admin_api_key' | 'operator';
+
 export interface HonoEnv {
 	Variables: {
 		apiContext: ApiContext;
@@ -121,9 +125,10 @@ export interface HonoEnv {
 		adminArchiveService: AdminArchiveService;
 		adminApiKeyService: AdminApiKeyService;
 		adminApiKeyAcls: Set<string> | null;
+		adminApiKeyId: bigint | null;
 		adminUserId: UserID;
 		adminUserAcls: Set<string>;
-		authTokenType?: 'session' | 'bearer' | 'bot' | 'admin_api_key';
+		authTokenType?: AuthTokenType;
 		clientFeatures: ReadonlySet<string>;
 		authToken?: string;
 		oauthBearerAllowed?: boolean;
@@ -145,6 +150,8 @@ export interface HonoEnv {
 		connectionRequestService: ConnectionRequestService;
 		blueskyOAuthService: IBlueskyOAuthService | null;
 		donationService: DonationService;
+		operatorPassCheckoutService: OperatorPassCheckoutService;
+		operatorPassEntitlementService: OperatorPassEntitlementService;
 		streamService: StreamService;
 		emailService: IEmailService;
 		emailChangeService: EmailChangeService;
@@ -174,6 +181,7 @@ export interface HonoEnv {
 		gatewayRequestService: GatewayRequestService;
 		discoveryService: GuildDiscoveryService;
 		guildService: GuildService;
+		guildVisitService: GuildVisitService;
 		inviteService: InviteService;
 		inviteRequestService: InviteRequestService;
 		liveKitWebhookService?: LiveKitWebhookService;
@@ -218,7 +226,6 @@ export interface HonoEnv {
 		workerService: IWorkerService<WorkerTaskName>;
 		stripeService: StripeService;
 		storeEntitlementService: StoreEntitlementService;
-		ageVerificationService: AgeVerificationService;
 		applicationService: ApplicationService;
 		oauth2Service: OAuth2Service;
 		oauth2RequestService: OAuth2RequestService;

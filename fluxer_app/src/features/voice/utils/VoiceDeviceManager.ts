@@ -34,6 +34,31 @@ const VOICE_MEDIA_PERMISSION_TYPES: ReadonlyArray<VoiceMediaPermissionType> = ['
 const VOICE_MEDIA_PERMISSION_INTENTS: ReadonlyArray<VoiceMediaPermissionIntent> = ['confirm', 'request'];
 const MAX_ENUMERATION_CHAIN_PASSES = 1 + VOICE_MEDIA_PERMISSION_TYPES.length * VOICE_MEDIA_PERMISSION_INTENTS.length;
 
+const ENUMERATE_DEVICES_TIMEOUT_MS = 5000;
+
+class EnumerateDevicesTimeoutError extends Error {
+	constructor() {
+		super(`navigator.mediaDevices.enumerateDevices() did not settle within ${ENUMERATE_DEVICES_TIMEOUT_MS}ms`);
+		this.name = 'EnumerateDevicesTimeoutError';
+	}
+}
+
+function enumerateMediaDevices(): Promise<Array<MediaDeviceInfo>> {
+	return new Promise((resolve, reject) => {
+		const timer = setTimeout(() => reject(new EnumerateDevicesTimeoutError()), ENUMERATE_DEVICES_TIMEOUT_MS);
+		navigator.mediaDevices.enumerateDevices().then(
+			(devices) => {
+				clearTimeout(timer);
+				resolve(devices);
+			},
+			(error: unknown) => {
+				clearTimeout(timer);
+				reject(error);
+			},
+		);
+	});
+}
+
 export interface EnsureVoiceDevicesOptions {
 	requestPermissions?: boolean;
 	requestPermissionTypes?: ReadonlyArray<VoiceMediaPermissionType>;
@@ -579,7 +604,7 @@ class VoiceDeviceManager {
 		const permissionStatus = {...this.state.permissionStatus};
 		try {
 			logger.debug('Calling navigator.mediaDevices.enumerateDevices()');
-			let devices = await navigator.mediaDevices.enumerateDevices();
+			let devices = await enumerateMediaDevices();
 			logger.debug('Initial enumeration result', {
 				deviceCount: devices.length,
 				devices: devices.map((d) => ({
@@ -620,7 +645,7 @@ class VoiceDeviceManager {
 				}
 				if (nativeResults.some(({result}) => result === 'granted')) {
 					try {
-						devices = await navigator.mediaDevices.enumerateDevices();
+						devices = await enumerateMediaDevices();
 					} catch (error) {
 						logger.warn('Device re-enumeration after native permission grant failed', {error});
 					}
@@ -643,7 +668,7 @@ class VoiceDeviceManager {
 							logger.debug('iOS PWA: microphone permission already granted via Permissions API, skipping getUserMedia');
 							permissionStatus.audio = 'granted';
 							try {
-								devices = await navigator.mediaDevices.enumerateDevices();
+								devices = await enumerateMediaDevices();
 								skipGetUserMedia = devices.some((device) => device.kind === 'audioinput' && device.label !== '');
 							} catch (error) {
 								logger.warn('iOS PWA device re-enumeration after permission grant failed', {error});
@@ -670,7 +695,7 @@ class VoiceDeviceManager {
 						}
 						logger.debug('Re-enumerating devices after permission grant');
 						try {
-							devices = await navigator.mediaDevices.enumerateDevices();
+							devices = await enumerateMediaDevices();
 							logger.debug('Re-enumeration result', {
 								deviceCount: devices.length,
 								devices: devices.map((d) => ({

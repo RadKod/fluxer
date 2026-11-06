@@ -113,8 +113,8 @@ handle_move_token_result(_Decision, {error, username_selection_required}, Build)
     UserId = maps:get(user_id, Context),
     {reply, gateway_errors:error(username_selection_required),
         clear_move_flags(UserId, ChannelIdValue, State)};
-handle_move_token_result(_Decision, {error, _Reason}, Build) ->
-    move_error_reply(voice_token_failed, Build);
+handle_move_token_result(_Decision, {error, Reason}, Build) ->
+    move_error_reply(guild_voice_connection_token:voice_error_for(Reason), Build);
 handle_move_token_result(Decision, {ok, TokenData}, Build) ->
     case voice_p2p:admit(Decision, TokenData) of
         {reject, ErrorAtom} ->

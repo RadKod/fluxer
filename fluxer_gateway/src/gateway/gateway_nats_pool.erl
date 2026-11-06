@@ -5,8 +5,8 @@
 -behaviour(gen_server).
 
 -export([start_link/0, pub/2, pub_reply/2, reply_publish_failures/0, get_pool_status/0]).
+-export([has_ready_connection/0]).
 -export([enable_rpc_subscription/0, disable_rpc_subscription/0]).
--export([rpc_ready/0]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -define(PERSISTENT_TERM_KEY, {?MODULE, connections}).
@@ -19,7 +19,8 @@
         handle_connect_ok_entry/5,
         accept_connect_ok/4,
         ignore_stale_connect_ok/2,
-        handle_ready/4,
+        handle_ready/2,
+        accept_connect_timeout/3,
         handle_conn_event_down/2,
         handle_slot_monitor_down/5,
         conn_from_term/1
@@ -80,18 +81,16 @@ reply_failure_counter() ->
             Ref
     end.
 
+-spec has_ready_connection() -> boolean().
+has_ready_connection() ->
+    case gateway_nats_pool_conn:get_pool_conn() of
+        {ok, _Conn} -> true;
+        {error, _Reason} -> false
+    end.
+
 -spec get_pool_status() -> map().
 get_pool_status() ->
     gen_server:call(?MODULE, get_pool_status).
-
--spec rpc_ready() -> boolean().
-rpc_ready() ->
-    try gen_server:call(?MODULE, rpc_ready, 1000) of
-        true -> true;
-        _ -> false
-    catch
-        exit:_ -> false
-    end.
 
 -spec enable_rpc_subscription() -> ok.
 enable_rpc_subscription() ->
@@ -110,39 +109,29 @@ init([]) ->
     persistent_term:put(?PERSISTENT_TERM_KEY, list_to_tuple(Slots)),
     persistent_term:put(?REPLY_FAILURE_KEY, counters:new(1, [write_concurrency])),
     self() ! connect_all,
-    {ok,
-        gateway_cluster_membership:watch_rpc_membership(#{
-            pool_size => PoolSize,
-            slots => #{},
-            monitors => #{},
-            connecting => #{},
-            rpc_enabled => nats_rpc_enabled(),
-            subs => #{},
-            handler_count => 0,
-            handler_refs => #{},
-            max_handlers => gateway_nats_pool_conn:max_handlers()
-        })}.
-
--spec nats_rpc_enabled() -> boolean().
-nats_rpc_enabled() ->
-    fluxer_gateway_env:get(nats_rpc_enabled) =/= false.
+    {ok, #{
+        pool_size => PoolSize,
+        slots => #{},
+        monitors => #{},
+        connecting => #{},
+        rpc_enabled => gateway_nats_pool_conn:nats_rpc_enabled(),
+        subs => #{},
+        sub_failures => #{},
+        handler_count => 0,
+        handler_refs => #{},
+        max_handlers => gateway_nats_pool_conn:max_handlers()
+    }}.
 
 -spec handle_call(term(), gen_server:from(), map()) -> {reply, term(), map()}.
 handle_call(get_pool_status, _From, State) ->
     {reply, build_pool_status(State), State};
-handle_call(rpc_ready, _From, State) ->
-    {reply, subscriptions_ready(State), State};
 handle_call(enable_rpc_subscription, _From, #{slots := Slots} = State) ->
-    NewState =
-        case fluxer_gateway_env:get(cluster_enabled) of
-            true -> reconcile_cluster_rpc(State#{rpc_enabled => true});
-            _ -> enable_subscriptions(Slots, State#{rpc_enabled => true})
-        end,
+    NewState = enable_subscriptions(Slots, State#{rpc_enabled => true}),
     {reply, ok, NewState};
 handle_call(disable_rpc_subscription, _From, #{slots := Slots, subs := Subs} = State) ->
     disable_subscriptions(Slots, Subs),
     logger:info("Gateway NATS pool unsubscribed all slots from RPC"),
-    {reply, ok, clear_cluster_subscriptions(State#{rpc_enabled => false, subs => #{}})};
+    {reply, ok, State#{rpc_enabled => false, subs => #{}}};
 handle_call(_Request, _From, State) ->
     {reply, ok, State}.
 
@@ -151,22 +140,6 @@ handle_cast(_Msg, State) ->
     {noreply, State}.
 
 -spec handle_info(term(), map()) -> {noreply, map()}.
-handle_info(cluster_rpc_readiness_changed, State) ->
-    {noreply, reconcile_cluster_rpc(State)};
-handle_info(
-    {retry_rpc_subscription, Token}, #{rpc_subscription_retry := {_Timer, Token}} = State
-) ->
-    {noreply, reconcile_cluster_rpc(State#{rpc_subscription_retry => undefined})};
-handle_info({retry_rpc_subscription, _Token}, State) ->
-    {noreply, State};
-handle_info(check_cluster_rpc, State) ->
-    Watched = gateway_cluster_membership:watch_rpc_membership(State),
-    {noreply, reconcile_cluster_rpc(Watched)};
-handle_info(
-    {'DOWN', Ref, process, Pid, _Reason},
-    #{rpc_membership_monitor := {Pid, Ref}} = State
-) ->
-    {noreply, reconcile_cluster_rpc(State)};
 handle_info(connect_all, #{pool_size := PoolSize} = State) ->
     {noreply, connect_all_slots(PoolSize, State)};
 handle_info({nats_pool_connect_result, Idx, Pid, {ok, Conn}}, State) when
@@ -181,14 +154,16 @@ handle_info({reconnect_slot, Idx}, #{slots := Slots} = State) when
     is_integer(Idx), Idx >= 0
 ->
     {noreply, reconnect_slot(Idx, Slots, State)};
-handle_info({Conn, ready}, #{rpc_enabled := RpcEnabled, slots := Slots} = State) ->
-    {noreply, handle_ready(conn_from_term(Conn), RpcEnabled, Slots, State)};
+handle_info({Conn, ready}, State) ->
+    {noreply, handle_ready(conn_from_term(Conn), State)};
+handle_info({resubscribe_slot, Idx}, State) when is_integer(Idx), Idx >= 0 ->
+    {noreply, resubscribe_slot(Idx, State)};
 handle_info({_Conn, _Sid, {msg, Subject, Payload, MsgOpts}}, State) when
     is_binary(Subject), is_binary(Payload), is_map(MsgOpts)
 ->
     {noreply, handle_rpc_msg(Subject, Payload, MsgOpts, State)};
 handle_info({handler_done, _Pid}, State) ->
-    {noreply, decrement_handler_count(State)};
+    {noreply, gateway_nats_pool_conn:decrement_handler_count(State)};
 handle_info({Conn, closed}, State) ->
     {noreply, handle_conn_event_down(conn_from_term(Conn), State)};
 handle_info({Conn, {error, _Reason}}, State) ->
@@ -205,79 +180,6 @@ handle_info({connect_timeout, Idx}, State) when is_integer(Idx), Idx >= 0 ->
     {noreply, handle_legacy_connect_timeout(Idx, State)};
 handle_info(_Info, State) ->
     {noreply, State}.
-
--spec reconcile_cluster_rpc(map()) -> map().
-reconcile_cluster_rpc(#{slots := Slots, subs := Subs} = State) ->
-    case gateway_cluster_membership:rpc_ready() andalso maps:get(rpc_enabled, State, true) of
-        true ->
-            case maps:get(rpc_subscription_retry, State, undefined) of
-                {_Timer, _Token} ->
-                    State;
-                undefined ->
-                    NewState = enable_subscriptions(Slots, State),
-                    Ready = subscriptions_ready(NewState),
-                    gateway_nats_rpc_handler:update_subscription_retry(
-                        NewState#{cluster_rpc_ready => Ready},
-                        missing_ready_subscriptions(NewState)
-                    )
-            end;
-        false ->
-            disable_subscriptions(Slots, Subs),
-            clear_cluster_subscriptions(State#{subs => #{}})
-    end.
-
--spec subscriptions_ready(map()) -> boolean().
-subscriptions_ready(State) ->
-    Subjects = gateway_nats_rpc:rpc_subjects_for_role(fluxer_gateway_sup:current_role()),
-    case Subjects =:= [] of
-        true ->
-            true;
-        false ->
-            maps:get(rpc_enabled, State, true) andalso
-                lists:all(
-                    fun(Idx) -> slot_subscriptions_ready(Idx, Subjects, State) end,
-                    lists:seq(0, maps:get(pool_size, State) - 1)
-                )
-    end.
-
--spec slot_subscriptions_ready(non_neg_integer(), [binary()], map()) -> boolean().
-slot_subscriptions_ready(Idx, Subjects, State) ->
-    Conn = maps:get(Idx, maps:get(slots, State), undefined),
-    Installed = maps:get(Idx, maps:get(rpc_subscriptions, State, #{}), #{}),
-    Sids = maps:get(Idx, maps:get(subs, State), []),
-    maps:get(Idx, maps:get(ready_slots, State, #{}), undefined) =:= Conn andalso
-        is_pid(Conn) andalso is_process_alive(Conn) andalso
-        gateway_nats_rpc_handler:subjects_installed(Subjects, Installed) andalso
-        lists:all(
-            fun(Subject) -> lists:member(maps:get(Subject, Installed), Sids) end, Subjects
-        ).
-
--spec missing_ready_subscriptions(map()) -> boolean().
-missing_ready_subscriptions(State) ->
-    Subjects = gateway_nats_rpc:rpc_subjects_for_role(fluxer_gateway_sup:current_role()),
-    Installed = maps:get(rpc_subscriptions, State, #{}),
-    maps:fold(
-        fun(Idx, Conn, Missing) ->
-            Missing orelse
-                (maps:get(Idx, maps:get(slots, State), undefined) =:= Conn andalso
-                    not gateway_nats_rpc_handler:subjects_installed(
-                        Subjects, maps:get(Idx, Installed, #{})
-                    ))
-        end,
-        false,
-        maps:get(ready_slots, State, #{})
-    ).
-
--spec clear_cluster_subscriptions(map()) -> map().
-clear_cluster_subscriptions(State) ->
-    case fluxer_gateway_env:get(cluster_enabled) of
-        true ->
-            gateway_nats_rpc_handler:cancel_subscription_retry(
-                State#{rpc_subscriptions => #{}, cluster_rpc_ready => false}
-            );
-        _ ->
-            State
-    end.
 
 -spec connect_all_slots(pos_integer(), map()) -> map().
 connect_all_slots(PoolSize, State) ->
@@ -296,9 +198,7 @@ reconnect_slot(Idx, Slots, State) ->
     end.
 
 -spec terminate(term(), map()) -> ok.
-terminate(_Reason, #{slots := Slots} = State) ->
-    gateway_cluster_membership:stop_rpc_watch(State),
-    _ = gateway_nats_rpc_handler:cancel_subscription_retry(State),
+terminate(_Reason, #{slots := Slots}) ->
     maps:foreach(fun disconnect_slot/2, Slots),
     persistent_term:erase(?PERSISTENT_TERM_KEY),
     persistent_term:erase(?REPLY_FAILURE_KEY),
@@ -341,8 +241,17 @@ enable_subscriptions(Slots, State) ->
 -spec enable_slot_subscription(non_neg_integer(), nats:conn() | undefined, map()) -> map().
 enable_slot_subscription(_Idx, undefined, State) ->
     State;
-enable_slot_subscription(Idx, Conn, State) ->
-    gateway_nats_pool_conn:subscribe_slot(Idx, Conn, State).
+enable_slot_subscription(Idx, Conn, #{connecting := Connecting} = State) ->
+    case maps:is_key(Idx, Connecting) of
+        true -> State;
+        false -> gateway_nats_pool_conn:subscribe_slot(Idx, Conn, State)
+    end.
+
+-spec resubscribe_slot(non_neg_integer(), map()) -> map().
+resubscribe_slot(_Idx, #{rpc_enabled := false} = State) ->
+    State;
+resubscribe_slot(Idx, #{slots := Slots} = State) ->
+    enable_slot_subscription(Idx, maps:get(Idx, Slots, undefined), State).
 
 -spec disable_subscriptions(map(), map()) -> ok.
 disable_subscriptions(Slots, Subs) ->
@@ -364,7 +273,7 @@ disable_slot_subscription(Idx, Sids, Slots) ->
 disconnect_slot(_Idx, undefined) ->
     ok;
 disconnect_slot(_Idx, Conn) ->
-    ignore_disconnect(Conn).
+    gateway_nats_pool_conn:ignore_disconnect(Conn).
 
 -spec handle_connect_ok(non_neg_integer(), pid(), nats:conn(), map()) -> map().
 handle_connect_ok(Idx, Pid, Conn, State) ->
@@ -385,45 +294,38 @@ handle_connect_ok_entry(Idx, Pid, Entry, Conn, State) ->
 
 -spec accept_connect_ok(non_neg_integer(), map(), nats:conn(), map()) -> map().
 accept_connect_ok(Idx, Entry, Conn, State) ->
-    #{
-        connecting := Connecting,
-        slots := Slots,
-        monitors := Monitors,
-        pool_size := PoolSize
-    } = State,
-    cancel_connect_timer(Entry),
+    #{connecting := Connecting, slots := Slots, monitors := Monitors} = State,
     cleanup_old_conn(maps:get(Idx, Slots, undefined)),
     CleanMon = remove_slot_monitors(Idx, Monitors),
     MRef = nats:monitor(Conn),
-    NewSlots = Slots#{Idx => Conn},
-    gateway_nats_pool_conn:update_persistent_term(NewSlots, PoolSize),
     gateway_nats_pool_conn:reset_failure_count(Idx),
-    logger:info("Gateway NATS pool slot connected", #{slot => Idx}),
     NewState = State#{
-        slots => NewSlots,
+        slots => Slots#{Idx => Conn},
         monitors => CleanMon#{MRef => Idx},
-        connecting => maps:remove(Idx, Connecting)
+        connecting => Connecting#{Idx => connecting_entry_with_conn(Entry, Conn)}
     },
-    case fluxer_gateway_env:get(cluster_enabled) of
-        true ->
-            Subs = maps:remove(Idx, maps:get(subs, State)),
-            Installed = maps:remove(Idx, maps:get(rpc_subscriptions, State, #{})),
-            ReadySlots = maps:remove(Idx, maps:get(ready_slots, State, #{})),
-            gateway_nats_rpc_handler:cancel_subscription_retry(
-                NewState#{
-                    subs => Subs,
-                    rpc_subscriptions => Installed,
-                    cluster_rpc_ready => false,
-                    ready_slots => ReadySlots
-                }
-            );
-        _ ->
-            NewState
+    case gateway_nats_pool_conn:conn_ready(Conn) of
+        true -> mark_slot_ready(Idx, NewState);
+        false -> NewState
     end.
+
+-spec connecting_entry_with_conn(term(), nats:conn()) -> map().
+connecting_entry_with_conn(Entry, Conn) when is_map(Entry) ->
+    Entry#{conn => Conn};
+connecting_entry_with_conn(Pid, Conn) ->
+    #{pid => Pid, conn => Conn}.
+
+-spec mark_slot_ready(non_neg_integer(), map()) -> map().
+mark_slot_ready(Idx, #{connecting := Connecting} = State) ->
+    cancel_connect_timer(maps:get(Idx, Connecting, undefined)),
+    ReadyState = State#{connecting => maps:remove(Idx, Connecting)},
+    gateway_nats_pool_conn:publish_ready_slots(ReadyState),
+    logger:info("Gateway NATS pool slot connected", #{slot => Idx}),
+    resubscribe_slot(Idx, ReadyState).
 
 -spec ignore_stale_connect_ok(nats:conn(), map()) -> map().
 ignore_stale_connect_ok(Conn, State) ->
-    ignore_disconnect(Conn),
+    gateway_nats_pool_conn:ignore_disconnect(Conn),
     State.
 
 -spec remove_slot_monitors(non_neg_integer(), map()) -> map().
@@ -432,7 +334,7 @@ remove_slot_monitors(Idx, Monitors) ->
 
 -spec cleanup_old_conn(nats:conn() | undefined) -> ok.
 cleanup_old_conn(undefined) -> ok;
-cleanup_old_conn(OldConn) -> ignore_disconnect(OldConn).
+cleanup_old_conn(OldConn) -> gateway_nats_pool_conn:ignore_disconnect(OldConn).
 
 -spec handle_connect_error(non_neg_integer(), pid(), term(), map()) -> map().
 handle_connect_error(Idx, Pid, Reason, #{connecting := Connecting} = State) ->
@@ -459,38 +361,13 @@ accept_connect_error(Idx, Entry, Reason, #{connecting := Connecting} = State) ->
     gateway_nats_pool_conn:schedule_reconnect(Idx, self()),
     State#{connecting => maps:remove(Idx, Connecting)}.
 
--spec handle_ready(nats:conn(), boolean(), map(), map()) -> map().
-handle_ready(Conn, RpcEnabled, Slots, State) ->
-    case RpcEnabled orelse fluxer_gateway_env:get(cluster_enabled) =:= true of
-        false ->
-            State;
-        true ->
-            case gateway_nats_pool_conn:find_slot_by_conn(Conn, State) of
-                undefined -> State;
-                Idx -> handle_ready_slot(Idx, Conn, Slots, State)
-            end
+-spec handle_ready(nats:conn(), map()) -> map().
+handle_ready(Conn, #{connecting := Connecting} = State) ->
+    case gateway_nats_pool_conn:find_slot_by_conn(Conn, State) of
+        undefined -> State;
+        Idx when is_map_key(Idx, Connecting) -> mark_slot_ready(Idx, State);
+        Idx -> resubscribe_slot(Idx, State)
     end.
-
--spec handle_ready_slot(non_neg_integer(), nats:conn(), map(), map()) -> map().
-handle_ready_slot(Idx, Conn, Slots, State) ->
-    case maps:find(Idx, Slots) of
-        {ok, Conn} ->
-            case fluxer_gateway_env:get(cluster_enabled) of
-                true ->
-                    ReadySlots = maps:get(ready_slots, State, #{}),
-                    reconcile_cluster_rpc(State#{ready_slots => ReadySlots#{Idx => Conn}});
-                _ ->
-                    gateway_nats_pool_conn:subscribe_slot(Idx, Conn, State)
-            end;
-        _ ->
-            State
-    end.
-
--spec decrement_handler_count(map()) -> map().
-decrement_handler_count(#{handler_count := HC} = State) when HC > 0 ->
-    State#{handler_count => HC - 1};
-decrement_handler_count(State) ->
-    State.
 
 -spec handle_rpc_msg(binary(), binary(), map(), map()) -> map().
 handle_rpc_msg(
@@ -503,10 +380,7 @@ handle_rpc_msg(
         handler_refs := HRefs
     } = State
 ) ->
-    case
-        gateway_nats_pool_conn:is_rpc_subject(Subject) andalso
-            gateway_cluster_membership:rpc_ready()
-    of
+    case gateway_nats_pool_conn:is_rpc_subject(Subject) of
         false -> State;
         true -> dispatch_rpc_msg(Subject, Payload, MsgOpts, HC, MaxH, HRefs, State)
     end.
@@ -520,7 +394,7 @@ dispatch_rpc_msg(Subject, Payload, MsgOpts, HC, MaxH, HRefs, State) ->
         undefined ->
             State;
         ReplyTo when HC >= MaxH ->
-            _ = send_overloaded(ReplyTo),
+            send_overloaded_async(ReplyTo),
             State;
         ReplyTo ->
             {_Pid, MRef} = spawn_rpc_handler(Subject, Payload, ReplyTo),
@@ -532,6 +406,11 @@ spawn_rpc_handler(Subject, Payload, ReplyTo) ->
     spawn_monitor(fun() ->
         gateway_nats_rpc_handler:handle_rpc_request(Subject, Payload, ReplyTo)
     end).
+
+-spec send_overloaded_async(binary()) -> ok.
+send_overloaded_async(ReplyTo) ->
+    _ = spawn(fun() -> send_overloaded(ReplyTo) end),
+    ok.
 
 -spec send_overloaded(binary()) -> ok | {error, term()}.
 send_overloaded(ReplyTo) ->
@@ -546,7 +425,7 @@ send_overloaded(ReplyTo) ->
 handle_conn_event_down(Conn, #{pool_size := PoolSize} = State) ->
     case gateway_nats_pool_conn:find_slot_by_conn(Conn, State) of
         undefined ->
-            ignore_disconnect(Conn),
+            gateway_nats_pool_conn:ignore_disconnect(Conn),
             State;
         Idx ->
             gateway_nats_pool_conn:handle_conn_down(Idx, Conn, PoolSize, State)
@@ -622,8 +501,11 @@ handle_legacy_connect_timeout(Idx, #{connecting := Connecting} = State) ->
     end.
 
 -spec accept_connect_timeout(non_neg_integer(), term(), map()) -> map().
+accept_connect_timeout(Idx, #{conn := Conn}, #{pool_size := PoolSize} = State) ->
+    logger:warning("Gateway NATS pool slot connection did not become ready", #{slot => Idx}),
+    gateway_nats_pool_conn:handle_conn_down(Idx, conn_from_term(Conn), PoolSize, State);
 accept_connect_timeout(Idx, Entry, #{connecting := Connecting} = State) ->
-    maybe_kill_connect_pid(connecting_entry_pid(Entry)),
+    gateway_nats_pool_conn:maybe_kill_connect_pid(connecting_entry_pid(Entry)),
     logger:warning("Gateway NATS pool slot connect attempt timed out", #{slot => Idx}),
     gateway_nats_pool_conn:schedule_reconnect(Idx, self()),
     State#{connecting => maps:remove(Idx, Connecting)}.
@@ -644,91 +526,6 @@ cancel_connect_timer(#{timer := TimerRef}) when is_reference(TimerRef) ->
 cancel_connect_timer(_) ->
     ok.
 
--spec maybe_kill_connect_pid(pid() | undefined) -> ok.
-maybe_kill_connect_pid(Pid) when is_pid(Pid) ->
-    unlink(Pid),
-    exit(Pid, kill),
-    ok;
-maybe_kill_connect_pid(undefined) ->
-    ok.
-
 -spec conn_from_term(term()) -> nats:conn().
 conn_from_term(Conn) when is_pid(Conn) ->
     Conn.
-
--spec ignore_disconnect(nats:conn()) -> ok.
-ignore_disconnect(Conn) ->
-    try nats:disconnect(Conn) of
-        _ -> ok
-    catch
-        throw:_ -> ok;
-        error:_ -> ok;
-        exit:_ -> ok
-    end.
-
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
-
--define(TEST_WAIT_LOOP_TIMEOUT_MS, 60000).
-
-stale_connect_timeout_does_not_kill_current_slot_worker_test() ->
-    Token = make_ref(),
-    StaleToken = make_ref(),
-    Pid = spawn(fun wait_forever/0),
-    State = #{
-        connecting => #{0 => #{pid => Pid, token => Token, timer => undefined}},
-        slots => #{},
-        monitors => #{},
-        pool_size => 1,
-        subs => #{}
-    },
-    try
-        ?assertEqual(State, handle_connect_timeout(0, StaleToken, State)),
-        ?assert(erlang:is_process_alive(Pid))
-    after
-        exit(Pid, kill)
-    end.
-
-legacy_connect_timeout_ignores_tokened_slot_worker_test() ->
-    Token = make_ref(),
-    Pid = spawn(fun wait_forever/0),
-    State = #{
-        connecting => #{0 => #{pid => Pid, token => Token, timer => undefined}},
-        slots => #{},
-        monitors => #{},
-        pool_size => 1,
-        subs => #{}
-    },
-    try
-        ?assertEqual(State, handle_legacy_connect_timeout(0, State)),
-        ?assert(erlang:is_process_alive(Pid))
-    after
-        exit(Pid, kill)
-    end.
-
-pool_keeps_rpc_unsubscribed_when_switched_off_test() ->
-    persistent_term:put({fluxer_gateway, runtime_config}, #{nats_rpc_enabled => false}),
-    Parent = self(),
-    try
-        Pid = spawn(fun() -> Parent ! {self(), init([])} end),
-        {ok, State} =
-            receive
-                {Pid, Reply} -> Reply
-            after 5000 -> timeout
-            end,
-        ?assertEqual(false, maps:get(rpc_enabled, State)),
-        ?assertEqual(State, handle_ready(self(), false, #{0 => self()}, State))
-    after
-        persistent_term:erase(?PERSISTENT_TERM_KEY),
-        persistent_term:erase(?REPLY_FAILURE_KEY),
-        persistent_term:erase({fluxer_gateway, runtime_config})
-    end.
-
-wait_forever() ->
-    receive
-        stop -> ok
-    after ?TEST_WAIT_LOOP_TIMEOUT_MS ->
-        ok
-    end.
-
--endif.

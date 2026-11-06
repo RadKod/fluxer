@@ -98,7 +98,7 @@ export class UserSettingsRepository {
 		return new UserGuildSettings({...settings, version: result.finalVersion ?? 1});
 	}
 
-	async upsertSettings(settings: UserSettingsRow): Promise<UserSettings> {
+	async upsertSettings(settings: UserSettingsRow, base?: UserSettingsRow): Promise<UserSettings> {
 		const userId = settings.user_id;
 		const current = await this.findSettings(userId, {authoritative: true});
 		if (!current) {

@@ -1,13 +1,30 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type {APIConfig, BlueskyOAuthConfig, TrustedCallerConfig} from '@app/api/config/APIConfig';
+import type {
+	AgePolicyConfig,
+	APIConfig,
+	BlueskyOAuthConfig,
+	OperatorPassConfig,
+	TrustedCallerConfig,
+} from '@app/api/config/APIConfig';
+import {
+	parseOperatorPassMaxQuantity,
+	parseOperatorPassReleaseLists,
+	parseOperatorPassStandardPrices,
+	parseOperatorPassWallTiers,
+	parseOperatorPassWithdrawalCountries,
+	resolveOperatorPassDisabledCurrencies,
+} from '@app/api/operator_pass/OperatorPassPrices';
 import {DonationRateLimitConfigs} from '@app/api/rate_limit_configs/DonationRateLimitConfig';
+import {OperatorPassRateLimitConfigs} from '@app/api/rate_limit_configs/OperatorPassRateLimitConfig';
 import {parseIpBanEntry} from '@app/api/utils/IpRangeUtils';
 import {trimTrailingSlash} from '@app/api/utils/UrlUtils';
 import type {WorkerTaskName} from '@app/api/worker/WorkerLaneConfig';
 import type {MasterConfig} from '@fluxer/config/src/MasterConfig';
+import {EmailDeliveryModes} from '@fluxer/constants/src/AccountConfigConstants';
 import {smtpTlsModeFromSecure} from '@fluxer/constants/src/SmtpConstants';
 import {parseIpAddress} from '@fluxer/ip_utils/src/IpAddress';
+import type {GeoEntry} from '@fluxer/schema/src/domains/geolocation/GeolocationSchemas';
 import {normalizeString} from '@fluxer/schema/src/primitives/SchemaPrimitives';
 import {parseGeoipSourceConfig, resolveGeoipRuntimeSourceConfig} from '@pkgs/geoip/src/GeoipStartup';
 
@@ -55,8 +72,21 @@ function toSmtpConfig(
 		port: smtp.port,
 		username: smtp.username,
 		password: smtp.password,
-		tlsMode: smtp.tls_mode ?? smtpTlsModeFromSecure(smtp.secure),
+		tlsMode: smtp.tls_mode ?? smtpTlsModeFromSecure(smtp.secure, smtp.port),
 	};
+}
+
+function resolveEnvEmailSwitch(
+	email: MasterConfig['integrations']['email'],
+): Pick<APIConfig['email'], 'enabled' | 'provider'> {
+	switch (email.delivery) {
+		case undefined:
+			return {enabled: email.enabled, provider: email.provider};
+		case EmailDeliveryModes.SMTP:
+			return {enabled: true, provider: 'smtp'};
+		case EmailDeliveryModes.OFF:
+			return {enabled: false, provider: email.provider};
+	}
 }
 
 function isBoolean(value: unknown): value is boolean {
@@ -138,10 +168,35 @@ function buildTrustedCallers(master: MasterConfig): Array<TrustedCallerConfig> {
 		trustedCallers.push({
 			name: 'donation',
 			key: donationProxyKey,
-			buckets: Object.values(DonationRateLimitConfigs).map((routeConfig) => routeConfig.bucket),
+			buckets: [
+				...Object.values(DonationRateLimitConfigs).map((routeConfig) => routeConfig.bucket),
+				...Object.values(OperatorPassRateLimitConfigs)
+					.filter((routeConfig) => routeConfig.trustForwardedClientIp === true)
+					.map((routeConfig) => routeConfig.bucket),
+			],
 		});
 	}
 	return trustedCallers;
+}
+
+const HOSTED_AGE_RESTRICTED_REGIONS = ['GB', 'BR'];
+
+function toGeoEntry(region: string): GeoEntry {
+	const separator = region.indexOf('-');
+	if (separator === -1) {
+		return {countryCode: region, regionCode: null};
+	}
+	return {countryCode: region.slice(0, separator), regionCode: region.slice(separator + 1)};
+}
+
+function buildAgePolicyConfig(master: MasterConfig): AgePolicyConfig {
+	const {enabled, restricted_regions} = master.instance.age_policy;
+	const regionsSet = restricted_regions !== undefined;
+	if (!(enabled ?? (regionsSet || !master.instance.self_hosted))) {
+		return {restricted: []};
+	}
+	const restricted = regionsSet ? restricted_regions : HOSTED_AGE_RESTRICTED_REGIONS;
+	return {restricted: restricted.map(toGeoEntry)};
 }
 
 const SETUP_TOKEN_MIN_LENGTH = 32;
@@ -160,6 +215,119 @@ function resolveSetupToken(master: MasterConfig): string | null {
 		);
 	}
 	return token;
+}
+
+const ISO_INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/u;
+const OPERATOR_PASS_MAX_GRACE_MINUTES = 24 * 60;
+
+function parseIsoInstant(value: string | undefined, envName: string): Date {
+	const trimmed = (value ?? '').trim();
+	const parsed = ISO_INSTANT_PATTERN.test(trimmed) ? Date.parse(trimmed) : Number.NaN;
+	if (!Number.isFinite(parsed)) {
+		throw new Error(`${envName} must be an ISO-8601 instant such as 2026-11-01T16:00:00Z`);
+	}
+	return new Date(parsed);
+}
+
+function parseOptionalIsoInstant(value: string | undefined, envName: string): Date | null {
+	return (value ?? '').trim().length === 0 ? null : parseIsoInstant(value, envName);
+}
+
+function parseOptionalSnowflake(value: string | undefined, envName: string): bigint | null {
+	const trimmed = (value ?? '').trim();
+	if (trimmed.length === 0) {
+		return null;
+	}
+	if (!/^[1-9]\d{0,19}$/u.test(trimmed)) {
+		throw new Error(`${envName} must be a snowflake ID`);
+	}
+	return BigInt(trimmed);
+}
+
+function resolveOperatorPassClockOffsetMs(master: MasterConfig): number {
+	const override = (master.operator_pass.now_override ?? '').trim();
+	if (override.length === 0) {
+		return 0;
+	}
+	const overrideAt = parseIsoInstant(override, 'FLUXER_OPERATOR_PASS_NOW');
+	if (master.env === 'production' && !master.dev.test_mode_enabled) {
+		console.warn('FLUXER_OPERATOR_PASS_NOW is ignored in production');
+		return 0;
+	}
+	return overrideAt.getTime() - Date.now();
+}
+
+function buildOperatorPassConfig(master: MasterConfig): OperatorPassConfig {
+	const source = master.operator_pass;
+	const priceRisesAt = parseOptionalIsoInstant(source.price_rises_at, 'FLUXER_OPERATOR_PASS_PRICE_RISES_AT');
+	if (priceRisesAt === null && master.env === 'production' && !master.instance.self_hosted) {
+		console.warn('FLUXER_OPERATOR_PASS_PRICE_RISES_AT is not set, the Operator Pass early bird price never ends');
+	}
+	const graceMinutes = source.grace_minutes;
+	if (
+		typeof graceMinutes !== 'number' ||
+		!Number.isInteger(graceMinutes) ||
+		graceMinutes < 0 ||
+		graceMinutes > OPERATOR_PASS_MAX_GRACE_MINUTES
+	) {
+		throw new Error(
+			`FLUXER_OPERATOR_PASS_GRACE_MINUTES must be an integer between 0 and ${OPERATOR_PASS_MAX_GRACE_MINUTES}`,
+		);
+	}
+	const labsGuildId = parseOptionalSnowflake(source.labs_guild_id, 'FLUXER_LABS_GUILD_ID');
+	const labsOperatorRoleId = parseOptionalSnowflake(source.labs_operator_role_id, 'FLUXER_LABS_OPERATOR_ROLE_ID');
+	if ((labsGuildId === null) !== (labsOperatorRoleId === null)) {
+		throw new Error('FLUXER_LABS_GUILD_ID and FLUXER_LABS_OPERATOR_ROLE_ID must be set together');
+	}
+	const labsVisionaryRoleId = parseOptionalSnowflake(source.labs_visionary_role_id, 'FLUXER_LABS_VISIONARY_ROLE_ID');
+	if (labsVisionaryRoleId !== null && labsGuildId === null) {
+		throw new Error('FLUXER_LABS_VISIONARY_ROLE_ID needs FLUXER_LABS_GUILD_ID');
+	}
+	const labsAccessRoleId = parseOptionalSnowflake(source.labs_access_role_id, 'FLUXER_LABS_ACCESS_ROLE_ID');
+	if (labsAccessRoleId !== null && labsGuildId === null) {
+		throw new Error('FLUXER_LABS_ACCESS_ROLE_ID needs FLUXER_LABS_GUILD_ID');
+	}
+	const labsOperatorsChannelId = parseOptionalSnowflake(
+		source.labs_operators_channel_id,
+		'FLUXER_LABS_OPERATORS_CHANNEL_ID',
+	);
+	if (labsOperatorsChannelId !== null && labsGuildId === null) {
+		throw new Error('FLUXER_LABS_OPERATORS_CHANNEL_ID needs FLUXER_LABS_GUILD_ID');
+	}
+	const standardPricesMinor = parseOperatorPassStandardPrices(source.standard_prices_minor);
+	const hostedSale = priceRisesAt !== null && master.env === 'production' && !master.instance.self_hosted;
+	if (hostedSale && standardPricesMinor === null) {
+		throw new Error(
+			'FLUXER_OPERATOR_PASS_STANDARD_PRICE_* must be set in production when FLUXER_OPERATOR_PASS_PRICE_RISES_AT is set',
+		);
+	}
+	if (
+		hostedSale &&
+		(labsGuildId === null ||
+			labsOperatorRoleId === null ||
+			labsVisionaryRoleId === null ||
+			labsOperatorsChannelId === null)
+	) {
+		throw new Error(
+			'FLUXER_LABS_GUILD_ID, FLUXER_LABS_OPERATOR_ROLE_ID, FLUXER_LABS_VISIONARY_ROLE_ID and FLUXER_LABS_OPERATORS_CHANNEL_ID must be set in production when FLUXER_OPERATOR_PASS_PRICE_RISES_AT is set',
+		);
+	}
+	return {
+		priceRisesAt,
+		graceMs: graceMinutes * 60 * 1000,
+		clockOffsetMs: resolveOperatorPassClockOffsetMs(master),
+		labsGuildId,
+		labsOperatorRoleId,
+		labsVisionaryRoleId,
+		labsAccessRoleId,
+		labsOperatorsChannelId,
+		standardPricesMinor,
+		releaseLists: parseOperatorPassReleaseLists(source.release_lists),
+		withdrawalCountries: parseOperatorPassWithdrawalCountries(source.withdrawal_countries),
+		wallTierMinimums: parseOperatorPassWallTiers(source.wall_tiers),
+		maxQuantity: parseOperatorPassMaxQuantity(source.max_quantity),
+		disabledCurrencies: resolveOperatorPassDisabledCurrencies(source.localized_prices_enabled),
+	};
 }
 
 export function buildAPIConfigFromMaster(master: MasterConfig): APIConfig {
@@ -207,6 +375,7 @@ export function buildAPIConfigFromMaster(master: MasterConfig): APIConfig {
 		headersTimeoutMs: master.services.api.headers_timeout_ms,
 		requestTimeoutMs: master.services.api.request_timeout_ms,
 		maxInflightRequests: master.services.api.max_inflight_requests,
+		maxConcurrentFormUploads: master.services.api.max_concurrent_form_uploads,
 		automatedMessageDeletionDelayDays: master.services.api.automated_message_deletion_delay_days,
 		ipBanExemptIps: normalizeIpBanExemptIps(master.services.api.ip_ban_exempt_ips),
 		cassandra: {
@@ -280,6 +449,8 @@ export function buildAPIConfigFromMaster(master: MasterConfig): APIConfig {
 		},
 		endpoints: {
 			apiPublic: master.endpoints.api,
+			apiPublicDiscovery: master.services.api.discovery_public_endpoint || master.endpoints.api,
+			apiTransportDiscovery: master.services.api.discovery_transport_endpoint || null,
 			apiClient: master.endpoints.api_client,
 			webApp: master.endpoints.app,
 			webAppOrigins: [...new Set([new URL(master.endpoints.app).origin, ...master.services.api.app_origin_aliases])],
@@ -309,12 +480,12 @@ export function buildAPIConfigFromMaster(master: MasterConfig): APIConfig {
 			buckets: s3Buckets,
 		},
 		email: {
-			enabled: master.integrations.email.enabled,
-			provider: master.integrations.email.provider,
+			...resolveEnvEmailSwitch(master.integrations.email),
 			webhookSecret: master.integrations.email.webhook_secret ?? undefined,
 			fromEmail: master.integrations.email.from_email,
 			fromName: master.integrations.email.from_name,
 			replyToEmail: master.integrations.email.reply_to_email,
+			supportAlertEmail: master.integrations.email.support_alert_email?.trim() || null,
 			appBaseUrl: resolveEmailAppBaseUrl(master),
 			htmlEnabled: master.integrations.email.html_enabled ?? false,
 			htmlFooter: resolveEmailHtmlFooter(master),
@@ -349,8 +520,12 @@ export function buildAPIConfigFromMaster(master: MasterConfig): APIConfig {
 			apiSecret: master.integrations.voice.api_secret,
 			url: master.integrations.voice.url,
 			internalUrl: master.integrations.voice.internal_url,
+			bundled: master.integrations.voice.bundled ?? true,
 			defaultRegion: master.integrations.voice.default_region,
 			p2pStunUrls: master.integrations.voice.p2p_stun_urls,
+			turnServers: master.integrations.voice.turn_servers ?? [],
+			joinAllowPrivateEndpoints: master.integrations.voice.join_allow_private_endpoints ?? false,
+			healthIntervalMs: master.integrations.voice.health_interval_ms ?? 15000,
 		},
 		stripe: {
 			enabled: master.integrations.stripe.enabled,
@@ -452,6 +627,10 @@ export function buildAPIConfigFromMaster(master: MasterConfig): APIConfig {
 		},
 		admin: {
 			oauthClientSecret: master.services.admin.oauth_client_secret,
+			sso: {
+				issuer: master.services.admin.sso.issuer,
+				clientId: master.services.admin.sso.client_id,
+			},
 		},
 		auth: {
 			sudoModeSecret: master.auth.sudo_mode_secret,
@@ -486,6 +665,8 @@ export function buildAPIConfigFromMaster(master: MasterConfig): APIConfig {
 				logoUrl: master.instance.branding.logo_url,
 				wordmarkUrl: master.instance.branding.wordmark_url,
 				faviconUrl: master.instance.branding.favicon_url,
+				faviconDarkUrl: master.instance.branding.favicon_dark_url,
+				signInBackdropUrl: master.instance.branding.sign_in_backdrop_url,
 				themeColor: master.instance.branding.theme_color,
 				statusPageUrl: master.instance.branding.status_page_url,
 				statusPageIncidentHistoryUrl: master.instance.branding.status_page_incident_history_url,
@@ -496,10 +677,18 @@ export function buildAPIConfigFromMaster(master: MasterConfig): APIConfig {
 			},
 			accountIdentity: master.instance.account_identity,
 			tagStyle: master.instance.tag_style,
+			agePolicy: buildAgePolicyConfig(master),
 		},
 		discovery: {
 			enabled: master.discovery.enabled,
 			minMemberCount: master.discovery.min_member_count,
+		},
+		operatorPass: buildOperatorPassConfig(master),
+		paymentDisputes: {
+			closureEffectiveAt: parseOptionalIsoInstant(
+				master.payment_disputes.closure_effective_at,
+				'FLUXER_PAYMENT_DISPUTE_CLOSURE_EFFECTIVE_AT',
+			),
 		},
 		dev: {
 			relaxRegistrationRateLimits: master.dev.relax_registration_rate_limits,
@@ -543,6 +732,7 @@ export function buildAPIConfigFromMaster(master: MasterConfig): APIConfig {
 			products: master.integrations.google_play.products ?? {},
 			pushAudience: master.integrations.google_play.push_audience,
 			pushServiceAccountEmail: master.integrations.google_play.push_service_account_email,
+			selfServiceRefunds: master.integrations.google_play.self_service_refunds,
 		},
 		storeBilling: {
 			sandboxUserIds: master.integrations.store_billing.sandbox_user_ids ?? [],
@@ -554,6 +744,7 @@ export function buildAPIConfigFromMaster(master: MasterConfig): APIConfig {
 			taskName: apiWorkerConfig?.task as WorkerTaskName | undefined,
 			enableCronScheduler: apiWorkerConfig?.enable_cron_scheduler,
 			metricsPort: apiWorkerConfig?.metrics_port,
+			embedded: apiWorkerConfig?.embedded ?? false,
 			laneConcurrencyOverrides: {
 				realtime: apiWorkerConfig?.lane_concurrency_overrides?.realtime,
 				unfurl: apiWorkerConfig?.lane_concurrency_overrides?.unfurl,

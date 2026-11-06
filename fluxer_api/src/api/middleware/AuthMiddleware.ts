@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type {HonoEnv} from '@app/api/types/HonoEnv';
+import type {AuthTokenType, HonoEnv} from '@app/api/types/HonoEnv';
 import {isLegacyAccountRestricted} from '@app/api/user/AccountLimit';
 import {AccessDeniedError} from '@fluxer/errors/src/domains/core/AccessDeniedError';
 import {UnauthorizedError} from '@fluxer/errors/src/domains/core/UnauthorizedError';
@@ -8,7 +8,7 @@ import {AccountLimitedError} from '@fluxer/errors/src/domains/user/AccountLimite
 import {createMiddleware} from 'hono/factory';
 
 function ensureOAuth2BearerRouteSupport(
-	authTokenType: 'session' | 'bearer' | 'bot' | 'admin_api_key' | undefined,
+	authTokenType: AuthTokenType | undefined,
 	oauthBearerAllowed: boolean | undefined,
 ): void {
 	if (authTokenType === 'bearer' && !oauthBearerAllowed) {

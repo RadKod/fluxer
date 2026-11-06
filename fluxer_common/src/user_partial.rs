@@ -4,8 +4,12 @@ use crate::user_flags::{USER_FLAG_STAFF, premium_perks_visible, public_user_flag
 use serde::{Deserialize, Serialize};
 
 pub const FLUXER_SYSTEM_USER_ID: i64 = 0;
-pub const FLUXER_SYSTEM_USERNAME: &str = "sanalyer";
 pub const FLUXER_SYSTEM_DISCRIMINATOR: i32 = 0;
+const UPSTREAM_INSTANCE_NAME: &str = "sanalyer";
+
+pub fn default_instance_name() -> String {
+    UPSTREAM_INSTANCE_NAME.to_owned()
+}
 
 /// Micup: a worn cosmetic, the catalog item and the image hash copied onto the user row when it was put on.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -60,6 +64,7 @@ pub struct UserPartialFields {
     pub flags: Option<i64>,
     pub premium_type: Option<i32>,
     pub premium_flags: Option<i32>,
+    pub hidden_profile_badges: Vec<String>,
     pub mention_flags: Option<i32>,
     pub avatar_decoration_id: Option<i64>,
     pub avatar_decoration_asset: Option<String>,
@@ -75,7 +80,7 @@ pub struct UserPartialFields {
 impl From<UserPartialFields> for ApiUserPartial {
     fn from(partial: UserPartialFields) -> Self {
         if partial.user_id == FLUXER_SYSTEM_USER_ID {
-            return fluxer_system_user();
+            return fluxer_system_user(partial.username);
         }
         Self {
             id: partial.user_id.to_string(),
@@ -92,6 +97,7 @@ impl From<UserPartialFields> for ApiUserPartial {
                 partial.bot.unwrap_or_default(),
                 partial.premium_type,
                 partial.premium_flags,
+                &partial.hidden_profile_badges,
             ),
             mention_flags: partial.mention_flags.filter(|flags| *flags != 0),
             avatar_decoration_data: cosmetic_asset_data(
@@ -140,10 +146,10 @@ fn cosmetic_asset_data(
     })
 }
 
-pub fn fluxer_system_user() -> ApiUserPartial {
+pub fn fluxer_system_user(instance_name: String) -> ApiUserPartial {
     ApiUserPartial {
         id: FLUXER_SYSTEM_USER_ID.to_string(),
-        username: FLUXER_SYSTEM_USERNAME.to_owned(),
+        username: instance_name,
         discriminator: format!("{:04}", FLUXER_SYSTEM_DISCRIMINATOR),
         identity_version: None,
         global_name: None,

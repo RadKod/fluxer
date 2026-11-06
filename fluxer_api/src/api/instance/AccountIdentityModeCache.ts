@@ -2,19 +2,16 @@
 
 import {Config} from '@app/api/Config';
 import {
+	type AccountIdentity as BaseAccountIdentity,
 	type AccountIdentityMode,
 	AccountIdentityModes,
 	DEFAULT_ACCOUNT_IDENTITY_MODE,
+	normalizeAccountIdentity,
 	type TagStyle,
 	TagStyles,
 } from '@fluxer/constants/src/AccountIdentityConstants';
 
-export interface StoredAccountIdentity {
-	mode: AccountIdentityMode;
-	tagStyle: TagStyle;
-	usernameMigration?: UsernameMigrationConfig;
-}
-
+// Micup: the stored identity also carries the username migration (see InstanceConfigRepository).
 export interface UsernameMigrationConfig {
 	state: 'legacy' | 'preparing' | 'selecting';
 	epoch: number;
@@ -23,11 +20,11 @@ export interface UsernameMigrationConfig {
 	forced_at: string | null;
 }
 
-export interface AccountIdentity {
-	mode: AccountIdentityMode;
-	tagStyle: TagStyle;
+export interface AccountIdentity extends BaseAccountIdentity {
 	usernameMigration?: UsernameMigrationConfig;
 }
+
+export type StoredAccountIdentity = AccountIdentity;
 
 let cachedStored: StoredAccountIdentity | null = null;
 let cachedError: Error | null = null;
@@ -42,8 +39,7 @@ export function resolveAccountIdentity(stored: StoredAccountIdentity | null): Ac
 		};
 	}
 	return {
-		mode: stored.mode,
-		tagStyle: stored.mode === AccountIdentityModes.USERNAME ? TagStyles.NONE : stored.tagStyle,
+		...normalizeAccountIdentity(stored.mode, stored.tagStyle),
 		...(stored.usernameMigration ? {usernameMigration: {...stored.usernameMigration}} : {}),
 	};
 }

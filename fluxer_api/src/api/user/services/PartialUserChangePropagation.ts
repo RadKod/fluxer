@@ -11,6 +11,7 @@ import {Logger} from '@app/api/Logger';
 import {createRequestCache} from '@app/api/middleware/RequestCacheMiddleware';
 import {getKVClient, getWorkerService} from '@app/api/middleware/ServiceRegistry';
 import type {User} from '@app/api/models/User';
+import {followOperatorPassWallStanding} from '@app/api/operator_pass/OperatorPassWallStanding';
 import {dispatchUserUpdate, hasPartialUserFieldsChanged} from '@app/api/user/UserMappers';
 import {mapWithConcurrency, runAllInOrder} from '@app/api/utils/ConcurrencyUtils';
 import {USERNAME_CAPACITY_LIMITS} from '@app/api/worker/tasks/UsernameCapacityMonitor';
@@ -89,11 +90,13 @@ export async function propagateUserUpdate(
 	const partial = async () => {
 		if (hasPartialUserFieldsChanged(oldUser, updatedUser)) await propagatePartialUserChange(deps, updatedUser);
 	};
+	const wall = () => followOperatorPassWallStanding(oldUser, updatedUser);
 	if (options.continueAfterDispatchFailure) {
-		await runAllInOrder([dispatch, partial], 'Failed to propagate user update');
+		await runAllInOrder([dispatch, partial, wall], 'Failed to propagate user update');
 	} else {
 		await dispatch();
 		await partial();
+		await wall();
 	}
 }
 

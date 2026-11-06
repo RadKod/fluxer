@@ -235,7 +235,7 @@ export class VoiceEngineV2AppLiveKitExecutionAdapter implements LiveKitMediaPort
 		if (reason === 'user' || reason === 'server' || reason === 'shutdown') this.microphoneSessionStarted = false;
 		const delegate = this.connection.disconnectFromVoiceChannel;
 		if (typeof delegate !== 'function') return;
-		const mapped = reason === 'user' ? 'user' : reason === 'server' ? 'server' : 'error';
+		const mapped = reason === 'user' || reason === 'server' ? reason : 'error';
 		try {
 			delegate.call(this.connection, mapped);
 		} catch (error) {

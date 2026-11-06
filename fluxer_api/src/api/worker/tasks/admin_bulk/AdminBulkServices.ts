@@ -12,12 +12,14 @@ import {EnforcementDecisionService} from '@app/api/enforcement/EnforcementDecisi
 import {EnforcementNoticeDelivery} from '@app/api/enforcement/EnforcementNoticeDelivery';
 import {getReportServiceInstance} from '@app/api/middleware/ServiceMiddleware';
 import {
+	getCustomBadgeCatalog,
 	getDiscriminatorService,
 	getEnforcementDecisionRepository,
 	getEntityAssetService,
 	getGuildDiscoveryRepository,
 	getInviteRepository,
 } from '@app/api/middleware/ServiceSingletons';
+import {queuePaymentDisputeClosures} from '@app/api/payment_disputes/PaymentDisputeEnforcement';
 import type {SystemDmDeps} from '@app/api/user/services/SystemDmMessage';
 import {UserChannelService} from '@app/api/user/services/UserChannelService';
 import type {WorkerDependencies} from '@app/api/worker/WorkerDependencies';
@@ -97,6 +99,7 @@ export function createWorkerEnforcementServices(deps: WorkerDependencies): Worke
 			userCacheService: deps.userCacheService,
 			reporterResolutionNotifier,
 		}),
+		onClosureEnded: queuePaymentDisputeClosures,
 	});
 	return {apiContext, auditService, banManagementService, reporterResolutionNotifier, delivery, enforcementService};
 }
@@ -133,6 +136,7 @@ export function createAdminBulkServices(deps: WorkerDependencies): AdminBulkServ
 		auditService,
 		discoveryRepository: getGuildDiscoveryRepository(),
 		enforcement: enforcementService,
+		customBadgeCatalog: getCustomBadgeCatalog(),
 	});
 	return {auditService, banManagementService, userService, guildService};
 }

@@ -13,7 +13,6 @@ import {
 	fetchOne,
 	upsertOne,
 } from '@app/api/database/CassandraQueryExecution';
-import {Db} from '@app/api/database/CassandraTypes';
 import type {ChannelRow, DmStateRow, PrivateChannelRow} from '@app/api/database/types/ChannelTypes';
 import {Logger} from '@app/api/Logger';
 import {Channel} from '@app/api/models/Channel';
@@ -254,15 +253,6 @@ export class UserChannelRepository {
 		const channelRow = buildDmChannelRow({channelId, user1Id: ownerId, user2Id: recipientId, ownerId});
 		await upsertOne(Channels.upsertAll(channelRow));
 		return new Channel(channelRow);
-	}
-
-	async deleteAllPrivateChannels(userId: UserID): Promise<void> {
-		await deleteOneOrMany(
-			PrivateChannels.deleteCql({
-				where: PrivateChannels.where.eq('user_id'),
-			}),
-			{user_id: userId},
-		);
 	}
 
 	async deleteAllReadStates(userId: UserID): Promise<void> {
@@ -671,22 +661,6 @@ export class UserChannelRepository {
 		});
 	}
 
-	async openDmForUser(userId: UserID, channelId: ChannelID, isGroupDm?: boolean): Promise<void> {
-		const channelRow = await fetchOne<ChannelRow>(FETCH_CHANNEL_CQL, {
-			channel_id: channelId,
-			soft_deleted: false,
-		});
-		if (channelRow) {
-			await this.openPrivateChannelForUser(userId, new Channel(channelRow));
-			return;
-		}
-		const resolvedIsGroupDm = isGroupDm ?? false;
-		await this.recordHistoricalDmChannel(userId, channelId, resolvedIsGroupDm);
-		await upsertOne(
-			PrivateChannels.patchByPk({user_id: userId, channel_id: channelId}, {is_gdm: Db.set(resolvedIsGroupDm)}),
-		);
-	}
-
 	async openPrivateChannelForUser(userId: UserID, channel: Channel): Promise<void> {
 		const isGroupDm = channel.type === ChannelTypes.GROUP_DM;
 		await this.recordHistoricalDmChannel(userId, channel.id, isGroupDm);
@@ -698,7 +672,7 @@ export class UserChannelRepository {
 		);
 	}
 
-	async recordHistoricalDmChannel(userId: UserID, channelId: ChannelID, isGroupDm: boolean): Promise<void> {
+	private async recordHistoricalDmChannel(userId: UserID, channelId: ChannelID, isGroupDm: boolean): Promise<void> {
 		if (isGroupDm) {
 			return;
 		}

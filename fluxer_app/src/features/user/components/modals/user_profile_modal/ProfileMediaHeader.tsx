@@ -21,10 +21,12 @@ import {
 import {
 	getProfileAvatarDecorationBounds,
 	getProfileAvatarLeft,
+	getBannerCutoutCx,
 	PROFILE_MODAL_BANNER_AVATAR_CUTOUT,
 	PROFILE_MODAL_GEOMETRY,
 	PROFILE_MODAL_GEOMETRY_STYLE,
 } from '@app/features/user/constants/UserProfileSurfaceGeometry';
+import {useDirection} from '@base-ui/react/direction-provider';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
 import {observer} from 'mobx-react-lite';
@@ -67,6 +69,7 @@ export const ProfileMediaHeader: React.FC<ProfileMediaHeaderProps> = observer(
 		const reactId = useId();
 		const safeId = reactId.replace(/[^a-zA-Z0-9_-]/g, '');
 		const maskId = `uid_${safeId}`;
+		const direction = useDirection();
 		const {
 			hoverRef: bannerHoverRef,
 			imageUrl: activeBannerUrl,
@@ -206,11 +209,15 @@ export const ProfileMediaHeader: React.FC<ProfileMediaHeaderProps> = observer(
 					/>
 					<circle
 						fill="black"
-						cx={
-							identity
-								? (avatarLeft + avatarBorder + avatarSize / 2) / avatarScale
-								: PROFILE_MODAL_BANNER_AVATAR_CUTOUT.cx
-						}
+						cx={getBannerCutoutCx(
+							{
+								viewBoxWidthPx: PROFILE_MODAL_BANNER_AVATAR_CUTOUT.viewBoxWidthPx,
+								cx: identity
+									? (avatarLeft + avatarBorder + avatarSize / 2) / avatarScale
+									: PROFILE_MODAL_BANNER_AVATAR_CUTOUT.cx,
+							},
+							direction,
+						)}
 						cy={
 							identity
 								? PROFILE_MODAL_BANNER_AVATAR_CUTOUT.viewBoxHeightPx +

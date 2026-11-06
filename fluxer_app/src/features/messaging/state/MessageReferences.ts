@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {ResettableStates} from '@app/features/app/state/ResettableStates';
 import {Message as MessageRecord} from '@app/features/messaging/models/MessagingMessage';
 import Messages from '@app/features/messaging/state/MessagingMessages';
 import {LRUMap} from '@app/lib/list/ListLruMap';
@@ -367,6 +368,18 @@ class MessageReferences {
 			if (active.message) yield active.message;
 		}
 	}
+
+	reset(): void {
+		this.deletedMessageIds = new Set();
+		this.cachedMessages = new Map();
+		this.referenceVersions.clear();
+		this.referenceCount.clear();
+		this.referencingMessages.clear();
+	}
 }
 
-export default new MessageReferences();
+const messageReferences = new MessageReferences();
+
+ResettableStates.register(messageReferences, () => messageReferences.reset());
+
+export default messageReferences;

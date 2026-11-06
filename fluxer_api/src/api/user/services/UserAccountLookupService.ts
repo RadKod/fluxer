@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {createGuildID, type GuildID, type UserID} from '@app/api/BrandedTypes';
+import {Config} from '@app/api/Config';
 import type {ConnectionRepository} from '@app/api/connection/ConnectionRepository';
 import type {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
 import type {GuildService} from '@app/api/guild/services/GuildService';
@@ -20,17 +21,15 @@ import {
 	type ProfileViewConnection,
 	projectedUser,
 } from '@app/api/user/profile/ProfileViewProjection';
+import {applyPremiumBadgeMasking} from '@app/api/user/profile_badges/PremiumBadgeMasking';
 import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import type {ProfileAccessService, ProfileSide} from '@app/api/user/services/ProfileAccessService';
 import {checkUsernameClaimAvailability, isUsernameTaken, readUsernameMigration} from '@app/api/user/UniqueUsernames';
-import {getBadgePremiumType} from '@app/api/user/UserHelpers';
 import {hasFixedDiscriminator} from '@app/api/user/UserTag';
 import {
-	PremiumFlags,
 	ProfileFieldPrivacyFlags,
 	RelationshipTypes,
 	type UserPremiumType,
-	UserPremiumTypes,
 } from '@fluxer/constants/src/UserConstants';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
 import {MissingAccessError} from '@fluxer/errors/src/domains/core/MissingAccessError';
@@ -150,26 +149,12 @@ export class UserAccountLookupService {
 				}
 			}
 		}
-		let premiumType = getBadgePremiumType(user);
-		let premiumSince = user.premiumSince ?? undefined;
-		let premiumLifetimeSequence = user.premiumLifetimeSequence ?? undefined;
-		if (restrictProfile || user.premiumFlags & PremiumFlags.BADGE_HIDDEN) {
-			premiumType = undefined;
-			premiumSince = undefined;
-			premiumLifetimeSequence = undefined;
-		} else {
-			if (user.premiumType === UserPremiumTypes.LIFETIME) {
-				if (user.premiumFlags & PremiumFlags.BADGE_MASKED) {
-					premiumType = UserPremiumTypes.SUBSCRIPTION;
-				}
-				if (user.premiumFlags & PremiumFlags.BADGE_SEQUENCE_HIDDEN) {
-					premiumLifetimeSequence = undefined;
-				}
-			}
-			if (user.premiumFlags & PremiumFlags.BADGE_TIMESTAMP_HIDDEN) {
-				premiumSince = undefined;
-			}
-		}
+		const {premiumType, premiumSince, premiumLifetimeSequence} = applyPremiumBadgeMasking(user, {
+			premiumFlags: user.premiumFlags,
+			hidden: user.hiddenProfileBadges,
+			selfHosted: Config.instance.selfHosted,
+			restricted: restrictProfile,
+		});
 		// Micup: the field privacy context comes with the access decision, no more reads.
 		const profileFieldPrivacyContext: ProfileFieldPrivacyContext | null = restrictProfile
 			? null

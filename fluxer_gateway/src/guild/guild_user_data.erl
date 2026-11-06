@@ -1,9 +1,6 @@
 %% SPDX-License-Identifier: AGPL-3.0-or-later
 
 -module(guild_user_data).
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
--endif.
 
 -typing([eqwalizer]).
 
@@ -100,7 +97,7 @@ maybe_update_cached_user_data(_, _, State) ->
 
 -spec maybe_update_author_data(map(), guild_state()) -> guild_state().
 maybe_update_author_data(AuthorData, State) ->
-    case snowflake_id:parse_optional(maps:get(<<"id">>, AuthorData, undefined)) of
+    case snowflake_id:parse_maybe(maps:get(<<"id">>, AuthorData, undefined)) of
         undefined ->
             State;
         UserId ->
@@ -126,6 +123,7 @@ maybe_handle_changed_author_data(UserId, AuthorData, Member, State) ->
     end.
 
 -ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
 
 handle_user_data_update_no_change_test() ->
     State = test_state(),

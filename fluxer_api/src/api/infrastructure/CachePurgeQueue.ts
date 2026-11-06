@@ -28,6 +28,7 @@ const LEGACY_QUEUE_KEY = 'cache_purge:queue';
 const LEGACY_MOVE_BATCH = 1000;
 const REJECTED_KEY = 'cache_purge:rejected';
 const MAX_TOKENS = 120;
+const MAX_PREFIXES_PER_REQUEST = 100;
 const REFILL_RATE = 5;
 const REFILL_INTERVAL_MS = 1000;
 

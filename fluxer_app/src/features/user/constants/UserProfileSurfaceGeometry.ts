@@ -107,6 +107,13 @@ export const PROFILE_MODAL_BANNER_AVATAR_CUTOUT = {
 export const PROFILE_POPOUT_OUTER_WIDTH_PX =
 	PROFILE_POPOUT_GEOMETRY.contentWidthPx + PROFILE_POPOUT_GEOMETRY.borderWidthPx * 2;
 
+export function getBannerCutoutCx(
+	cutout: {readonly viewBoxWidthPx: number; readonly cx: number},
+	direction: 'ltr' | 'rtl',
+): number {
+	return direction === 'rtl' ? cutout.viewBoxWidthPx - cutout.cx : cutout.cx;
+}
+
 export const PROFILE_POPOUT_GEOMETRY_STYLE: CssLengthVariables = {
 	'--profile-popout-content-width': remFromPx(PROFILE_POPOUT_GEOMETRY.contentWidthPx),
 	'--profile-popout-content-height': remFromPx(PROFILE_POPOUT_GEOMETRY.contentHeightPx),

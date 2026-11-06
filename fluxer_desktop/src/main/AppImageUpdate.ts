@@ -16,6 +16,7 @@ import {
 } from 'node:fs';
 import {open} from 'node:fs/promises';
 import {basename, dirname, join, resolve, sep} from 'node:path';
+import {errorMessage} from '@electron/common/ErrorMessage';
 
 type AppImageUnavailableReason =
 	| 'appimage-path-missing'
@@ -89,7 +90,7 @@ function asStagingError(error: unknown): unknown {
 	if (code === null || !NON_RETRYABLE_STAGING_ERRNOS.has(code)) {
 		return error;
 	}
-	return new AppImageStagingError(code, error instanceof Error ? error.message : String(error));
+	return new AppImageStagingError(code, errorMessage(error));
 }
 
 function stagingDirectoryPrefix(installedPath: string): string {

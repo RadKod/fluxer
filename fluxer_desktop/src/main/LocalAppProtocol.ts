@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {DESKTOP_APP_SCHEME} from '@electron/common/Constants';
+import {getLaunchProductName} from '@electron/common/DesktopConfig';
 import {createChildLogger} from '@electron/common/Logger';
 import {getDesktopOutboundHTTP} from '@electron/main/DesktopOutboundHTTP';
 import {recordGatewayOriginAnchor} from '@electron/main/GatewayOriginRegistry';
@@ -22,28 +23,28 @@ const log = createChildLogger('LocalAppProtocol');
 
 const THEME_STORAGE_KEY = 'theme';
 
-export class LocalAppProtocolSchemeRegistrationOrderError extends Error {
+class LocalAppProtocolSchemeRegistrationOrderError extends Error {
 	public constructor() {
 		super('Local app protocol scheme privileges must be registered before Electron app ready');
 		this.name = 'LocalAppProtocolSchemeRegistrationOrderError';
 	}
 }
 
-export class LocalAppProtocolHandlerRegistrationOrderError extends Error {
+class LocalAppProtocolHandlerRegistrationOrderError extends Error {
 	public constructor() {
 		super('Local app protocol handler must be registered after Electron app ready');
 		this.name = 'LocalAppProtocolHandlerRegistrationOrderError';
 	}
 }
 
-export class LocalAppProtocolHandlerOwnershipError extends Error {
+class LocalAppProtocolHandlerOwnershipError extends Error {
 	public constructor() {
 		super('Local app protocol already has a handler owned outside this runtime');
 		this.name = 'LocalAppProtocolHandlerOwnershipError';
 	}
 }
 
-export class LocalAppProtocolShutdownAdmissionError extends Error {
+class LocalAppProtocolShutdownAdmissionError extends Error {
 	public constructor() {
 		super('Local app protocol is shutting down');
 		this.name = 'LocalAppProtocolShutdownAdmissionError';
@@ -147,9 +148,10 @@ export class DesktopLocalAppProtocol {
 		log.info('Deactivated the local app runtime plan');
 	}
 
-	public getIndexContext(): LocalAppIndexContext {
+	private getIndexContext(): LocalAppIndexContext {
 		return {
 			prebootTheme: readPrebootTheme(),
+			productName: getLaunchProductName(),
 			cleartextInstanceOrigins: getDesktopOutboundHTTP().registeredCleartextOrigins(),
 		};
 	}

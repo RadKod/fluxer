@@ -15,16 +15,15 @@ import {
 	setStoredBillingConfig,
 } from '@app/api/stripe/BillingConfigCache';
 import {getProductRegistry, ProductRegistry, ProductType} from '@app/api/stripe/ProductRegistry';
-import {getStripeClient} from '@app/api/stripe/StripeClient';
 import {setupSyncStripeWebhookWorker, signStripeWebhook} from '@app/api/stripe/tests/StripeWebhookTestUtils';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
-import {NoopLogger} from '@app/api/test/mocks/NoopLogger';
 import {
 	createMockWebhookPayload,
 	createStripeApiHandlers,
 	type StripeApiHandlers,
 } from '@app/api/test/msw/handlers/StripeApiHandlers';
 import {server} from '@app/api/test/msw/server';
+import {createTestWorkerHelpers} from '@app/api/test/SyncTaskWorkerService';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
 import {getCurrencyPreferences, getGiftCurrencyPreferences, isLocalizedCurrency} from '@app/api/utils/CurrencyUtils';
@@ -83,6 +82,7 @@ function operatorBilling(overrides: Partial<StoredBillingConfig> = {}): StoredBi
 		automatic_tax: null,
 		tax_id_collection: null,
 		terms_consent_required: null,
+		billing_emails: null,
 		default_currency: 'GBP',
 		prices: OPERATOR_PRICES,
 		country_currencies: {SE: 'SEK', CH: 'CHF'},
@@ -120,7 +120,7 @@ function restoreGlobalState(state: GlobalState): void {
 	setStoredBillingConfig(state.storedBilling);
 }
 
-const WORKER_HELPERS = {logger: new NoopLogger()} as unknown as WorkerTaskHelpers;
+const WORKER_HELPERS = createTestWorkerHelpers();
 
 function useOperatorBilling(overrides: Partial<StoredBillingConfig> = {}): void {
 	Config.instance.selfHosted = true;
@@ -235,6 +235,21 @@ describe('operator billing catalog', () => {
 		});
 
 		test('rejects hosted gift checkout despite configured consent and tax', async () => {
+			const token = await createPurchaser();
+			await createBuilder(harness, token)
+				.post('/stripe/checkout/subscription')
+				.body({price_id: 'price_envmonthlyusd', client_geoip_country_code: 'SE'})
+				.expect(HTTP_STATUS.OK)
+				.execute();
+			const session = stripeHandlers.spies.createdCheckoutSessions[0];
+			expect(session?.line_items?.[0]?.price).toBe('price_envmonthlyusd');
+			expect(session?.custom_text?.terms_of_service_acceptance?.message).toContain('Fluxer Plutonium');
+			expect(session?.consent_collection?.terms_of_service).toBe('required');
+			expect(sessionField(session, 'automatic_tax')).toEqual({enabled: 'true'});
+			expect(sessionField(session, 'tax_id_collection')).toEqual({enabled: 'true'});
+		});
+
+		test('charges no tax on a gift checkout, because a gift code is a multi-purpose voucher', async () => {
 			const token = await createPurchaser();
 			await createBuilder(harness, token)
 				.post('/stripe/checkout/gift')
@@ -407,7 +422,7 @@ describe('operator billing catalog', () => {
 			const token = await createPurchaser();
 			await createBuilder(harness, token)
 				.post('/stripe/checkout/gift')
-				.body({price_id: 'price_opgbpgiftmonth'})
+				.body({price_id: 'price_opgbpgiftmonth', client_geoip_country_code: 'DE'})
 				.expect(HTTP_STATUS.NOT_FOUND, APIErrorCodes.NOT_FOUND)
 				.execute();
 			expect(stripeHandlers.spies.createdCheckoutSessions).toHaveLength(0);

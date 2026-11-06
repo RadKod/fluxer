@@ -17,7 +17,10 @@ import {Config} from '@app/api/Config';
 import {mapChannelToResponse} from '@app/api/channel/ChannelMappers';
 import type {ChannelRepository} from '@app/api/channel/ChannelRepository';
 import {buildBroadcastMessageData} from '@app/api/channel/services/message/MessageGatewayDispatch';
-import {ensurePersonalNotesChannelExists} from '@app/api/channel/services/PersonalNotesChannelRepair';
+import {
+	ensurePersonalNotesChannelExists,
+	personalNotesEnabled,
+} from '@app/api/channel/services/PersonalNotesChannelRepair';
 import {withThreadParentFieldsMany} from '@app/api/channel/services/thread/ThreadParentSettings';
 import {
 	listThreadMembersPage,
@@ -38,6 +41,8 @@ import {
 } from '@app/api/guild/GuildModel';
 import type {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
 import {checkGuildSoundboardPlayRateLimit} from '@app/api/guild/soundboard/GuildSoundboardPlayRateLimit';
+import {enqueueEndGuildVisitsForCode} from '@app/api/guild/visits/GuildVisitLifecycle';
+import {resolveSessionGuildVisits} from '@app/api/guild/visits/GuildVisitSession';
 import {stripAnimationPrefix} from '@app/api/infrastructure/AssetEntitlementUtils';
 import type {AvatarService} from '@app/api/infrastructure/AvatarService';
 import type {DiscriminatorService} from '@app/api/infrastructure/DiscriminatorService';
@@ -52,7 +57,11 @@ import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
 import {resolveLimitSafe} from '@app/api/limits/LimitConfigUtils';
 import {createLimitMatchContext} from '@app/api/limits/LimitMatchContextBuilder';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
-import {GUILD_MEMBER_COUNT_COUNTER, removeGuildMemberCounted} from '@app/api/middleware/ServiceSingletons';
+import {
+	GUILD_MEMBER_COUNT_COUNTER,
+	getOperatorPassEntitlementService,
+	removeGuildMemberCounted,
+} from '@app/api/middleware/ServiceSingletons';
 import type {AuthSession as AuthSessionModel} from '@app/api/models/AuthSession';
 import type {Channel} from '@app/api/models/Channel';
 import type {FavoriteMeme} from '@app/api/models/FavoriteMeme';
@@ -66,6 +75,7 @@ import type {UserGuildSettings} from '@app/api/models/UserGuildSettings';
 import {UserSettings} from '@app/api/models/UserSettings';
 import type {WebAuthnCredential} from '@app/api/models/WebAuthnCredential';
 import type {BotAuthService} from '@app/api/oauth/BotAuthService';
+import {operatorPassPrivateFields} from '@app/api/operator_pass/OperatorPassEntitlementService';
 import {mapReadStateResponse} from '@app/api/read_state/ReadStateResponseMapper';
 import type {ReadStateService} from '@app/api/read_state/ReadStateService';
 import {visibleReadStates} from '@app/api/read_state/ReadStateVisibility';
@@ -78,6 +88,8 @@ import {
 	timeRpcStep,
 	timeRpcStepSync,
 } from '@app/api/rpc/RpcTimings';
+import {getAccountTier} from '@app/api/user/AccountTier';
+import {isDateOfBirthEnforced} from '@app/api/user/DateOfBirth';
 import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {CustomStatusValidator} from '@app/api/user/services/CustomStatusValidator';
 import {GameActivityPolicyService} from '@app/api/user/services/GameActivityPolicyService';
@@ -118,6 +130,7 @@ import {RateLimitError} from '@fluxer/errors/src/domains/core/RateLimitError';
 import {UnauthorizedError} from '@fluxer/errors/src/domains/core/UnauthorizedError';
 import {UnknownGuildError} from '@fluxer/errors/src/domains/guild/UnknownGuildError';
 import {UnknownUserError} from '@fluxer/errors/src/domains/user/UnknownUserError';
+import {getSameIpDecisionKey} from '@fluxer/ip_utils/src/IpAddress';
 import {resolveVoiceRoomAssignment} from '@fluxer/schema/src/domains/admin/VoiceRoomConfigSchemas';
 import type {ChannelResponse} from '@fluxer/schema/src/domains/channel/ChannelSchemas';
 import type {VoiceStateResponse} from '@fluxer/schema/src/domains/gateway/GatewaySchemas';
@@ -151,6 +164,7 @@ interface HandleSessionRequestParams {
 	longitude?: string;
 	gameActivityRequestNonce?: string;
 	threadChannelsCapable?: boolean;
+	guildVisitsCapable?: boolean;
 }
 
 interface HandleGuildCollectionRequestParams {
@@ -244,6 +258,18 @@ export class RpcService {
 		});
 	}
 
+	private async loadOperatorPassFields(user: User): Promise<ReturnType<typeof operatorPassPrivateFields> | null> {
+		if (Config.instance.selfHosted || user.isBot) {
+			return null;
+		}
+		try {
+			return operatorPassPrivateFields(user, await getOperatorPassEntitlementService().getHolder(user));
+		} catch (error) {
+			Logger.warn({userId: user.id, error}, 'Failed to load Operator Pass holder for session start');
+			return null;
+		}
+	}
+
 	private async ensurePersonalNotesChannel(user: User): Promise<void> {
 		const personalNotesChannelId = userIdToChannelId(user.id);
 		const existingChannel = await this.channelRepository.channelData.findUnique(personalNotesChannelId);
@@ -285,6 +311,13 @@ export class RpcService {
 		return sticker;
 	}
 
+	private requireVoiceService(): VoiceService {
+		if (this.voiceService === null) {
+			throw new Error('Voice is not enabled on this server');
+		}
+		return this.voiceService;
+	}
+
 	async handleRpcRequest({request, requestCache}: HandleRpcRequestParams): Promise<RpcResponse> {
 		switch (request.type) {
 			case 'soundboard_play_rate_limit':
@@ -316,6 +349,7 @@ export class RpcService {
 						longitude: request.longitude,
 						gameActivityRequestNonce: request.game_activity_request_nonce,
 						threadChannelsCapable: request.thread_channels_capable === true,
+						guildVisitsCapable: request.guild_visits_capable === true,
 					}),
 				};
 			case 'guild_collection':
@@ -401,10 +435,7 @@ export class RpcService {
 					{type: 'voice_get_token', guildId: request.guild_id, channelId: request.channel_id, userId: request.user_id},
 					'RPC voice_get_token received',
 				);
-				if (this.voiceService === null) {
-					throw new Error('Voice is not enabled on this server');
-				}
-				const result = await this.voiceService.getVoiceToken({
+				const result = await this.requireVoiceService().getVoiceToken({
 					guildId: request.guild_id !== undefined ? createGuildID(request.guild_id) : undefined,
 					channelId: createChannelID(request.channel_id),
 					userId: createUserID(request.user_id),
@@ -427,10 +458,7 @@ export class RpcService {
 				};
 			}
 			case 'voice_force_disconnect_participant': {
-				if (this.voiceService === null) {
-					throw new Error('Voice is not enabled on this server');
-				}
-				await this.voiceService.disconnectParticipant({
+				await this.requireVoiceService().disconnectParticipant({
 					guildId: request.guild_id !== undefined ? createGuildID(request.guild_id) : undefined,
 					channelId: createChannelID(request.channel_id),
 					userId: createUserID(request.user_id),
@@ -442,10 +470,7 @@ export class RpcService {
 				};
 			}
 			case 'voice_update_participant': {
-				if (this.voiceService === null) {
-					throw new Error('Voice is not enabled on this server');
-				}
-				await this.voiceService.updateParticipant({
+				await this.requireVoiceService().updateParticipant({
 					guildId: request.guild_id !== undefined ? createGuildID(request.guild_id) : undefined,
 					channelId: createChannelID(request.channel_id),
 					userId: createUserID(request.user_id),
@@ -461,10 +486,7 @@ export class RpcService {
 				};
 			}
 			case 'voice_update_participant_permissions': {
-				if (this.voiceService === null) {
-					throw new Error('Voice is not enabled on this server');
-				}
-				await this.voiceService.updateParticipantPermissions({
+				await this.requireVoiceService().updateParticipantPermissions({
 					guildId: request.guild_id !== undefined ? createGuildID(request.guild_id) : undefined,
 					channelId: createChannelID(request.channel_id),
 					userId: createUserID(request.user_id),
@@ -870,6 +892,7 @@ export class RpcService {
 		longitude,
 		gameActivityRequestNonce,
 		threadChannelsCapable = false,
+		guildVisitsCapable = false,
 	}: HandleSessionRequestParams): Promise<RpcResponseSessionData> {
 		const timings = new RpcTimingRecorder();
 		const normalizedToken = timings.timeSync('normalize_session_token', () => this.normalizeSessionToken(token));
@@ -907,6 +930,7 @@ export class RpcService {
 				{
 					tokenType,
 					tokenHashPrefix,
+					ip,
 					retryAfter: rateLimitResult.retryAfter,
 					limit: rateLimitResult.limit,
 					resetTime: rateLimitResult.resetTime,
@@ -938,6 +962,7 @@ export class RpcService {
 				{
 					tokenType,
 					tokenHashPrefix,
+					ip,
 				},
 				'RPC session token validation failed',
 			);
@@ -1054,7 +1079,13 @@ export class RpcService {
 			this.queueStripePremiumStateReconciliation(user),
 		);
 		timings.timeSync('queue_payment_reconciliation', () => this.queuePaymentReconciliation(user));
-		await timings.time('ensure_personal_notes_channel', async () => this.ensurePersonalNotesChannel(user));
+		if (await personalNotesEnabled()) {
+			await timings.time('ensure_personal_notes_channel', async () => this.ensurePersonalNotesChannel(user));
+		} else {
+			userData.privateChannels = userData.privateChannels.filter(
+				(channel) => channel.type !== ChannelTypes.DM_PERSONAL_NOTES,
+			);
+		}
 		const privateChannelLimitSteps: RpcTimingSteps = {};
 		const privateChannelLimitStartedAtNs = startRpcTiming();
 		userData.privateChannels = await this.ensurePrivateChannelsWithinLimit({
@@ -1078,7 +1109,7 @@ export class RpcService {
 			preloadUserPartialsStartedAtNs,
 			preloadUserPartialsSteps,
 		);
-		const [privateChannels, relationships, guilds, readyFeedNotificationState] = await Promise.all([
+		const [privateChannels, relationships, guilds, readyFeedNotificationState, operatorPassFields] = await Promise.all([
 			timeRpcStep(readyPayloadSteps, 'map_private_channels', async () =>
 				this.mapRpcSessionPrivateChannels({
 					channels: userData.privateChannels,
@@ -1097,6 +1128,7 @@ export class RpcService {
 				userData.guildIds.map((guildId) => ({id: guildId.toString()})),
 			),
 			timeRpcStep(readyPayloadSteps, 'await_feed_notification_state', async () => feedNotificationState),
+			timeRpcStep(readyPayloadSteps, 'load_operator_pass', async () => this.loadOperatorPassFields(user)),
 		]);
 		timings.record('map_ready_payloads', readyPayloadStartedAtNs, readyPayloadSteps);
 		const rtcRegions = timings.timeSync('build_rtc_regions', () => {
@@ -1155,6 +1187,12 @@ export class RpcService {
 		const userGuildSettings = await timings.time('map_user_guild_settings', () =>
 			Promise.all(userData.guildSettings.map((settings) => mapUserGuildSettingsForViewer(settings, sessionViewer))),
 		);
+		const visitGuildIds =
+			guildVisitsCapable && !isDateOfBirthEnforced(user)
+				? await timings.time('resolve_guild_visits', async () =>
+						resolveSessionGuildVisits({user, ip: ip ?? null, memberGuildIds: userData.guildIds}),
+					)
+				: [];
 		const responseBuildSteps: RpcTimingSteps = {};
 		const [usernameMigration, usernamePolicy] = await timings.time('load_username_configuration', () =>
 			Promise.all([
@@ -1171,7 +1209,10 @@ export class RpcService {
 			auth_session_id_hash: timeRpcStepSync(responseBuildSteps, 'map_auth_session_id_hash', () =>
 				authSession ? uint8ArrayToBase64(authSession.sessionIdHash, {urlSafe: true}) : undefined,
 			),
-			user: timeRpcStepSync(responseBuildSteps, 'map_user', () => mapUserToPrivateResponse(user)),
+			user: timeRpcStepSync(responseBuildSteps, 'map_user', () => ({
+				...mapUserToPrivateResponse(user),
+				...operatorPassFields,
+			})),
 			user_settings: timeRpcStepSync(responseBuildSteps, 'map_user_settings', () =>
 				userData.settings
 					? mapUserSettingsToResponse({
@@ -1206,6 +1247,13 @@ export class RpcService {
 			),
 			version,
 			...(readyFeedNotificationState && {feed_notification_state: readyFeedNotificationState}),
+			visit_guild_ids: visitGuildIds.map((visit) => visit.guildId.toString()),
+			operator_visit_guild_ids: visitGuildIds
+				.filter((visit) => visit.operator)
+				.map((visit) => visit.guildId.toString()),
+			adult_content_allowed: canUserAccessNsfwContent(user),
+			account_tier: getAccountTier(user),
+			ip_key: ip ? (getSameIpDecisionKey(ip) ?? ip) : null,
 		};
 		timings.record('build_session_response_payload', responseBuildStartedAtNs, responseBuildSteps);
 		if ((user.flags & UserFlags.STAFF) === 0n) {
@@ -1675,15 +1723,16 @@ export class RpcService {
 			const needsGroupDmRepair = settings.groupDmAddPermissionFlags === 0;
 			if (needsIncomingCallRepair || needsGroupDmRepair) {
 				const isAdult = canUserAccessNsfwContent({isBot: false, dateOfBirth: user.dateOfBirth});
+				const baseRow = settings.toRow();
 				const updatedRow = {
-					...settings.toRow(),
+					...baseRow,
 					...(needsIncomingCallRepair && {
 						incoming_call_flags: isAdult ? IncomingCallFlags.EVERYONE : IncomingCallFlags.FRIENDS_ONLY,
 					}),
 					...(needsGroupDmRepair && {group_dm_add_permission_flags: GroupDmAddPermissionFlags.FRIENDS_ONLY}),
 				};
 				await timeUserDataStep('repair_user_settings_defaults', async () =>
-					this.userRepository.upsertSettings(updatedRow),
+					this.userRepository.upsertSettings(updatedRow, baseRow),
 				);
 				settings = new UserSettings(updatedRow);
 			}
@@ -1694,7 +1743,7 @@ export class RpcService {
 			guildSettings,
 			notes,
 			readStates,
-			guildIds,
+			guildIds: isDateOfBirthEnforced(user) ? [] : guildIds,
 			privateChannels,
 			relationships,
 			favoriteMemes,
@@ -1963,7 +2012,12 @@ export class RpcService {
 				},
 				'Repairing orphaned invites',
 			);
-			await Promise.all(orphanedInvites.map((invite) => this.inviteRepository.delete(invite.code)));
+			await Promise.all(
+				orphanedInvites.map(async (invite) => {
+					await this.inviteRepository.delete(invite.code);
+					await enqueueEndGuildVisitsForCode(guild.id, invite.code);
+				}),
+			);
 		}
 		if (orphanedWebhooks.length > 0) {
 			Logger.info(

@@ -10,8 +10,6 @@ use objc2_screen_capture_kit::{
     SCDisplay, SCRunningApplication, SCStream, SCStreamConfiguration, SCWindow,
 };
 
-pub use objc2_screen_capture_kit::SCStreamOutputType;
-
 pub fn cgrect_standardized(r: CGRect) -> CGRect {
     let mut out = r;
     if out.size.width < 0.0 {

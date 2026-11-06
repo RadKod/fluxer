@@ -1,14 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import crypto from 'node:crypto';
 import type {ApiContext} from '@app/api/ApiContext';
 import * as AuthPassword from '@app/api/auth/AuthPassword';
 import * as AuthSession from '@app/api/auth/AuthSession';
 import {revokeAllAuthSessions} from '@app/api/auth/AuthSessionRevocation';
 import * as AuthUtility from '@app/api/auth/AuthUtility';
 import {createEmailRevertToken} from '@app/api/BrandedTypes';
+import {Logger} from '@app/api/Logger';
+import {getKVClient} from '@app/api/middleware/ServiceRegistry';
 import type {User} from '@app/api/models/User';
 import {enqueueStripeCustomerEmailSync} from '@app/api/stripe/StripeCustomer';
+import {EMAIL_REVERT_TOKEN_TTL_SECONDS} from '@app/api/user/repositories/auth/TokenRepository';
 import {dispatchUserUpdate} from '@app/api/user/UserMappers';
+import {UserTraits} from '@app/api/user/UserTraits';
 import {hashPassword} from '@app/api/utils/PasswordUtils';
 import * as RandomUtils from '@app/api/utils/RandomUtils';
 import {requireConfiguredClientIp} from '@app/api/utils/RequestClientIp';
@@ -38,7 +43,25 @@ export async function issueEmailRevertToken(ctx: ApiContext, params: IssueEmailR
 		user_id: user.id,
 		email: trimmed,
 	});
-	await email.sendEmailChangeRevert(trimmed, user.username, newEmail, token, user.locale);
+	await email.send('email_change_revert', trimmed, {newEmail, token}, user.locale);
+}
+
+const EMAIL_REVERT_CLAIM_KEY_PREFIX = 'auth:email-revert:claimed:';
+
+function emailRevertClaimKey(token: string): string {
+	return `${EMAIL_REVERT_CLAIM_KEY_PREFIX}${crypto.createHash('sha256').update(token).digest('hex')}`;
+}
+
+function claimEmailRevertToken(token: string): Promise<boolean> {
+	return getKVClient().setnx(emailRevertClaimKey(token), '1', EMAIL_REVERT_TOKEN_TTL_SECONDS);
+}
+
+async function releaseEmailRevertTokenClaim(token: string): Promise<void> {
+	try {
+		await getKVClient().del(emailRevertClaimKey(token));
+	} catch (error) {
+		Logger.error({error}, 'Could not release the claim of an email revert token whose revert failed');
+	}
 }
 
 export async function revertEmailChange(
@@ -63,20 +86,31 @@ export async function revertEmailChange(
 	if (await AuthPassword.isPasswordPwned(ctx, password)) {
 		throw InputValidationError.fromCode('password', ValidationErrorCodes.PASSWORD_IS_TOO_COMMON);
 	}
-	const passwordHash = await hashPassword(password);
-	const now = new Date();
-	const updatedUser = await users.patchUpsert(
-		user.id,
-		{
-			email: tokenData.email,
-			email_verified: true,
-			totp_secret: null,
-			authenticator_types: null,
-			password_hash: passwordHash,
-			password_last_changed_at: now,
-		},
-		user.toRow(),
-	);
+	if (!(await claimEmailRevertToken(token))) {
+		throw InputValidationError.fromCode('token', ValidationErrorCodes.INVALID_OR_EXPIRED_REVERT_TOKEN);
+	}
+	let updatedUser: User;
+	try {
+		const passwordHash = await hashPassword(password);
+		const traits = user.traits;
+		traits.delete(UserTraits.PASSKEY);
+		updatedUser = await users.patchUpsert(
+			user.id,
+			{
+				email: tokenData.email,
+				email_verified: true,
+				totp_secret: null,
+				authenticator_types: null,
+				password_hash: passwordHash,
+				password_last_changed_at: new Date(),
+				traits: traits.size > 0 ? traits : null,
+			},
+			user.toRow(),
+		);
+	} catch (error) {
+		await releaseEmailRevertTokenClaim(token);
+		throw error;
+	}
 	await users.deleteAllPasswordResetTokens(user.id);
 	await users.deleteEmailRevertToken(token);
 	await users.deleteAllMfaBackupCodes(user.id);

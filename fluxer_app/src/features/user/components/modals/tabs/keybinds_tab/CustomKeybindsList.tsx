@@ -32,11 +32,11 @@ const UNASSIGNED_2_DESCRIPTOR = msg({
 	comment: 'Short label in the keybinds tab. Keep it concise.',
 });
 const RESET_ALL_SHORTCUTS_DESCRIPTOR = msg({
-	message: 'Reset all shortcuts?',
+	message: 'Reset all keybinds?',
 	comment: 'Confirmation prompt in the keybinds tab.',
 });
 const THIS_REMOVES_EVERY_CUSTOM_SHORTCUT_AND_RE_ENABLES_DESCRIPTOR = msg({
-	message: 'This removes every custom shortcut and re-enables all built-in shortcuts. This cannot be undone.',
+	message: 'This removes every custom keybind and re-enables all built-in keybinds. This cannot be undone.',
 	comment: 'Error message in the keybinds tab. Keep the tone plain and specific.',
 });
 
@@ -46,7 +46,7 @@ const DISABLE_BUILT_IN_SHORTCUTS_DESCRIPTOR = msg({
 });
 
 const SHORTCUTS_ARE_PAUSED_WHILE_RECORDING_DESCRIPTOR = msg({
-	message: 'Shortcuts are paused while recording.',
+	message: 'Keybinds are paused while recording.',
 	comment: 'Short helper text in the keybinds tab.',
 });
 function resolveActionLabel(labelByAction: ReadonlyMap<KeybindCommand, string>, action: string | null): string | null {
@@ -115,6 +115,30 @@ export const CustomKeybindsList: React.FC<{searchQuery: string}> = observer(({se
 		);
 	};
 	const hasAnyOverrides = allCustomKeybinds.length > 0 || disableBuiltinKeybinds;
+	let customList: React.ReactNode;
+	if (customKeybinds.length === 0) {
+		customList = (
+			<div className={styles.emptyState} data-flx="user.keybinds-tab.custom-keybinds-list.empty-state">
+				<Trans>No custom keybinds yet.</Trans>
+			</div>
+		);
+	} else if (filteredKeybinds.length === 0) {
+		customList = (
+			<div className={styles.emptyState} data-flx="user.keybinds-tab.custom-keybinds-list.empty-state--2">
+				<Trans>No custom keybinds match that search.</Trans>
+			</div>
+		);
+	} else {
+		customList = filteredKeybinds.map((entry) => (
+			<CustomKeybindRow
+				key={entry.id}
+				entry={entry}
+				conflictLabel={conflictLabels.get(entry.id) ?? null}
+				onRemove={() => Keybind.removeCustomKeybind(entry.id)}
+				data-flx="user.keybinds-tab.custom-keybinds-list.custom-keybind-row"
+			/>
+		));
+	}
 	return (
 		<div className={styles.customSection} data-flx="user.keybinds-tab.custom-keybinds-list.custom-section">
 			<div className={styles.customHeader} data-flx="user.keybinds-tab.custom-keybinds-list.custom-header">
@@ -156,7 +180,7 @@ export const CustomKeybindsList: React.FC<{searchQuery: string}> = observer(({se
 						}
 						data-flx="user.keybinds-tab.custom-keybinds-list.button.add"
 					>
-						<Trans>Add shortcut</Trans>
+						<Trans>Add keybind</Trans>
 					</Button>
 				</div>
 			</div>
@@ -179,25 +203,7 @@ export const CustomKeybindsList: React.FC<{searchQuery: string}> = observer(({se
 				/>
 			</div>
 			<div className={styles.customList} data-flx="user.keybinds-tab.custom-keybinds-list.custom-list">
-				{customKeybinds.length === 0 ? (
-					<div className={styles.emptyState} data-flx="user.keybinds-tab.custom-keybinds-list.empty-state">
-						<Trans>No custom shortcuts yet.</Trans>
-					</div>
-				) : filteredKeybinds.length === 0 ? (
-					<div className={styles.emptyState} data-flx="user.keybinds-tab.custom-keybinds-list.empty-state--2">
-						<Trans>No custom shortcuts match that search.</Trans>
-					</div>
-				) : (
-					filteredKeybinds.map((entry) => (
-						<CustomKeybindRow
-							key={entry.id}
-							entry={entry}
-							conflictLabel={conflictLabels.get(entry.id) ?? null}
-							onRemove={() => Keybind.removeCustomKeybind(entry.id)}
-							data-flx="user.keybinds-tab.custom-keybinds-list.custom-keybind-row"
-						/>
-					))
-				)}
+				{customList}
 			</div>
 		</div>
 	);

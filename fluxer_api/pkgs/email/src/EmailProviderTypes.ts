@@ -6,10 +6,18 @@ export interface EmailConfig {
 	fromName: string;
 	replyTo?: string | null;
 	appBaseUrl: string;
+	apiBaseUrl: string;
 	appealsEmail: string | null;
+	privacyEmail: string | null;
 	safetyEmail: string | null;
 	supportEmail: string | null;
 	productName: string;
+	marketingBaseUrl: string;
+	staticCdnBaseUrl: string;
+	legalAddress: string | null;
+	brandLogo: boolean;
+	// Micup: branding of the old EmailHtml renderer. Upstream's MJML renderer builds the HTML part now, so EmailService
+	// no longer reads this; it stays for EmailHtml.ts.
 	html?: EmailHtmlBranding | null;
 }
 
@@ -30,6 +38,14 @@ export interface EmailMessage {
 	subject: string;
 	text: string;
 	html?: string;
+	headers?: Record<string, string>;
+	attachments?: ReadonlyArray<EmailAttachment>;
+}
+
+export interface EmailAttachment {
+	filename: string;
+	content: Uint8Array;
+	contentType: string;
 }
 
 export interface IEmailProvider {

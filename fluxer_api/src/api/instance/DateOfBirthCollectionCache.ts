@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-let cachedCollectDateOfBirth: boolean | null = null;
+import {getDateOfBirthPolicy} from '@app/api/instance/AccountsConfigCache';
+import {collectsDateOfBirth} from '@fluxer/constants/src/AccountConfigConstants';
 
-export function getDefaultDateOfBirthCollection(): boolean {
+// sanalyer (from Micup): birth dates are collected by default on this self-hosted instance too.
+export function getLegacyDateOfBirthCollectionDefault(): boolean {
 	return true;
 }
 
 export function instanceCollectsDateOfBirth(): boolean {
-	return cachedCollectDateOfBirth ?? getDefaultDateOfBirthCollection();
-}
-
-export function setCachedDateOfBirthCollection(collect: boolean): void {
-	cachedCollectDateOfBirth = collect;
+	return collectsDateOfBirth(getDateOfBirthPolicy());
 }

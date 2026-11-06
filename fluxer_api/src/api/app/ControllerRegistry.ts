@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {ActivityPubController} from '@app/api/activity_pub/ActivityPubController';
+import {AdminDownloadController} from '@app/api/admin/AdminDownloadController';
 import {registerAdminControllers} from '@app/api/admin/controllers/index';
 import {AttachmentController} from '@app/api/attachment/AttachmentController';
+import {AccountEntryController} from '@app/api/auth/AccountEntryController';
 import {AuthController} from '@app/api/auth/AuthController';
 import {OriginHandoffController} from '@app/api/auth/OriginHandoffController';
 import {PasskeyBridgeController} from '@app/api/auth/PasskeyBridgeController';
 import {registerBadgeProfileExtension} from '@app/api/badge/BadgeProfileProvider';
+import {BillingDocumentController} from '@app/api/billing_documents/BillingDocumentController';
 import {BlueskyOAuthController} from '@app/api/bluesky/BlueskyOAuthController';
 import {registerChannelControllers} from '@app/api/channel/controllers/index';
 import type {APIConfig} from '@app/api/config/APIConfig';
@@ -39,6 +43,8 @@ import {InviteController} from '@app/api/invite/InviteController';
 import {OAuth2ApplicationsController} from '@app/api/oauth/OAuth2ApplicationsController';
 import {OAuth2Controller} from '@app/api/oauth/OAuth2Controller';
 import {OpenAPIController} from '@app/api/openapi/OpenAPIController';
+import {OperatorPassController} from '@app/api/operator_pass/OperatorPassController';
+import {OperatorPassInternalController} from '@app/api/operator_pass/OperatorPassInternalController';
 import {PayriffCallbackController} from '@app/api/payriff/PayriffCallbackController';
 import {PremiumController} from '@app/api/premium/PremiumController';
 import {ReadStateController} from '@app/api/read_state/ReadStateController';
@@ -58,6 +64,7 @@ import type {HonoApp} from '@app/api/types/HonoEnv';
 import {UnfurlController} from '@app/api/unfurl/UnfurlController';
 import {UserController} from '@app/api/user/controllers/UserController';
 import {registerMicupUserLifecycleHooks} from '@app/api/user/lifecycle/MicupUserLifecycleHooks';
+import {VoiceNodeController} from '@app/api/voice/VoiceNodeController';
 import {VoiceP2pConnectionReportController} from '@app/api/voice/VoiceP2pConnectionReportController';
 import {VoiceActivityController} from '@app/api/voice_activity/VoiceActivityController';
 import {VoiceSeatController} from '@app/api/voice_seat/VoiceSeatController';
@@ -65,10 +72,13 @@ import {WebhookController} from '@app/api/webhook/WebhookController';
 
 export function registerControllers(routes: HonoApp, config: APIConfig): void {
 	InternalRpcController(routes);
+	OperatorPassInternalController(routes);
 	GatewayController(routes);
 	GeolocationController(routes);
 	registerAdminControllers(routes);
+	AdminDownloadController(routes);
 	AuthController(routes);
+	AccountEntryController(routes);
 	OriginHandoffController(routes);
 	PasskeyBridgeController(routes);
 	AttachmentController(routes);
@@ -76,6 +86,7 @@ export function registerControllers(routes: HonoApp, config: APIConfig): void {
 	ConnectionController(routes);
 	BlueskyOAuthController(routes);
 	InstanceController(routes);
+	ActivityPubController(routes);
 	OpenAPIController(routes);
 	DownloadController(routes);
 	ExperimentController(routes);
@@ -95,6 +106,7 @@ export function registerControllers(routes: HonoApp, config: APIConfig): void {
 	}
 	UserController(routes);
 	VoiceP2pConnectionReportController(routes);
+	VoiceNodeController(routes);
 	StoreBillingController(routes);
 	WebhookController(routes);
 	OAuth2Controller(routes);
@@ -103,6 +115,8 @@ export function registerControllers(routes: HonoApp, config: APIConfig): void {
 	registerMicupControllers(routes);
 	if (!config.instance.selfHosted) {
 		DonationController(routes);
+		OperatorPassController(routes);
+		BillingDocumentController(routes);
 		StripeController(routes);
 	} else {
 		GiftCodeRoutes(routes);

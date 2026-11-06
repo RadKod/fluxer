@@ -25,6 +25,9 @@ let cachedConfig: MasterConfig | null = null;
 
 const MAX_REPORT_RETENTION_DAYS = 36_500;
 
+// sanalyer: no upstream Fluxer web or Android origins; the instance's own app origin is added at load time.
+const OFFICIAL_ANDROID_PASSKEY_ORIGINS: Array<string> = [];
+
 const DEFAULT_PASSKEY_ORIGINS: Array<string> = [];
 
 function defaultConfig(): MasterConfig {
@@ -99,6 +102,7 @@ function defaultConfig(): MasterConfig {
 				headers_timeout_ms: 30_000,
 				request_timeout_ms: 120_000,
 				max_inflight_requests: 512,
+				max_concurrent_form_uploads: 16,
 				automated_message_deletion_delay_days: 7,
 				ip_ban_exempt_ips: [],
 				donation_proxy_key: '',
@@ -107,6 +111,8 @@ function defaultConfig(): MasterConfig {
 				presigned_harvest_downloads_enabled: true,
 				unfurl_ignored_hosts: [],
 				app_origin_aliases: [],
+				discovery_public_endpoint: '',
+				discovery_transport_endpoint: '',
 				storage_change_feed: {
 					enabled: false,
 					stream: 'STORAGE_CHANGES',
@@ -136,6 +142,10 @@ function defaultConfig(): MasterConfig {
 			admin: {
 				secret_key_base: '',
 				oauth_client_secret: '',
+				sso: {
+					issuer: '',
+					client_id: '',
+				},
 			},
 		},
 		auth: {
@@ -253,12 +263,6 @@ function defaultConfig(): MasterConfig {
 			},
 			blocklist_feeds: {},
 			breached_password_check: {},
-			push: {
-				apns: {
-					enabled: false,
-					apps: [],
-				},
-			},
 			app_store: {
 				enabled: false,
 				apps: [],
@@ -269,6 +273,7 @@ function defaultConfig(): MasterConfig {
 				packages: [],
 				token_uri: 'https://oauth2.googleapis.com/token',
 				products: {},
+				self_service_refunds: false,
 			},
 			store_billing: {
 				sandbox_user_ids: [],
@@ -286,6 +291,11 @@ function defaultConfig(): MasterConfig {
 			},
 			account_identity: null,
 			tag_style: null,
+			age_policy: {},
+		},
+		payment_disputes: {},
+		operator_pass: {
+			grace_minutes: 30,
 		},
 		dev: {
 			relax_registration_rate_limits: false,
@@ -305,7 +315,6 @@ function defaultConfig(): MasterConfig {
 		},
 		attachment_decay_enabled: true,
 		deletion_grace_period_hours: 336,
-		inactivity_deletion_threshold_days: 365,
 		report_retention: {
 			days: 365,
 			dry_run: false,
@@ -331,9 +340,17 @@ function assertOneOf<T extends string>(value: string, allowed: ReadonlyArray<T>,
 	}
 }
 
+function missingSetting(envName: string): Error {
+	const version = process.env.BUILD_VERSION?.trim();
+	const image = version ? `image ${version}` : 'this image';
+	return new Error(
+		`${envName} is required. If .env or the Helm values set it, the stack files or the Helm chart in use are older than ${image} and don't pass it on. Run rexctl upgrade, or upgrade the Helm chart to the same release as the image.`,
+	);
+}
+
 function requireString(value: string | undefined, envName: string): void {
 	if (!value || value.trim().length === 0) {
-		throw new Error(`${envName} is required`);
+		throw missingSetting(envName);
 	}
 }
 
@@ -344,14 +361,14 @@ function applyProfilePseudonymSecret(config: MasterConfig): void {
 		return;
 	}
 	if (config.env === 'production') {
-		throw new Error('FLUXER_PROFILE_PSEUDONYM_SECRET is required');
+		throw missingSetting('FLUXER_PROFILE_PSEUDONYM_SECRET');
 	}
 	config.auth.profile_pseudonym_secret = DEVELOPMENT_PROFILE_PSEUDONYM_SECRET;
 }
 
-function validateReplyToEmail(value: string): void {
+function validateSingleEmail(value: string, name: string): void {
 	if (value !== '' && !/^[^\s@<>,;"]+@[^\s@<>,;"]+$/.test(value)) {
-		throw new Error('FLUXER_EMAIL_REPLY_TO_EMAIL must be a single email address such as support@example.com');
+		throw new Error(`${name} must be a single email address such as support@example.com`);
 	}
 }
 
@@ -423,7 +440,7 @@ function normalizeEmailFallbackConfig(config: MasterConfig): void {
 function validateUploadRelaySecret(value: string): void {
 	const trimmed = value.trim();
 	if (trimmed.length === 0) {
-		throw new Error('FLUXER_MEDIA_PROXY_UPLOAD_RELAY_SECRET_BASE64 is required');
+		throw missingSetting('FLUXER_MEDIA_PROXY_UPLOAD_RELAY_SECRET_BASE64');
 	}
 	if (!/^[A-Za-z0-9+/]+={0,2}$/u.test(trimmed)) {
 		throw new Error('FLUXER_MEDIA_PROXY_UPLOAD_RELAY_SECRET_BASE64 must be base64');
@@ -473,16 +490,23 @@ function assertIdentifier(value: string, envName: string): void {
 	}
 }
 
+const VAPID_REMEDY =
+	'Run rexctl doctor --fix to make a new pair. Browsers that have notifications on subscribe again on their next visit.';
+
+function vapidMismatch(): Error {
+	return new Error(`FLUXER_VAPID_PRIVATE_KEY does not match FLUXER_VAPID_PUBLIC_KEY. ${VAPID_REMEDY}`);
+}
+
 function validateVapidConfig(config: MasterConfig): void {
 	requireString(config.auth.vapid.public_key, 'FLUXER_VAPID_PUBLIC_KEY');
 	requireString(config.auth.vapid.private_key, 'FLUXER_VAPID_PRIVATE_KEY');
 	const pub = Buffer.from(config.auth.vapid.public_key, 'base64url');
 	const priv = Buffer.from(config.auth.vapid.private_key, 'base64url');
 	if (pub.length !== 65 || pub[0] !== 0x04) {
-		throw new Error('FLUXER_VAPID_PUBLIC_KEY must be the base64url 65-byte uncompressed P-256 point');
+		throw new Error(`FLUXER_VAPID_PUBLIC_KEY must be the base64url 65-byte uncompressed P-256 point. ${VAPID_REMEDY}`);
 	}
 	if (priv.length !== 32) {
-		throw new Error('FLUXER_VAPID_PRIVATE_KEY must be the base64url 32-byte P-256 scalar');
+		throw new Error(`FLUXER_VAPID_PRIVATE_KEY must be the base64url 32-byte P-256 scalar. ${VAPID_REMEDY}`);
 	}
 	let derived: Buffer;
 	try {
@@ -490,10 +514,10 @@ function validateVapidConfig(config: MasterConfig): void {
 		curve.setPrivateKey(priv);
 		derived = curve.getPublicKey();
 	} catch {
-		throw new Error('FLUXER_VAPID_PRIVATE_KEY does not match FLUXER_VAPID_PUBLIC_KEY');
+		throw vapidMismatch();
 	}
 	if (!derived.equals(pub)) {
-		throw new Error('FLUXER_VAPID_PRIVATE_KEY does not match FLUXER_VAPID_PUBLIC_KEY');
+		throw vapidMismatch();
 	}
 }
 
@@ -777,6 +801,32 @@ function validateStoreBillingConfig(config: MasterConfig): void {
 	assertBoolean(config.integrations.store_billing.sandbox_entitles_all, 'FLUXER_STORE_BILLING_SANDBOX_ENTITLES_ALL');
 }
 
+const AGE_POLICY_REGION_PATTERN = /^[A-Z]{2}(?:-[A-Z0-9]{1,3})?$/u;
+
+function normalizeAgePolicyRegions(regions: Array<string> | undefined, envName: string): Array<string> | undefined {
+	if (regions === undefined) return undefined;
+	const normalized = regions.map((region) => region.trim().toUpperCase());
+	for (const region of normalized) {
+		if (!AGE_POLICY_REGION_PATTERN.test(region)) {
+			throw new Error(
+				`${envName} entry ${JSON.stringify(region)} must be a country code such as GB or a country and region code such as US-MS`,
+			);
+		}
+	}
+	return [...new Set(normalized)];
+}
+
+function normalizeAgePolicyConfig(config: MasterConfig): void {
+	const agePolicy = config.instance.age_policy;
+	if (agePolicy.enabled !== undefined) {
+		assertBoolean(agePolicy.enabled, 'FLUXER_AGE_POLICY_ENABLED');
+	}
+	config.instance.age_policy = {
+		enabled: agePolicy.enabled,
+		restricted_regions: normalizeAgePolicyRegions(agePolicy.restricted_regions, 'FLUXER_AGE_POLICY_RESTRICTED_REGIONS'),
+	};
+}
+
 function validateDomain(value: string, envName: string): void {
 	if (value === '') return;
 	const parsed = URL.parse(`http://${value}/`);
@@ -842,7 +892,10 @@ function normalizeConfig(config: MasterConfig): MasterConfig {
 	}
 	assertOneOf(config.internal.kv_mode, ['standalone', 'cluster'], 'FLUXER_KV_MODE');
 	assertOneOf(config.integrations.email.provider, ['smtp', 'none'], 'FLUXER_EMAIL_PROVIDER');
-	assertOneOf(config.integrations.search.engine, ['elasticsearch', 'meilisearch'], 'FLUXER_SEARCH_ENGINE');
+	if (config.integrations.email.delivery !== undefined) {
+		assertOneOf(config.integrations.email.delivery, ['off', 'smtp'], 'FLUXER_EMAIL_DELIVERY');
+	}
+	assertOneOf(config.integrations.search.engine, ['elasticsearch', 'meilisearch', 'none'], 'FLUXER_SEARCH_ENGINE');
 	assertOneOf(config.integrations.cache_purge.adapter, CACHE_PURGE_ADAPTER_NAMES, 'FLUXER_CACHE_PURGE_ADAPTER');
 	if (config.instance.tag_style !== null) {
 		assertOneOf(config.instance.tag_style, TAG_STYLE_NAMES, 'FLUXER_TAG_STYLE');
@@ -858,10 +911,18 @@ function normalizeConfig(config: MasterConfig): MasterConfig {
 	validatePayriffConfig(config);
 	normalizeBunnyStreamConfig(config);
 	validateStoreBillingConfig(config);
-	validateReplyToEmail(config.integrations.email.reply_to_email);
+	validateSingleEmail(config.integrations.email.reply_to_email, 'FLUXER_EMAIL_REPLY_TO_EMAIL');
+	validateSingleEmail(config.integrations.email.support_alert_email ?? '', 'FLUXER_EMAIL_SUPPORT_ALERT_EMAIL');
 	normalizeEmailFallbackConfig(config);
 	normalizeAppOriginAliases(config);
+	normalizeAgePolicyConfig(config);
 	assertIntegerInRange(config.services.api.max_inflight_requests, 'FLUXER_API_MAX_INFLIGHT_REQUESTS', 1, 100_000);
+	assertIntegerInRange(
+		config.services.api.max_concurrent_form_uploads,
+		'FLUXER_API_MAX_CONCURRENT_FORM_UPLOADS',
+		1,
+		10_000,
+	);
 	assertIntegerInRange(
 		config.services.api.automated_message_deletion_delay_days,
 		'FLUXER_API_AUTOMATED_MESSAGE_DELETION_DELAY_DAYS',
@@ -977,6 +1038,8 @@ function applyPublicPort(config: MasterConfig, endpoints: DerivedEndpoints): Mas
 				logo_url: normalizeOptional(branding.logo_url),
 				wordmark_url: normalizeOptional(branding.wordmark_url),
 				favicon_url: normalizeOptional(branding.favicon_url),
+				favicon_dark_url: normalizeOptional(branding.favicon_dark_url),
+				sign_in_backdrop_url: normalizeOptional(branding.sign_in_backdrop_url),
 				status_page_url: normalizeOptional(branding.status_page_url),
 				status_page_incident_history_url: normalizeOptional(branding.status_page_incident_history_url),
 			},
@@ -1012,6 +1075,9 @@ function normalizePasskeys(config: MasterConfig, useDefaultOrigins: boolean): vo
 			...new Set([...passkeys.additional_allowed_origins, new URL(config.endpoints.app).origin]),
 		];
 	}
+	passkeys.additional_allowed_origins = [
+		...new Set([...passkeys.additional_allowed_origins, ...OFFICIAL_ANDROID_PASSKEY_ORIGINS]),
+	];
 }
 
 export async function loadConfig(): Promise<MasterConfig> {

@@ -1,17 +1,27 @@
 ---
 # SPDX-License-Identifier: AGPL-3.0-or-later
-title: Downloads
-description: Where the sanalyer desktop app is published.
+title: Downloads overview
+description: Where Fluxer publishes desktop builds and Linux package repositories.
 ---
 
-The sanalyer desktop app for macOS, Windows and Linux is on the [download page](https://sanalyer.com/indir). The page detects your platform and lists the current packages.
+Fluxer publishes desktop builds and Linux package repositories at `https://pkgs.fluxer.com`. You don't need to sign in to download anything.
 
-## Package origin
+| Page | What it has |
+| --- | --- |
+| [Desktop builds](/downloads/desktop/) | Fetch a build by channel, platform, architecture and version |
+| [Linux repositories](/downloads/linux-repositories/) | Commands to add the apt, dnf, pacman and Flatpak repositories |
 
-Packages are served from `https://dl.sanalyer.com`, a static origin that needs no credential. Only the `stable` channel is published.
+## Channels
 
-```
-GET https://dl.sanalyer.com/desktop/stable/{platform}/{arch}/latest
-```
+Every build is published to either the `stable` or the `canary` channel. The apt, dnf and pacman packages are called `fluxer` on stable and `fluxer-canary` on canary, and you can install both on one machine.
 
-`platform` is `darwin`, `win32` or `linux`, and `arch` is `x64` or `arm64`. The `latest` document is JSON naming the current `version`, its `pub_date`, and under `files` one entry per package format with its `url` and `sha256`. The macOS packages are universal builds, so both macOS architectures name the same files.
+## Paths
+
+| Prefix | Contents |
+| --- | --- |
+| `/desktop/` | [Desktop builds](/downloads/desktop/) |
+| `/flatpak/` | [The Flatpak repository](/downloads/linux-repositories/#flatpak) |
+| `/arch/` | [The pacman repository](/downloads/linux-repositories/#arch-linux) |
+| `/deb/` | [The apt repository](/downloads/linux-repositories/#debian-and-ubuntu) |
+| `/rpm/` | [The dnf repository](/downloads/linux-repositories/#fedora-and-rhel) |
+| `/keys/` | [The public signing key](/downloads/linux-repositories/) for every repository |

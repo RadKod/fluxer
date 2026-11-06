@@ -30,6 +30,7 @@ impl AdminApiClient {
         let response = self
             .generated()
             .list_admin_users(
+                None,
                 nonempty(email),
                 nonempty(last_active_ip),
                 Some(limit.as_str()),
@@ -70,10 +71,7 @@ impl AdminApiClient {
         resp.users
             .into_iter()
             .next()
-            .ok_or_else(|| super::client::ApiError::Http {
-                status: 404,
-                message: "User not found".to_owned(),
-            })
+            .ok_or_else(|| super::client::ApiError::http(404, "User not found"))
     }
 
     pub async fn get_current_admin(&self) -> ApiResult<AdminUser> {
@@ -239,6 +237,16 @@ impl AdminApiClient {
         let response = self
             .generated()
             .update_admin_user_premium_flags(&snowflake(user_id), &body)
+            .await
+            .map_err(|e| self.generated_error(e))?;
+        let resp: UserMutationResponse = self.generated_value(response.into_inner())?;
+        Ok(resp.user)
+    }
+
+    pub async fn remove_premium(&self, user_id: &str, reason: &str) -> ApiResult<AdminUser> {
+        let response = self
+            .generated_with_reason(Some(reason))?
+            .remove_admin_user_premium(&snowflake(user_id))
             .await
             .map_err(|e| self.generated_error(e))?;
         let resp: UserMutationResponse = self.generated_value(response.into_inner())?;

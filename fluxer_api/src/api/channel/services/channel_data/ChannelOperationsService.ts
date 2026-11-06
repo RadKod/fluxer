@@ -11,6 +11,7 @@ import {
 	type UserID,
 } from '@app/api/BrandedTypes';
 import type {ChannelRepository} from '@app/api/channel/ChannelRepository';
+import type {ChannelAccess} from '@app/api/channel/services/AuthenticatedChannel';
 import {
 	enqueueChannelFollowerRemoval,
 	scheduleDeletedChannelFollowerRemoval,
@@ -48,6 +49,7 @@ import type {GuildRepository} from '@app/api/guild/repositories/GuildRepository'
 import {ChannelHelpers} from '@app/api/guild/services/channel/ChannelHelpers';
 import {requireGuildPermission} from '@app/api/guild/services/GuildMfaEnforcement';
 import {hasThreadPermissionBits, resolveProtectedBitActor} from '@app/api/guild/services/ThreadPermissionBits';
+import {enqueueEndGuildVisitsForCode} from '@app/api/guild/visits/GuildVisitLifecycle';
 import {contentModerationService} from '@app/api/infrastructure/ContentModerationService';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {ILiveKitService} from '@app/api/infrastructure/ILiveKitService';
@@ -195,17 +197,20 @@ export class ChannelOperationsService {
 		viewer,
 		channelId,
 		skipNsfwValidation,
+		access,
 	}: {
 		userId: UserID;
 		viewer: ThreadViewer;
 		channelId: ChannelID;
 		skipNsfwValidation?: boolean;
+		access?: ChannelAccess;
 	}): Promise<Channel> {
 		const {channel} = await this.channelAuthService.getChannelAuthenticated({
 			userId,
 			channelId,
 			viewer,
 			skipNsfwValidation,
+			access,
 		});
 		return channel;
 	}
@@ -394,8 +399,12 @@ export class ChannelOperationsService {
 				}
 			}
 		}
-		const requestedParentId =
-			data.parent_id !== undefined ? (data.parent_id ? createChannelID(data.parent_id) : null) : channel.parentId;
+		let requestedParentId: ChannelID | null;
+		if (data.parent_id !== undefined) {
+			requestedParentId = data.parent_id ? createChannelID(data.parent_id) : null;
+		} else {
+			requestedParentId = channel.parentId;
+		}
 		if (data.parent_id !== undefined) {
 			await this.validateParentCategory({
 				guildId: guildIdValue,
@@ -637,6 +646,9 @@ export class ChannelOperationsService {
 				...channelInvites.map((invite) => this.inviteRepository.delete(invite.code)),
 				...channelWebhooks.map((webhook) => this.webhookRepository.delete(webhook.id)),
 			]);
+			for (const invite of channelInvites) {
+				if (invite.guildId) await enqueueEndGuildVisitsForCode(invite.guildId, invite.code);
+			}
 			await this.channelUtilsService.purgeChannelAttachments(channel);
 			await this.channelRepository.messages.deleteAllChannelMessages(channelId);
 			await deleteChannelMessageSearchDocuments(channelId, {context: {source: 'channel_delete'}});

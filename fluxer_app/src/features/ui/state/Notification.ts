@@ -17,8 +17,10 @@ import {Message} from '@app/features/messaging/models/MessagingMessage';
 import * as MessageUtils from '@app/features/messaging/utils/MessageUtils';
 import Navigation from '@app/features/navigation/state/Navigation';
 import SelectedChannel from '@app/features/navigation/state/SelectedChannel';
+import {startAccountEngineNotifications} from '@app/features/notification/utils/AccountEngineNotifications';
 import {buildMessageNotificationBody} from '@app/features/notification/utils/MessageNotificationPreview';
 import {getNotificationIconURL} from '@app/features/notification/utils/NotificationIconURL';
+import {clearChannelNotifications, trackNotification} from '@app/features/notification/utils/NotificationTracker';
 import * as NotificationUtils from '@app/features/notification/utils/NotificationUtils';
 import * as PushSubscriptionService from '@app/features/platform/push/PushSubscriptionService';
 import AppStorage from '@app/features/platform/state/PersistentStorage';
@@ -72,49 +74,11 @@ export enum TTSNotificationMode {
 	NEVER = 2,
 }
 
-const MAX_PER_CHANNEL = 5;
 const CACHE_SIZE = 500;
 
-interface TrackedNotification {
-	browserNotification: Notification | null;
-	nativeId: string | null;
+function clearCurrentAccountChannelNotifications(channelId: string): void {
+	clearChannelNotifications(Accounts.currentAccountKey, channelId);
 }
-
-const notificationTracker = new (class {
-	private channels: Record<string, Array<TrackedNotification>> = {};
-
-	track(channelId: string, notification: TrackedNotification): void {
-		let notifications = this.channels[channelId];
-		if (notifications == null) {
-			notifications = [];
-			this.channels[channelId] = notifications;
-		}
-		notifications.push(notification);
-		while (notifications.length > MAX_PER_CHANNEL) {
-			const old = notifications.shift();
-			if (old) {
-				old.browserNotification?.close();
-				if (old.nativeId) {
-					NotificationUtils.closeNativeNotification(old.nativeId);
-				}
-			}
-		}
-	}
-
-	clearChannel(channelId: string): void {
-		const notifications = this.channels[channelId];
-		if (notifications == null) return;
-		delete this.channels[channelId];
-		const browserNotifications = notifications
-			.map((n) => n.browserNotification)
-			.filter((n): n is Notification => n != null);
-		browserNotifications.forEach((notification) => notification.close());
-		const nativeIds = notifications.map((n) => n.nativeId).filter((id): id is string => id != null);
-		if (nativeIds.length > 0) {
-			NotificationUtils.closeNativeNotifications(nativeIds);
-		}
-	}
-})();
 
 type NotificationData = Readonly<{
 	message: WireMessage;
@@ -174,6 +138,9 @@ class NotificationState {
 			notificationUtils.ensureDesktopNotificationClickHandler();
 			await this.initPersistence();
 			await this.refreshPermission();
+		});
+		queueMicrotask(() => {
+			startAccountEngineNotifications();
 		});
 		queueMicrotask(() => {
 			this.accountReactionDisposer = reaction(
@@ -279,6 +246,7 @@ class NotificationState {
 		if (StreamerMode.shouldDisableNotifications) return null;
 		const channel = Channels.getChannel(message.channel_id);
 		if (!channel) return null;
+		if (channel.isPrivate() && RuntimeConfig.directMessagesDisabled) return null;
 		if (message.author.id === Authentication.currentUserId) return null;
 		if (Relationships.isBlocked(message.author.id)) return null;
 		if (LocalPresence.getStatus() === StatusTypes.DND) return null;
@@ -395,6 +363,7 @@ class NotificationState {
 			channel.guildId && channel.guildId !== ME
 				? Routes.channelMessage(channel.guildId, channel.id, message.id)
 				: Routes.dmChannelMessage(channel.id, message.id);
+		const accountKey = Accounts.currentAccountKey;
 		try {
 			const result = await NotificationUtils.showNotification({
 				id: message.id,
@@ -404,9 +373,9 @@ class NotificationState {
 				icon: getNotificationIconURL(user, channel.guildId),
 				url: notificationUrl,
 				playSound: false,
-				accountKey: Accounts.currentAccountKey,
+				accountKey,
 			});
-			notificationTracker.track(channel.id, {
+			trackNotification(accountKey, channel.id, {
 				browserNotification: result.browserNotification,
 				nativeId: result.nativeNotificationId,
 			});
@@ -497,23 +466,23 @@ class NotificationState {
 		if (focused) {
 			const channelId = SelectedChannel.currentChannelId;
 			if (channelId) {
-				notificationTracker.clearChannel(channelId);
+				clearCurrentAccountChannelNotifications(channelId);
 			}
 		}
 	}
 
 	handleChannelSelect({channelId}: {channelId?: string | null}): void {
 		if (channelId) {
-			notificationTracker.clearChannel(channelId);
+			clearCurrentAccountChannelNotifications(channelId);
 		}
 	}
 
 	handleMessageAck({channelId}: {channelId: string}): void {
-		notificationTracker.clearChannel(channelId);
+		clearCurrentAccountChannelNotifications(channelId);
 	}
 
 	handleMessageDelete({channelId}: {channelId: string}): void {
-		notificationTracker.clearChannel(channelId);
+		clearCurrentAccountChannelNotifications(channelId);
 	}
 
 	handleRelationshipNotification(
@@ -522,7 +491,7 @@ class NotificationState {
 			event?: 'add' | 'update';
 		},
 	): void {
-		if (RuntimeConfig.directMessagesDisabled) {
+		if (RuntimeConfig.friendsDisabled) {
 			return;
 		}
 		if (StreamerMode.shouldDisableNotifications) {

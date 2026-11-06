@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {createAPIApp} from '@app/api/App';
+import {resetAdminSsoCachesForTests} from '@app/api/admin/AdminSsoSignIn';
+import {resetSsoProviderCachesForTests} from '@app/api/auth/services/SsoService';
 import {Config} from '@app/api/Config';
 import {resetApiServicesForTesting} from '@app/api/CreateApiContext';
 import {
 	resetCassandraQueryExecutorForTesting,
 	setCassandraQueryExecutorForTesting,
 } from '@app/api/database/CassandraQueryExecution';
+import {resetGuildVisitorCachesForTesting} from '@app/api/guild/visits/GuildVisitorAccess';
 import {resetSharedListsForTests} from '@app/api/infrastructure/activity/SharedLists';
 import {SearchProvider} from '@app/api/infrastructure/SearchProvider';
 import {ipBanCache} from '@app/api/middleware/IpBanMiddleware';
@@ -31,6 +34,7 @@ import {MockStorageService} from '@app/api/test/mocks/MockStorageService';
 import {NoopLogger} from '@app/api/test/mocks/NoopLogger';
 import {NoopUnfurlerService} from '@app/api/test/mocks/NoopUnfurlerService';
 import {NoopGatewayService} from '@app/api/test/NoopGatewayService';
+import {NoopOperatorPassWallPublisher} from '@app/api/test/NoopOperatorPassWallPublisher';
 import {NoopWorkerService} from '@app/api/test/NoopWorkerService';
 import {resetServiceStateForTesting} from '@app/api/test/ResetServiceState';
 import {InMemorySearchProvider} from '@app/api/test/search/InMemorySearchProvider';
@@ -96,6 +100,7 @@ export async function createApiTestHarness(options: CreateApiTestHarnessOptions 
 	} = await createAPIApp({
 		config: Config,
 		logger: harnessLogger,
+		operatorPassWallPublisher: new NoopOperatorPassWallPublisher(),
 		registerRoutes: options.registerRoutes,
 	});
 	try {
@@ -106,14 +111,18 @@ export async function createApiTestHarness(options: CreateApiTestHarnessOptions 
 		throw error;
 	}
 	async function reset(): Promise<void> {
+		resetGuildVisitorCachesForTesting();
 		resetApiServicesForTesting();
 		resetCassandraQueryExecutorForTesting();
 		getInstanceConfigRepository().clearCacheForTesting();
 		kvProvider.reset();
 		setInjectedUnfurlerService(undefined);
 		resetSharedListsForTests();
+		resetSsoProviderCachesForTests();
+		resetAdminSsoCachesForTests();
 	}
 	async function resetData(): Promise<void> {
+		resetGuildVisitorCachesForTesting();
 		resetApiServicesForTesting();
 		resetCassandraQueryExecutorForTesting();
 		getInstanceConfigRepository().clearCacheForTesting();

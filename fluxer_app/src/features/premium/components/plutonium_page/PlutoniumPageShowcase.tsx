@@ -3,6 +3,10 @@
 import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import styles from '@app/features/premium/components/plutonium_page/PlutoniumPage.module.css';
 import {
+	PlutoniumPageIcon,
+	type PlutoniumPageIconName,
+} from '@app/features/premium/components/plutonium_page/PlutoniumPageIcons';
+import {
 	AVATAR_LSF,
 	BANNER_LSF,
 	EMOJI_CATVIBE,
@@ -27,8 +31,9 @@ import {
 import type {MessageDescriptor} from '@lingui/core';
 import {useLingui} from '@lingui/react/macro';
 import {clsx} from 'clsx';
+import {useCallback, useState} from 'react';
 
-const PERK_SHOT_SIZES = '(min-width: 48rem) 50vw, calc(100vw - 5rem)';
+const PERK_SHOT_SIZES = '(min-width: 80rem) 35rem, (min-width: 48rem) calc(50vw - 3rem), calc(100vw - 2.5rem)';
 const CHAT_SURFACE = 'rgb(30, 29, 35)';
 
 interface PerkOverlay {
@@ -42,6 +47,7 @@ interface PerkOverlay {
 
 interface PerkCard {
 	id: string;
+	icon: PlutoniumPageIconName;
 	title: MessageDescriptor;
 	body: MessageDescriptor;
 	shots: ShotFamily;
@@ -62,6 +68,7 @@ const EXPRESSIONS_OVERLAYS: ReadonlyArray<PerkOverlay> = [
 const PERK_CARDS: ReadonlyArray<PerkCard> = [
 	{
 		id: 'expressions',
+		icon: 'smiley',
 		title: SHOWCASE_EXPRESSIONS_TITLE_DESCRIPTOR,
 		body: SHOWCASE_EXPRESSIONS_BODY_DESCRIPTOR,
 		shots: EXPRESSIONS_SHOTS,
@@ -71,6 +78,7 @@ const PERK_CARDS: ReadonlyArray<PerkCard> = [
 	},
 	{
 		id: 'profile',
+		icon: 'userCircle',
 		title: SHOWCASE_PROFILE_TITLE_DESCRIPTOR,
 		body: SHOWCASE_PROFILE_BODY_WITHOUT_TAG_DESCRIPTOR,
 		shots: PROFILE_SHOTS,
@@ -81,6 +89,7 @@ const PERK_CARDS: ReadonlyArray<PerkCard> = [
 	},
 	{
 		id: 'stream',
+		icon: 'videoCamera',
 		title: SHOWCASE_STREAM_TITLE_DESCRIPTOR,
 		body: SHOWCASE_STREAM_BODY_DESCRIPTOR,
 		shots: STREAM_SHOTS,
@@ -90,6 +99,7 @@ const PERK_CARDS: ReadonlyArray<PerkCard> = [
 	},
 	{
 		id: 'upload',
+		icon: 'paperclip',
 		title: SHOWCASE_UPLOAD_TITLE_DESCRIPTOR,
 		body: SHOWCASE_UPLOAD_BODY_DESCRIPTOR,
 		shots: UPLOAD_SHOTS,
@@ -228,8 +238,28 @@ function ProfileOverlay() {
 }
 
 function PerkArt({card, eager}: {card: PerkCard; eager: boolean}) {
+	const [status, setStatus] = useState<'pending' | 'loaded' | 'failed'>('pending');
+	const imageRef = useCallback((image: HTMLImageElement | null) => {
+		if (image?.complete) setStatus(image.naturalWidth > 0 ? 'loaded' : 'failed');
+	}, []);
 	return (
-		<div className={styles.perkArt} data-flx="premium.plutonium-page.perk-art">
+		<div
+			className={clsx(
+				styles.perkArt,
+				status === 'pending' && styles.perkArtPending,
+				status === 'failed' && styles.perkArtFailed,
+			)}
+			data-flx="premium.plutonium-page.perk-art"
+		>
+			{status !== 'loaded' && (
+				<div className={styles.perkArtPlaceholder} data-flx="premium.plutonium-page.perk-art.placeholder">
+					<PlutoniumPageIcon
+						name={card.icon}
+						className={styles.perkArtPlaceholderIcon}
+						data-flx="premium.plutonium-page.perk-art.placeholder-icon"
+					/>
+				</div>
+			)}
 			<picture data-flx="premium.plutonium-page.plutonium-page-showcase.perk-art.picture">
 				<source
 					type="image/webp"
@@ -238,6 +268,7 @@ function PerkArt({card, eager}: {card: PerkCard; eager: boolean}) {
 					data-flx="premium.plutonium-page.plutonium-page-showcase.perk-art.source.image-webp"
 				/>
 				<img
+					ref={imageRef}
 					draggable={false}
 					className={styles.perkArtImage}
 					src={card.shots.webp[1]}
@@ -247,6 +278,8 @@ function PerkArt({card, eager}: {card: PerkCard; eager: boolean}) {
 					fetchPriority={eager ? 'high' : undefined}
 					decoding="async"
 					alt=""
+					onLoad={() => setStatus('loaded')}
+					onError={() => setStatus('failed')}
 					data-flx="premium.plutonium-page.perk-art.image"
 				/>
 			</picture>
@@ -288,7 +321,7 @@ export function PlutoniumPageShowcase({uploadSize, freeUploadSize}: PlutoniumPag
 	const {i18n} = useLingui();
 	const showArt = !RuntimeConfig.isSelfHosted();
 	return (
-		<>
+		<div className={styles.featureRows} data-flx="premium.plutonium-page.feature-rows">
 			{PERK_CARDS.map((card, index) => {
 				const flipped = index % 2 === 1;
 				const body = i18n._(card.body, {freeSize: freeUploadSize});
@@ -300,11 +333,16 @@ export function PlutoniumPageShowcase({uploadSize, freeUploadSize}: PlutoniumPag
 					>
 						{showArt && (
 							<div className={styles.perkArtColumn} data-flx="premium.plutonium-page.perk-row.art-column">
-								<PerkArt
-									card={card}
-									eager={index === 0}
-									data-flx="premium.plutonium-page.plutonium-page-showcase.perk-art"
-								/>
+								<div
+									className={clsx(styles.tilt, flipped && styles.tiltReverse)}
+									data-flx="premium.plutonium-page.perk-row.tilt"
+								>
+									<PerkArt
+										card={card}
+										eager={index === 0}
+										data-flx="premium.plutonium-page.plutonium-page-showcase.perk-art"
+									/>
+								</div>
 							</div>
 						)}
 						<div className={styles.perkTextColumn} data-flx="premium.plutonium-page.perk-row.text-column">
@@ -318,6 +356,6 @@ export function PlutoniumPageShowcase({uploadSize, freeUploadSize}: PlutoniumPag
 					</article>
 				);
 			})}
-		</>
+		</div>
 	);
 }

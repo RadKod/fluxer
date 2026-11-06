@@ -5,10 +5,13 @@ use crate::{
     admin_flags,
     api::{
         client::{AdminApiClient, ApiError},
-        enforcement::{ClosureRequest, api_error_message},
+        enforcement::ClosureRequest,
         generated::{
             snowflake,
-            types::{AdminUserFeatureLimitRequestLimit, AdminUserMessageShredRequestEntriesItem},
+            types::{
+                AdminUserFeatureLimitRequestLimit, AdminUserMessageShredRequestEntriesItem,
+                AdminUserMessageShredRequestPreviewToken,
+            },
         },
     },
     middleware::flash::FlashData,
@@ -71,6 +74,16 @@ pub async fn dispatch(
                 .await,
             "Legacy account restriction cleared successfully",
             "Failed to clear legacy account restriction",
+        ),
+        "update_badges" => DispatchOutcome::from_result(
+            client
+                .update_user_badges(
+                    user_id,
+                    &form.list_values_any(&["badge_ids[]", "badge_ids"]),
+                )
+                .await,
+            "User badges updated",
+            "Failed to update user badges",
         ),
         "update_flags" => {
             if has_legacy_flag_delta_fields(form) {
@@ -172,6 +185,15 @@ pub async fn dispatch(
         },
         "grant_visionary" => grant_visionary(client, user_id, form).await,
         "revoke_visionary" => revoke_visionary(client, user_id, form).await,
+        "remove_premium" => {
+            let Some(internal_note) = get("internal_note") else {
+                return DispatchOutcome::error("Add an internal note");
+            };
+            match client.remove_premium(user_id, &internal_note).await {
+                Ok(_) => DispatchOutcome::success("Premium removed"),
+                Err(error) => decision_failure("Failed to remove premium", user_id, &error),
+            }
+        }
         "update_acls" => {
             let acls = form.list_values_any(&["acls[]", "acls"]);
             DispatchOutcome::from_result(
@@ -499,19 +521,34 @@ pub async fn dispatch(
             "Failed to cancel bulk message deletion",
         ),
         "message_shred" => {
-            let entries = match parse_message_shred_csv(form.first("csv_data").unwrap_or_default())
-            {
-                Ok(entries) if entries.is_empty() => {
-                    return DispatchOutcome::error("The CSV has no channel_id,message_id rows.");
-                }
+            let entries = match message_shred_entries(form.first("csv_data").unwrap_or_default()) {
                 Ok(entries) => entries,
                 Err(error) => return DispatchOutcome::error(error),
+            };
+            let Some(preview_token) = form.clean("preview_token").and_then(|token| {
+                token
+                    .parse::<AdminUserMessageShredRequestPreviewToken>()
+                    .ok()
+            }) else {
+                return DispatchOutcome::error("Preview the messages before you delete them.");
             };
             let basis = match basis_from_form(form) {
                 Ok(basis) => basis,
                 Err(message) => return DispatchOutcome::error(message),
             };
-            match client.queue_message_shred(user_id, entries, &basis).await {
+            let entries = entries
+                .into_iter()
+                .map(
+                    |(channel_id, message_id)| AdminUserMessageShredRequestEntriesItem {
+                        channel_id: snowflake(&channel_id),
+                        message_id: snowflake(&message_id),
+                    },
+                )
+                .collect();
+            match client
+                .queue_message_shred(user_id, entries, &basis, preview_token)
+                .await
+            {
                 Ok(response) => DispatchOutcome {
                     flash: FlashData::success(removal_message(
                         "Message shred queued",
@@ -643,92 +680,6 @@ fn username_audit_reason(form: &MultiValueForm) -> Result<String, &'static str> 
     Ok(reason)
 }
 
-fn has_legacy_flag_delta_fields(form: &MultiValueForm) -> bool {
-    ["add_flags[]", "add_flags", "remove_flags[]", "remove_flags"]
-        .iter()
-        .any(|key| form.contains_key(key))
-}
-
-fn is_relationship_category(category: &str) -> bool {
-    matches!(
-        category,
-        "friend" | "incoming_request" | "outgoing_request" | "blocked"
-    )
-}
-
-fn parse_dry_run(value: Option<&str>) -> bool {
-    !matches!(value.map(|value| value.trim().to_ascii_lowercase()), Some(value) if value == "false" || value == "0")
-}
-
-fn parse_message_shred_csv(
-    csv: &str,
-) -> Result<Vec<AdminUserMessageShredRequestEntriesItem>, String> {
-    let mut entries = Vec::new();
-    for line in csv.trim().lines() {
-        let trimmed = line.trim();
-        if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("channel_id,message_id") {
-            continue;
-        }
-        let parts: Vec<&str> = trimmed.split(',').collect();
-        if parts.len() != 2 {
-            return Err(
-                "Each row must contain channel_id and message_id separated by a comma".to_owned(),
-            );
-        }
-        entries.push(AdminUserMessageShredRequestEntriesItem {
-            channel_id: snowflake(&parse_csv_snowflake(parts[0], "channel_id", trimmed)?),
-            message_id: snowflake(&parse_csv_snowflake(parts[1], "message_id", trimmed)?),
-        });
-    }
-    Ok(entries)
-}
-
-fn parse_csv_snowflake(value: &str, field: &str, row: &str) -> Result<String, String> {
-    let trimmed = value.trim();
-    if trimmed.is_empty() {
-        return Err(format!("Invalid row format: {row}"));
-    }
-    match trimmed.parse::<u64>() {
-        Ok(parsed) => Ok(parsed.to_string()),
-        Err(_) => Err(format!("Invalid {field} on row: {row}")),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{parse_dry_run, parse_message_shred_csv};
-
-    #[test]
-    fn parse_dry_run_defaults_to_preview() {
-        assert!(parse_dry_run(None));
-        assert!(parse_dry_run(Some("true")));
-        assert!(!parse_dry_run(Some("false")));
-        assert!(!parse_dry_run(Some("0")));
-    }
-
-    #[test]
-    fn parse_message_shred_csv_accepts_header_and_rows() {
-        let entries = parse_message_shred_csv("channel_id,message_id\n123,456\n789,101112")
-            .expect("valid csv");
-        assert_eq!(entries.len(), 2);
-        assert_eq!(
-            serde_json::to_value(&entries[0]).expect("serializable entry"),
-            serde_json::json!({"channel_id": "123", "message_id": "456"})
-        );
-    }
-
-    #[test]
-    fn parse_message_shred_csv_rejects_bad_rows() {
-        let error = parse_message_shred_csv("123,abc").expect_err("invalid message id");
-        assert_eq!(error, "Invalid message_id on row: 123,abc");
-        let error = parse_message_shred_csv("123,456,789").expect_err("too many columns");
-        assert_eq!(
-            error,
-            "Each row must contain channel_id and message_id separated by a comma"
-        );
-    }
-}
-
 // Upstream enforcement actions (merged 2026-10-16); kept whole after the Micup actions above.
 fn with_skipped(
     done: &str,
@@ -768,18 +719,28 @@ async fn close_account(
         Ok(block_networks) => block_networks.filter(|_| enforcement),
         Err(message) => return DispatchOutcome::error(message),
     };
+    let immediate = form.bool_value("delete_immediately");
+    if immediate && form.clean("delete_immediately_confirm").as_deref() != Some("DELETE") {
+        return DispatchOutcome::error("Type DELETE to confirm deleting the account now");
+    }
     let request = ClosureRequest {
         basis: basis.moderation_basis(),
         days_until_deletion,
+        immediate,
         remove_evidence: enforcement && form.bool_value("remove_evidence"),
         block_networks,
         replace_pending_deletion_at,
         internal_note: basis.internal_note().map(str::to_owned),
     };
     match client.close_account(user_id, &request).await {
-        Ok(response) => {
-            DispatchOutcome::success(with_skipped("Account closed.", &response.skipped_ips))
-        }
+        Ok(response) => DispatchOutcome::success(with_skipped(
+            if immediate {
+                "Account closed. It is being deleted now."
+            } else {
+                "Account closed."
+            },
+            &response.skipped_ips,
+        )),
         Err(error) => decision_failure("Failed to close the account", user_id, &error),
     }
 }
@@ -854,8 +815,84 @@ fn parse_day(value: &str) -> Option<chrono::DateTime<chrono::Utc>> {
 
 fn decision_failure(context: &str, user_id: &str, error: &ApiError) -> DispatchOutcome {
     tracing::warn!(%error, user_id, "admin API request failed: {context}");
-    match api_error_message(error) {
+    match error.detail_message() {
         Some(message) => DispatchOutcome::error(format!("{context}: {message}")),
         None => DispatchOutcome::error(context.to_owned()),
+    }
+}
+
+fn has_legacy_flag_delta_fields(form: &MultiValueForm) -> bool {
+    ["add_flags[]", "add_flags", "remove_flags[]", "remove_flags"]
+        .iter()
+        .any(|key| form.contains_key(key))
+}
+
+fn is_relationship_category(category: &str) -> bool {
+    matches!(
+        category,
+        "friend" | "incoming_request" | "outgoing_request" | "blocked"
+    )
+}
+
+fn parse_dry_run(value: Option<&str>) -> bool {
+    !matches!(value.map(|value| value.trim().to_ascii_lowercase()), Some(value) if value == "false" || value == "0")
+}
+
+pub(super) fn message_shred_entries(csv: &str) -> Result<Vec<(String, String)>, String> {
+    let entries = parse_message_shred_csv(csv)?;
+    if entries.is_empty() {
+        return Err("The CSV has no channel_id,message_id rows.".to_owned());
+    }
+    Ok(entries)
+}
+
+fn parse_message_shred_csv(csv: &str) -> Result<Vec<(String, String)>, String> {
+    let mut entries = Vec::new();
+    for line in csv.trim_start_matches('\u{feff}').lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let parts: Vec<&str> = trimmed.split(',').map(unquote).collect();
+        if parts.len() != 2 {
+            return Err(
+                "Each row must contain channel_id and message_id separated by a comma".to_owned(),
+            );
+        }
+        if parts[0].eq_ignore_ascii_case("channel_id")
+            && parts[1].eq_ignore_ascii_case("message_id")
+        {
+            continue;
+        }
+        entries.push((
+            parse_csv_snowflake(parts[0], "channel_id", trimmed)?,
+            parse_csv_snowflake(parts[1], "message_id", trimmed)?,
+        ));
+    }
+    Ok(entries)
+}
+
+fn unquote(value: &str) -> &str {
+    let value = value.trim();
+    value
+        .strip_prefix('"')
+        .and_then(|inner| inner.strip_suffix('"'))
+        .unwrap_or(value)
+        .trim()
+}
+
+fn parse_csv_snowflake(value: &str, field: &str, row: &str) -> Result<String, String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return Err(format!("Invalid row format: {row}"));
+    }
+    if !trimmed.bytes().all(|byte| byte.is_ascii_digit()) {
+        return Err(format!(
+            "Invalid {field} on row: {row}. IDs must be whole numbers. A spreadsheet can round long IDs, so export them as text."
+        ));
+    }
+    match trimmed.parse::<u64>() {
+        Ok(parsed) => Ok(parsed.to_string()),
+        Err(_) => Err(format!("Invalid {field} on row: {row}")),
     }
 }

@@ -21,17 +21,23 @@ import {
 } from '@app/features/app/domain_migration/DomainMigrationCore';
 import {runDomainMigrationPreMount} from '@app/features/app/domain_migration/DomainMigrationPreMount';
 import {installRuntimeConfigEffects} from '@app/features/app/state/RuntimeConfigEffects';
+import {captureAccountHandoffFromLocation} from '@app/features/auth/state/AccountHandoffCapture';
 import {installImageRetention} from '@app/features/messaging/utils/ImageRetention';
 import {Logger} from '@app/features/platform/utils/AppLogger';
+import {installChunkIntegrityRecovery} from '@app/features/platform/utils/ChunkIntegrityRecovery';
 import {loadLazyModule} from '@app/features/platform/utils/LazyModuleLoader';
 import {installUnhandledRejectionReporter} from '@app/features/platform/utils/UnhandledRejectionReporter';
+import {captureCustomCssOffFromLocation} from '@app/features/theme_settings/state/CustomCssOff';
 import {PASSKEY_BRIDGE_PATH} from '@fluxer/constants/src/PasskeyConstants';
 import {configure} from 'mobx';
 
 const logger = new Logger('index');
 
+captureAccountHandoffFromLocation();
+captureCustomCssOffFromLocation();
 installBrowserStorageAccessProtection();
 installUnhandledRejectionReporter();
+installChunkIntegrityRecovery();
 
 configure({disableErrorBoundaries: true, enforceActions: 'observed'});
 

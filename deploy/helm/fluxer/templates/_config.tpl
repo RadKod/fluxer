@@ -69,6 +69,9 @@
 {{- $_ := set $c "FLUXER_LIVEKIT_INTERNAL_URL" $v.livekit.external.url }}
 {{- $_ := set $c "FLUXER_LIVEKIT_DEFAULT_REGION" $v.livekit.defaultRegion }}
 {{- $_ := set $c "FLUXER_LIVEKIT_URL" $v.livekit.external.publicUrl }}
+{{- else if eq $livekit "joined" }}
+{{- $_ := set $c "FLUXER_LIVEKIT_BUNDLED" "false" }}
+{{- $_ := set $c "FLUXER_LIVEKIT_DEFAULT_REGION" $v.livekit.defaultRegion }}
 {{- end }}
 {{- $_ := set $c "FLUXER_API_PRESIGNED_HARVEST_DOWNLOADS_ENABLED" "false" }}
 {{- $_ := set $c "FLUXER_EMAIL_FROM_EMAIL" "noreply@localhost" }}
@@ -93,9 +96,13 @@
 {{- $c := dict }}
 {{- $_ := set $c "FLUXER_APP_PROXY_PORT" "8080" }}
 {{- $_ := set $c "DISCOVERY_UPSTREAM_URL" "http://api:8080/.well-known/fluxer" }}
+{{- $_ := set $c "DISCOVERY_REFRESH_INTERVAL_MS" "5000" }}
 {{- $_ := set $c "FLUXER_S3_PUBLIC_ENDPOINT" ($v.s3.publicEndpoint | default $s3) }}
 {{- $_ := set $c "FLUXER_S3_BUCKET_UPLOADS" $v.s3.buckets.uploads }}
 {{- $_ := set $c "FLUXER_MEDIA_ENDPOINT" (printf "%s/media" (include "fluxer.origin" .)) }}
+{{- if eq (include "fluxer.livekitMode" .) "external" }}
+{{- $_ := set $c "FLUXER_LIVEKIT_URL" $v.livekit.external.publicUrl }}
+{{- end }}
 {{- range $k, $val := $v.appProxy.config | default dict }}
 {{- $_ := set $c $k (include "fluxer.string" ($val | default "")) }}
 {{- end }}

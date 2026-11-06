@@ -21,6 +21,7 @@ import {
 	RevokeGiftCodesRequest,
 	RevokeGiftCodesResponse,
 } from '@fluxer/schema/src/domains/admin/AdminSchemas';
+import {GiftCodeParam} from '@fluxer/schema/src/domains/common/CommonParamSchemas';
 import {GenerateCosmeticGiftCodesRequest} from '@fluxer/schema/src/domains/shop/ShopAdminSchemas';
 
 function trimTrailingSlash(value: string): string {
@@ -59,7 +60,7 @@ export function CodesAdminController(app: HonoApp) {
 			operationId: 'create_admin_gift_codes',
 			summary: 'Issue gift codes',
 			description:
-				'Create one-use Plus gift codes with an explicit positive duration and return their complete redemption links. Lifetime gifts are not supported. On self-hosted instances the premium mode must be mirror. Requires GIFT_CODES_GENERATE permission.',
+				'Create one-use Plus gift codes and return their complete redemption links. Use a positive duration, or on a self-hosted instance the duration type lifetime for Plus that never ends. On self-hosted instances the premium mode must be mirror. Requires GIFT_CODES_GENERATE permission.',
 			responseSchema: CodesResponse,
 			statusCode: 200,
 			security: 'adminApiKey',
@@ -69,6 +70,9 @@ export function CodesAdminController(app: HonoApp) {
 			assertGiftCodesAvailable();
 			const adminService = ctx.get('adminService');
 			const {count, duration_type, duration_quantity} = ctx.req.valid('json');
+			if (duration_type === 'lifetime' && !Config.instance.selfHosted) {
+				throw InputValidationError.create('duration_type', 'Lifetime gift codes are only for self-hosted instances');
+			}
 			const codes = await adminService.codeGenerationService.generateGiftCodes({
 				count,
 				durationType: duration_type,
@@ -166,6 +170,36 @@ export function CodesAdminController(app: HonoApp) {
 				]),
 			});
 			return ctx.json(result);
+		},
+	);
+	app.delete(
+		'/admin/gift-codes/:code',
+		RateLimitMiddleware(RateLimitConfigs.ADMIN_CODE_GENERATION),
+		requireAdminACL(AdminACLs.GIFT_CODES_GENERATE),
+		Validator('param', GiftCodeParam),
+		OpenAPI({
+			operationId: 'revoke_admin_gift_code',
+			summary: 'Revoke gift code',
+			description:
+				'Revoke a gift code that nobody has redeemed, so it can no longer be redeemed. Pass the code, which is the last part of the redemption link. Returns 404 when the code is unknown or already revoked, and 400 when it was redeemed, in which case Remove user premium ends the premium it gave, or when a customer bought it. Creates audit log entry. Requires GIFT_CODES_GENERATE permission.',
+			responseSchema: null,
+			statusCode: 204,
+			security: 'adminApiKey',
+			tags: 'Admin',
+		}),
+		async (ctx) => {
+			const giftCode = await ctx.get('adminService').codeGenerationService.revokeGiftCode(ctx.req.valid('param').code);
+			await recordAdminWrite(ctx, {
+				targetType: 'gift_code',
+				targetId: BigInt(0),
+				action: 'revoke_gift_code',
+				metadata: {
+					code: giftCode.code,
+					duration_type: giftCode.durationType,
+					duration_quantity: giftCode.durationQuantity.toString(),
+				},
+			});
+			return ctx.body(null, 204);
 		},
 	);
 }

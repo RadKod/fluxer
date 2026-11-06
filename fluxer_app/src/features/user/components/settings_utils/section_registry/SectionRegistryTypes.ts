@@ -8,7 +8,7 @@ import type {
 } from '@app/features/user/components/settings_utils/SettingsMetadata';
 import type {MessageDescriptor} from '@lingui/core';
 
-export type SectionKeyword = MessageDescriptor | string | (() => string);
+type SectionKeyword = MessageDescriptor | string | (() => string);
 
 export type UserSettingsTabType =
 	| 'my_profile'
@@ -17,12 +17,16 @@ export type UserSettingsTabType =
 	| 'account_security'
 	| 'plutonium'
 	| 'shop'
+	| 'subscriptions'
+	| 'operator_pass'
 	| 'gift_inventory'
+	| 'payments'
 	| 'privacy_safety'
 	| 'authorized_apps'
 	| 'blocked_users'
 	| 'devices'
 	| 'appearance'
+	| 'themes'
 	| 'accessibility'
 	| 'chat_settings'
 	| 'voice_video'

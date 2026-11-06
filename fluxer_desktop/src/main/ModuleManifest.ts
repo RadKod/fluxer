@@ -30,7 +30,7 @@ export interface DesktopModuleManifestEntry {
 	readonly maximumShellVersion: ModuleVersion | null;
 }
 
-export interface DesktopModuleShellRequirement {
+interface DesktopModuleShellRequirement {
 	readonly latestVersion: ModuleVersion;
 	readonly minimumVersion: ModuleVersion;
 }

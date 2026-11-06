@@ -5,7 +5,6 @@ import {
 	GatewayCompression,
 	isGatewayCompressionError,
 } from '@app/features/gateway/transport/GatewayCompression';
-import {GatewayConnectionRole} from '@app/features/gateway/transport/GatewayConnectionRole';
 import {
 	DISPATCH_FLUSH_DELAY_MS,
 	DISPATCH_IDLE_RETRY_TIMEOUT_MS,
@@ -15,6 +14,11 @@ import {
 	shouldRetryIdleWait,
 	shouldSkipIdleWait,
 } from '@app/features/gateway/transport/GatewayDispatchScheduling';
+import {
+	type GatewayGuildSubscriptions,
+	GatewaySubscriptionLedger,
+	type GatewaySubscriptionRelease,
+} from '@app/features/gateway/transport/GatewaySubscriptionLedger';
 import {
 	formatGatewayReadyTimings,
 	type GatewayTimings,
@@ -31,7 +35,6 @@ import {
 } from '@app/features/gateway/transport/GatewayWireTransport';
 import type {GameActivity} from '@app/features/gateway/types/GatewayPresenceTypes';
 import {Logger, LogLevel} from '@app/features/platform/utils/AppLogger';
-import {ExponentialBackoff} from '@app/features/platform/utils/RetryScheduler';
 import type {GatewayCustomStatusPayload} from '@app/features/user/state/CustomStatus';
 import type {GatewayErrorCode} from '@fluxer/constants/src/GatewayConstants';
 import {GatewayCloseCodes, GatewayOpcodes} from '@fluxer/constants/src/GatewayConstants';
@@ -44,8 +47,11 @@ const GATEWAY_TIMEOUTS = {
 	ResumeResponse: 15000,
 	ResumeWindow: 180000,
 	MinReconnect: 1000,
-	MaxReconnect: 60000,
+	MaxReconnect: 10000,
+	MaxReconnectWhileDispatchesFail: 60000,
+	ReconnectFloor: 500,
 	ReconnectSpread: 2000,
+	InvalidSessionIdentifySpread: 1000,
 	Hello: 20000,
 } as const;
 
@@ -87,7 +93,7 @@ export interface GatewaySocketProperties {
 	longitude?: string;
 }
 
-export interface GatewayPresence {
+interface GatewayPresence {
 	status: string;
 	afk: boolean;
 	mobile: boolean;
@@ -113,7 +119,7 @@ export interface GatewayVoiceSignalParams {
 	data: object;
 }
 
-export const VOICE_SIGNAL_MAX_JSON_BYTES = 16000;
+const VOICE_SIGNAL_MAX_JSON_BYTES = 16000;
 
 export const VoiceSignalSendResult = {
 	Sent: 'sent',
@@ -133,15 +139,16 @@ export interface GatewaySocketOptions {
 	initialGuildId?: string | null;
 	isMobileLayout: () => boolean;
 	geo: () => {latitude: string | null; longitude: string | null};
-	role: GatewayConnectionRole;
+	logName?: string;
 }
 
-export interface GatewaySocketOwnership {
-	readonly role: GatewayConnectionRole;
-	readonly presence: GatewayPresence | undefined;
-	readonly initialGuildId: string | null;
-	readonly isMobileLayout: () => boolean;
-	readonly geo: () => {latitude: string | null; longitude: string | null};
+export interface GatewayResumeSeed {
+	readonly sessionId: string;
+	readonly sequence: number;
+}
+
+export interface GatewayHandoffSeed extends GatewayResumeSeed {
+	readonly release: GatewaySubscriptionRelease | null;
 }
 
 interface GatewayResumeProbeOptions {
@@ -216,11 +223,12 @@ type GatewaySocketEventArgs<K extends keyof GatewaySocketEvents> = GatewaySocket
 
 export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 	private readonly log: Logger;
-	private reconnectBackoff: ExponentialBackoff;
+	private reconnectAttempts = 0;
 	private socket: GatewayWireTransport | null = null;
 	private removeSocketMessageListener: (() => void) | null = null;
 	private connectionState: GatewayState = GatewayState.Disconnected;
 	private activeSessionId: string | null = null;
+	private readonly subscriptionLedger = new GatewaySubscriptionLedger();
 	private lastSequenceNumber = 0;
 	private lastReconnectAt = 0;
 	private connectStartedAt = 0;
@@ -254,11 +262,7 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 		private readonly gatewayUrlWrapper?: (url: string) => string,
 	) {
 		super();
-		this.log = new Logger('Gateway');
-		this.reconnectBackoff = new ExponentialBackoff({
-			minDelay: GATEWAY_TIMEOUTS.MinReconnect,
-			maxDelay: GATEWAY_TIMEOUTS.MaxReconnect,
-		});
+		this.log = new Logger(options.logName ?? 'Gateway');
 	}
 
 	private emitDeferred<K extends keyof GatewaySocketEvents>(event: K, ...args: GatewaySocketEventArgs<K>): void {
@@ -423,6 +427,10 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 		if (this.reconnectTimeoutId != null) {
 			clearTimeout(this.reconnectTimeoutId);
 			this.reconnectTimeoutId = null;
+		}
+		if (this.invalidSessionTimeoutId != null) {
+			clearTimeout(this.invalidSessionTimeoutId);
+			this.invalidSessionTimeoutId = null;
 		}
 		this.stopHeartbeat();
 		this.clearSession();
@@ -662,25 +670,10 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 		});
 	}
 
-	updateGuildSubscriptions(params: {
-		subscriptions: Record<
-			string,
-			{
-				active?: boolean;
-				member_list_channels?: Record<string, Array<[number, number]>>;
-				typing?: boolean;
-				members?: Array<string>;
-				sync?: boolean;
-				threads?: boolean;
-				thread_member_lists?: Array<string>;
-			}
-		>;
-	}): void {
+	updateGuildSubscriptions(params: {subscriptions: GatewayGuildSubscriptions}): void {
 		if (!this.isConnected()) return;
-		this.sendPayload({
-			op: GatewayOpcodes.LAZY_REQUEST,
-			d: params,
-		});
+		if (!this.sendPayload({op: GatewayOpcodes.LAZY_REQUEST, d: params})) return;
+		this.subscriptionLedger.record(params.subscriptions);
 	}
 
 	requestGuildCounts(guildIds: Array<string>): void {
@@ -724,12 +717,47 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 		this.options.token = token;
 	}
 
-	configureOwnership(ownership: GatewaySocketOwnership): void {
-		this.options.role = ownership.role;
-		this.options.presence = ownership.presence;
-		this.options.initialGuildId = ownership.initialGuildId;
-		this.options.isMobileLayout = ownership.isMobileLayout;
-		this.options.geo = ownership.geo;
+	seedResume(seed: GatewayResumeSeed): void {
+		if (this.connectionState !== GatewayState.Disconnected || this.socket !== null) {
+			throw new Error('A gateway resume can only be seeded before the socket connects');
+		}
+		if (seed.sessionId.length === 0 || !Number.isSafeInteger(seed.sequence) || seed.sequence < 0) {
+			throw new Error('A gateway resume seed needs a session id and a non-negative sequence');
+		}
+		this.clearSession();
+		this.activeSessionId = seed.sessionId;
+		this.lastSequenceNumber = seed.sequence;
+		this.lastGatewayMessageAt = Date.now();
+	}
+
+	closeForHandoff(code: number, reason: string): GatewayHandoffSeed | null {
+		this.log.info(`Closing for handoff: [${code}] ${reason}`);
+		const release = this.subscriptionLedger.release();
+		this.isUserInitiatedDisconnect = true;
+		this.shouldReconnectImmediately = false;
+		this.clearHelloTimeout();
+		this.clearResumeTimeout();
+		if (this.reconnectTimeoutId != null) {
+			clearTimeout(this.reconnectTimeoutId);
+			this.reconnectTimeoutId = null;
+		}
+		if (this.invalidSessionTimeoutId != null) {
+			clearTimeout(this.invalidSessionTimeoutId);
+			this.invalidSessionTimeoutId = null;
+		}
+		this.stopHeartbeat();
+		if (this.socket && this.socket.readyState === GatewayWireReadyState.OPEN) {
+			try {
+				this.socket.close(code, reason);
+			} catch (error) {
+				this.log.error('Error while closing the gateway transport for handoff', error);
+			}
+		}
+		this.teardownSocket();
+		this.updateState(GatewayState.Disconnected);
+		this.flushDeferredEmits();
+		const sessionId = this.activeSessionId;
+		return sessionId === null ? null : {sessionId, sequence: this.lastSequenceNumber, release};
 	}
 
 	getState(): GatewayState {
@@ -760,7 +788,7 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 					this.compressionFallbackInProgress = false;
 					const transport = createGatewayWireTransport(url, {
 						binaryType: compression !== 'none' ? 'arraybuffer' : 'blob',
-						adoptPrebootSocket: this.options.role === GatewayConnectionRole.FOREGROUND,
+						adoptPrebootSocket: true,
 					});
 					this.socket = transport;
 					transport.on('open', this.handleSocketOpen);
@@ -968,6 +996,7 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 					session_id: string;
 				};
 				this.activeSessionId = data.session_id;
+				this.subscriptionLedger.clear();
 				this.resetHeartbeatHistory();
 				this.resetBackoffUnlessDispatchesKeepFailing();
 				this.updateState(GatewayState.Connected);
@@ -1054,6 +1083,10 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 			clearTimeout(this.invalidSessionTimeoutId);
 			this.invalidSessionTimeoutId = null;
 		}
+		if (!isResumable && this.resumeTimeoutId != null) {
+			this.identifyAfterRejectedResume();
+			return;
+		}
 		const delay = 2500 + Math.random() * 1000;
 		this.invalidSessionTimeoutId = window.setTimeout(() => {
 			this.invalidSessionTimeoutId = null;
@@ -1062,6 +1095,17 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 			}
 			this.shouldReconnectImmediately = true;
 			this.disconnect(4000, `Invalid session (resumable=${isResumable})`, true);
+		}, delay);
+	}
+
+	private identifyAfterRejectedResume(): void {
+		this.clearResumeTimeout();
+		this.clearSession();
+		const delay = Math.floor(Math.random() * GATEWAY_TIMEOUTS.InvalidSessionIdentifySpread);
+		this.log.info(`Resume rejected, identifying on the same connection in ${delay}ms`);
+		this.invalidSessionTimeoutId = window.setTimeout(() => {
+			this.invalidSessionTimeoutId = null;
+			this.sendIdentify();
 		}, delay);
 	}
 
@@ -1268,13 +1312,21 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 			return GATEWAY_TIMEOUTS.MinReconnect + this.reconnectSpread();
 		}
 		this.lastReconnectAt = now;
-		const delay = this.reconnectBackoff.next();
-		this.log.debug(`Reconnect backoff attempt=${this.reconnectBackoff.getCurrentAttempts()} delay=${delay}ms`);
+		this.reconnectAttempts += 1;
+		const cap =
+			this.consecutiveDispatchFailures > 0
+				? GATEWAY_TIMEOUTS.MaxReconnectWhileDispatchesFail
+				: GATEWAY_TIMEOUTS.MaxReconnect;
+		const ceiling = Math.min(GATEWAY_TIMEOUTS.MinReconnect * 2 ** (this.reconnectAttempts - 1), cap);
+		const delay = Math.floor(
+			GATEWAY_TIMEOUTS.ReconnectFloor + Math.random() * (ceiling - GATEWAY_TIMEOUTS.ReconnectFloor),
+		);
+		this.log.debug(`Reconnect backoff attempt=${this.reconnectAttempts} delay=${delay}ms`);
 		return delay;
 	}
 
 	private resetBackoffInternal(): void {
-		this.reconnectBackoff.reset();
+		this.reconnectAttempts = 0;
 	}
 
 	private resetBackoffUnlessDispatchesKeepFailing(): void {
@@ -1313,6 +1365,7 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 	private clearSession(): void {
 		const hadSession = Boolean(this.activeSessionId);
 		this.activeSessionId = null;
+		this.subscriptionLedger.clear();
 		this.lastSequenceNumber = 0;
 		this.lastGatewayMessageAt = null;
 		this.dispatchGeneration += 1;

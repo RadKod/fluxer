@@ -146,6 +146,7 @@ interface ThumbHashCurtainState {
 	curtainLifted: boolean;
 	fastFade: boolean;
 	posterRevealed: boolean;
+	onPosterError: () => void;
 }
 
 function useThumbHashCurtain(source: string, enabled: boolean): ThumbHashCurtainState {
@@ -153,18 +154,28 @@ function useThumbHashCurtain(source: string, enabled: boolean): ThumbHashCurtain
 	const [cachedAtMount] = useState(() => ImageCacheUtils.hasImage(source));
 	const [curtainLifted, setCurtainLifted] = useState(false);
 	const [fastFade, setFastFade] = useState(false);
+	const [failedSource, setFailedSource] = useState<string | null>(null);
+	const onPosterError = useAttachmentRefreshOnError(source);
 	useLayoutEffect(() => {
 		if (!enabled || source.length === 0) return;
-		return ImageCacheUtils.loadImage(source, () => {
-			setFastFade(Date.now() - mountedAt < PLACEHOLDER_FAST_FADE_WINDOW_MS);
-			setCurtainLifted(true);
-		});
-	}, [enabled, mountedAt, source]);
+		return ImageCacheUtils.loadImage(
+			source,
+			() => {
+				setFastFade(Date.now() - mountedAt < PLACEHOLDER_FAST_FADE_WINDOW_MS);
+				setCurtainLifted(true);
+			},
+			() => {
+				onPosterError();
+				setFailedSource(source);
+			},
+		);
+	}, [enabled, mountedAt, onPosterError, source]);
 	return {
 		shouldMount: !cachedAtMount,
 		curtainLifted,
 		fastFade,
-		posterRevealed: source.length === 0 || cachedAtMount || curtainLifted,
+		posterRevealed: source.length === 0 || cachedAtMount || curtainLifted || failedSource === source,
+		onPosterError,
 	};
 }
 
@@ -583,7 +594,13 @@ export const EmbedGifv: FC<
 		const handleVideoError = useAttachmentRefreshOnError(videoProxyURL);
 		const [containerElement, setContainerElement] = useState<HTMLDivElement | null>(null);
 		const {isPointerInside, hasFocusInside} = useMediaSurfaceInteraction(containerElement);
-		const {shouldBlur, gateReason, canReveal, reveal: revealSensitiveMedia} = useMatureMedia(nsfw, channelId);
+		const {
+			shouldBlur,
+			shouldBlock,
+			gateReason,
+			canReveal,
+			reveal: revealSensitiveMedia,
+		} = useMatureMedia(nsfw, channelId);
 		const {
 			ref: visibilityRef,
 			loadMedia: shouldLoadMedia,
@@ -685,6 +702,10 @@ export const EmbedGifv: FC<
 			safePause(video);
 		}, [shouldPlay]);
 
+		if (shouldBlock) {
+			return null;
+		}
+
 		return (
 			<GifEmbedShell
 				type="gifv"
@@ -757,6 +778,7 @@ export const EmbedGifv: FC<
 							height={dimensions.height}
 							loading="eager"
 							tabIndex={-1}
+							onError={thumbHashCurtain.onPosterError}
 							data-embed-media="gifv-still"
 							data-flx="channel.embeds.media.embed-gifv.still-element"
 						/>
@@ -811,7 +833,13 @@ export const EmbedGif: FC<
 		const mediaCalculator = useEmbedMediaCalculator(layoutConstraints);
 		const [containerElement, setContainerElement] = useState<HTMLDivElement | null>(null);
 		const {isPointerInside, hasFocusInside} = useMediaSurfaceInteraction(containerElement);
-		const {shouldBlur, gateReason, canReveal, reveal: revealSensitiveMedia} = useMatureMedia(nsfw, channelId);
+		const {
+			shouldBlur,
+			shouldBlock,
+			gateReason,
+			canReveal,
+			reveal: revealSensitiveMedia,
+		} = useMatureMedia(nsfw, channelId);
 		const {
 			ref: visibilityRef,
 			loadMedia: shouldLoadMedia,
@@ -922,6 +950,10 @@ export const EmbedGif: FC<
 			},
 			[baseProxyURL],
 		);
+
+		if (shouldBlock) {
+			return null;
+		}
 
 		return (
 			<GifEmbedShell

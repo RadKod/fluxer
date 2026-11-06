@@ -5,6 +5,7 @@ import {
 	GuildOperations,
 	GuildOperationsDescriptions,
 } from '@fluxer/constants/src/GuildConstants';
+import {CustomBadgeIdsType} from '@fluxer/schema/src/domains/admin/AdminBadgeSchemas';
 import {CommunityRemovalBasis} from '@fluxer/schema/src/domains/admin/EnforcementSchemas';
 import {GuildAuditLogListResponse} from '@fluxer/schema/src/domains/guild/GuildAuditLogSchemas';
 import {GuildBanCreateRequest} from '@fluxer/schema/src/domains/guild/GuildRequestSchemas';
@@ -102,6 +103,13 @@ export const KickGuildMemberRequest = z.object({
 });
 
 export type KickGuildMemberRequest = z.infer<typeof KickGuildMemberRequest>;
+
+export const UnbanGuildMemberRequest = z.object({
+	guild_id: SnowflakeType,
+	user_id: SnowflakeType,
+});
+
+export type UnbanGuildMemberRequest = z.infer<typeof UnbanGuildMemberRequest>;
 
 export const GetProcessMemoryStatsQuery = z.object({
 	limit: createQueryIntegerType({defaultValue: 100, minValue: 100, maxValue: 1000}).describe(
@@ -268,6 +276,7 @@ export const UpdateGuildRequest = UpdateGuildSettingsRequest.omit({guild_id: tru
 	new_owner_id: TransferGuildOwnershipRequest.shape.new_owner_id.optional(),
 	add_features: UpdateGuildFeaturesRequest.shape.add_features.unwrap().optional(),
 	remove_features: UpdateGuildFeaturesRequest.shape.remove_features.unwrap().optional(),
+	badge_ids: CustomBadgeIdsType.optional(),
 	fields: ClearGuildFieldsRequest.shape.fields.optional(),
 });
 

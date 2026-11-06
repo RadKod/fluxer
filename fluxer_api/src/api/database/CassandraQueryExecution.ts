@@ -4,7 +4,14 @@ import {Config} from '@app/api/Config';
 import {resolveReadConsistency} from '@app/api/database/CassandraConsistency';
 import {logBatch, logQuery} from '@app/api/database/CassandraDevLogger';
 import {getIsDev} from '@app/api/database/CassandraMetaRegistry';
-import type {CassandraParams, KvQueryMeta, PreparedQuery, QueryTemplate} from '@app/api/database/CassandraTypes';
+import type {
+	CassandraParam,
+	CassandraParams,
+	KvAdvance,
+	KvQueryMeta,
+	PreparedQuery,
+	QueryTemplate,
+} from '@app/api/database/CassandraTypes';
 import {
 	assertNoUndefinedParams,
 	getStatementMeta,
@@ -12,24 +19,35 @@ import {
 	normalizeExecuteArgs,
 	normalizeInParams,
 } from '@app/api/database/CassandraTypes';
+import {LocalDate} from '@app/api/database/LocalDate';
 import {Logger} from '@app/api/Logger';
 import {chunkArray} from '@app/api/utils/ArrayUtils';
 import {ServiceUnavailableError} from '@fluxer/errors/src/domains/core/ServiceUnavailableError';
-import {getClient, toDriverConsistency} from '@pkgs/cassandra/src/Client';
-import cassandra from 'cassandra-driver';
+import {getClient, getLoadedCassandraDriver, toDriverConsistency} from '@pkgs/cassandra/src/Client';
+import type cassandra from 'cassandra-driver';
 
 const DEFAULT_MAX_PARTITION_KEYS_PER_QUERY = 100;
 
+function isBusyConnectionError(err: unknown): boolean {
+	return err instanceof Error && err.name === 'BusyConnectionError';
+}
+
 function isDriverOverloadError(err: unknown): boolean {
-	if (err instanceof cassandra.errors.BusyConnectionError) {
+	if (isBusyConnectionError(err)) {
 		return true;
 	}
-	if (err instanceof cassandra.errors.NoHostAvailableError && err.innerErrors) {
-		return Object.values(err.innerErrors as Record<string, unknown>).some(
-			(innerError) => innerError instanceof cassandra.errors.BusyConnectionError,
-		);
+	if (err instanceof Error && err.name === 'NoHostAvailableError' && 'innerErrors' in err && err.innerErrors) {
+		return Object.values(err.innerErrors as Record<string, unknown>).some(isBusyConnectionError);
 	}
 	return false;
+}
+
+function driverParams(params: object): Record<string, CassandraParam> {
+	const out: Record<string, CassandraParam> = {};
+	for (const [key, value] of Object.entries(params)) {
+		out[key] = value instanceof LocalDate ? value.toString() : value;
+	}
+	return out;
 }
 
 export function mapCassandraDriverError(err: unknown): unknown {
@@ -49,6 +67,7 @@ export interface CassandraQueryExecutorForTesting {
 		},
 	): Promise<PagedQueryResult<T>>;
 	executeBatch(queries: Array<{query: string; params: object; meta?: KvQueryMeta}>, atomic?: boolean): Promise<void>;
+	advanceRows?(writes: ReadonlyArray<KvAdvance>): Promise<Array<boolean>>;
 	reset?(): void;
 	shutdown?(): Promise<void>;
 }
@@ -87,7 +106,7 @@ export interface PagedQueryResult<T> {
 }
 
 export interface CassandraReadOptions {
-	consistency: 'all' | 'serial';
+	consistency: 'all' | 'serial' | 'localQuorum';
 }
 
 async function collectSelectRows<T>(queryType: string, result: cassandra.types.ResultSet): Promise<Array<T>> {
@@ -128,12 +147,14 @@ export async function executeQuery<T = Record<string, unknown>, P extends Cassan
 	const isDev = getIsDev();
 	const startTime = isDev ? performance.now() : 0;
 	try {
-		const result = await getClient().execute(cql, bound, {
+		const result = await getClient().execute(cql, driverParams(bound), {
 			prepare: true,
 			...(readOptions
 				? {
 						consistency: toDriverConsistency(
-							resolveReadConsistency(readOptions.consistency, Config.cassandra.consistency),
+							readOptions.consistency === 'localQuorum'
+								? 'local_quorum'
+								: resolveReadConsistency(readOptions.consistency, Config.cassandra.consistency),
 						),
 					}
 				: {}),
@@ -230,7 +251,7 @@ export async function fetchPage<T = Record<string, unknown>, P extends Cassandra
 			pageState: null,
 		};
 	}
-	const result = await getClient().execute(cql, bound, {
+	const result = await getClient().execute(cql, driverParams(bound), {
 		prepare: true,
 		fetchSize: options.pageSize,
 		pageState: options.pageState ?? undefined,
@@ -269,6 +290,20 @@ export async function fetchManyInChunks<
 	return results.flat();
 }
 
+export async function advanceRows(
+	writes: ReadonlyArray<KvAdvance>,
+	readThenWrite: () => Promise<Array<boolean>>,
+): Promise<Array<boolean>> {
+	if (writes.length === 0) return [];
+	const executor = activeExecutor();
+	return executor?.advanceRows ? executor.advanceRows(writes) : readThenWrite();
+}
+
+export async function advanceRow(write: KvAdvance, readThenWrite: () => Promise<boolean>): Promise<boolean> {
+	const [written] = await advanceRows([write], async () => [await readThenWrite()]);
+	return written === true;
+}
+
 export async function upsertOne<P extends CassandraParams = CassandraParams>(
 	queryOrPrepared: PreparedQuery<P> | string,
 	params?: P,
@@ -297,7 +332,11 @@ interface BatchQuery {
 	meta?: KvQueryMeta;
 }
 
-async function executeBatch(queries: Array<BatchQuery>, atomic = true): Promise<void> {
+async function executeBatch(
+	queries: Array<BatchQuery>,
+	atomic = true,
+	consistency?: CassandraReadOptions['consistency'],
+): Promise<void> {
 	if (queries.length === 0) return;
 	for (const {query, params, meta} of queries) {
 		assertUnconditional({cql: query, params: params as CassandraParams, kvMeta: meta});
@@ -317,6 +356,7 @@ async function executeBatch(queries: Array<BatchQuery>, atomic = true): Promise<
 		prepare: true,
 		logged: atomic,
 		counter: false,
+		...(consistency ? {consistency: getLoadedCassandraDriver()?.types.consistencies[consistency]} : {}),
 	};
 	const isDev = getIsDev();
 	const startTime = isDev ? performance.now() : 0;
@@ -324,7 +364,7 @@ async function executeBatch(queries: Array<BatchQuery>, atomic = true): Promise<
 		await getClient().batch(
 			queries.map(({query, params}) => ({
 				query,
-				params: normalizeInParams(getStatementMeta(query), params as CassandraParams),
+				params: driverParams(normalizeInParams(getStatementMeta(query), params as CassandraParams)),
 			})),
 			options,
 		);
@@ -356,9 +396,9 @@ export class BatchBuilder {
 		return this;
 	}
 
-	async execute(atomic = true): Promise<void> {
+	async execute(atomic = true, consistency?: CassandraReadOptions['consistency']): Promise<void> {
 		if (this.queries.length === 0) return;
-		await executeBatch(this.queries, atomic);
+		await executeBatch(this.queries, atomic, consistency);
 	}
 
 	async executeChunked(chunkSize: number, atomic = false): Promise<void> {

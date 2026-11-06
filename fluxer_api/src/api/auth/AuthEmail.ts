@@ -2,9 +2,9 @@
 
 import type {ApiContext} from '@app/api/ApiContext';
 import * as AuthUtility from '@app/api/auth/AuthUtility';
+import {confirmEmailOwnership} from '@app/api/auth/EmailOwnership';
 import {createEmailVerificationToken} from '@app/api/BrandedTypes';
 import type {User} from '@app/api/models/User';
-import {dispatchUserUpdate} from '@app/api/user/UserMappers';
 import * as RandomUtils from '@app/api/utils/RandomUtils';
 import {createRateLimitError} from '@app/api/utils/RateLimitUtils';
 import {SuspiciousActivityFlags, UserFlags} from '@fluxer/constants/src/UserConstants';
@@ -20,12 +20,12 @@ export const EMAIL_CLEARABLE_SUSPICIOUS_ACTIVITY_FLAGS =
 	SuspiciousActivityFlags.REQUIRE_REVERIFIED_EMAIL_OR_REVERIFIED_PHONE;
 
 export async function verifyEmail(ctx: ApiContext, data: VerifyEmailRequest): Promise<boolean> {
-	const {users, gateway} = ctx.services;
+	const {users} = ctx.services;
 	const tokenData = await users.getEmailVerificationToken(data.token);
 	if (!tokenData) {
 		return false;
 	}
-	const user = await users.findUnique(tokenData.userId);
+	let user = await users.findUnique(tokenData.userId);
 	if (!user) {
 		return false;
 	}
@@ -37,23 +37,15 @@ export async function verifyEmail(ctx: ApiContext, data: VerifyEmailRequest): Pr
 	) {
 		return false;
 	}
-	const updates: {
-		email_verified: boolean;
-		email_bounced: boolean;
-		suspicious_activity_flags?: number;
-	} = {
-		email_verified: true,
-		email_bounced: false,
-	};
+	// Micup: verifying the email also clears the suspicious-activity requirements an email verification satisfies.
 	if (user.suspiciousActivityFlags !== null && user.suspiciousActivityFlags !== 0) {
 		const newFlags = user.suspiciousActivityFlags & ~EMAIL_CLEARABLE_SUSPICIOUS_ACTIVITY_FLAGS;
 		if (newFlags !== user.suspiciousActivityFlags) {
-			updates.suspicious_activity_flags = newFlags;
+			user = await users.patchUpsert(user.id, {suspicious_activity_flags: newFlags}, user.toRow());
 		}
 	}
-	const updatedUser = await users.patchUpsert(user.id, updates, user.toRow());
+	await confirmEmailOwnership(ctx, user);
 	await users.deleteEmailVerificationToken(data.token);
-	await dispatchUserUpdate(gateway, updatedUser);
 	return true;
 }
 
@@ -89,5 +81,5 @@ export async function sendVerificationEmail(ctx: ApiContext, params: {user: User
 		user_id: user.id,
 		email,
 	});
-	await emailService.sendEmailVerification(email, user.username, token, user.locale);
+	await emailService.send('email_verification', email, {verificationToken: token}, user.locale);
 }

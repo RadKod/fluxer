@@ -28,29 +28,6 @@ describe('User flags in responses', () => {
 	beforeEach(async () => {
 		await harness.reset();
 	});
-	test('GET /users/@me hides staff flag when STAFF_HIDDEN is set', async () => {
-		const account = await createTestAccount(harness);
-		await setUserFlags(harness, account.userId, UserFlags.STAFF | UserFlags.STAFF_HIDDEN);
-		const {json} = await fetchUserMe(harness, account.token);
-		expect(json.flags & PublicUserFlags.STAFF).toBe(0);
-		expect(json.is_staff).toBe(true);
-	});
-	test('PATCH /users/@me preserves staff flag with STAFF_HIDDEN after profile update', async () => {
-		const account = await createTestAccount(harness);
-		await setUserFlags(harness, account.userId, UserFlags.STAFF | UserFlags.STAFF_HIDDEN);
-		const {json} = await updateUserProfile(harness, account.token, {
-			bio: 'updated bio',
-		});
-		expect(json.flags & PublicUserFlags.STAFF).toBe(0);
-		expect(json.is_staff).toBe(true);
-	});
-	test('GET /users/:id hides staff flag when STAFF_HIDDEN is set', async () => {
-		const account = await createTestAccount(harness);
-		const viewer = await createTestAccount(harness);
-		await setUserFlags(harness, account.userId, UserFlags.STAFF | UserFlags.STAFF_HIDDEN);
-		const {json} = await fetchUser(harness, account.userId, viewer.token);
-		expect(json.flags & PublicUserFlags.STAFF).toBe(0);
-	});
 	test('VERIFIED is public user flag bit 29', () => {
 		expect(UserFlags.VERIFIED).toBe(1n << 29n);
 		expect(PublicUserFlags.VERIFIED).toBe(1 << 29);
@@ -63,13 +40,6 @@ describe('User flags in responses', () => {
 		expect(me.flags).toBe(PublicUserFlags.VERIFIED | PublicUserFlags.SPAMMER);
 		const {json: partial} = await fetchUser(harness, account.userId, viewer.token);
 		expect(partial.flags).toBe(PublicUserFlags.VERIFIED | PublicUserFlags.SPAMMER);
-	});
-	test('STAFF_HIDDEN hides STAFF but keeps VERIFIED', async () => {
-		const account = await createTestAccount(harness);
-		const viewer = await createTestAccount(harness);
-		await setUserFlags(harness, account.userId, UserFlags.STAFF | UserFlags.STAFF_HIDDEN | UserFlags.VERIFIED);
-		const {json} = await fetchUser(harness, account.userId, viewer.token);
-		expect(json.flags).toBe(PublicUserFlags.VERIFIED);
 	});
 	test('PATCH /users/@me ignores a flags field, so a user cannot verify themselves', async () => {
 		const account = await createTestAccount(harness);

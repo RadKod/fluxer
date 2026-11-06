@@ -4,6 +4,7 @@ import type {ChannelID, GuildID, InviteCode, UserID} from '@app/api/BrandedTypes
 import {mapChannelToPartialResponse} from '@app/api/channel/ChannelMappers';
 import type {ChannelService} from '@app/api/channel/services/ChannelService';
 import type {ThreadViewer} from '@app/api/experiment/ChannelThreadsGate';
+import {guildVisitsOffer} from '@app/api/experiment/GuildVisitsGate';
 import type {GuildService} from '@app/api/guild/services/GuildService';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {UserCacheService} from '@app/api/infrastructure/UserCacheService';
@@ -17,6 +18,7 @@ import type {InviteService} from '@app/api/invite/InviteService';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
 import type {Channel} from '@app/api/models/Channel';
 import type {Invite} from '@app/api/models/Invite';
+import type {TierContext} from '@app/api/user/AccountTier';
 import {InviteTypes} from '@fluxer/constants/src/ChannelConstants';
 import type {ChannelPartialResponse} from '@fluxer/schema/src/domains/channel/ChannelSchemas';
 import type {GuildPartialResponse} from '@fluxer/schema/src/domains/guild/GuildResponseSchemas';
@@ -44,6 +46,11 @@ interface MappingHelpers {
 const INVITE_RESPONSE_TTL_SECONDS = 30;
 const inviteResponseKey = (code: InviteCode) => `invite:response:${code}`;
 
+function withVisitsOffer(response: InviteResponseSchema, userId: UserID | null): InviteResponseSchema {
+	if (!('guild' in response)) return response;
+	return {...response, guild: {...response.guild, ...guildVisitsOffer(response.guild.features, userId)}};
+}
+
 export class InviteRequestService {
 	constructor(
 		private readonly inviteService: InviteService,
@@ -56,18 +63,26 @@ export class InviteRequestService {
 
 	// Micup: a public invite card (Keşfet, feed posts) makes every reader ask for the same code, and the answer is the
 	// same for everyone (the route needs no login), so it is kept 30 s. getOrSet fills once per code at a time and never
-	// keeps a failed fill, so an unknown invite is not cached. Accept reads the database as before.
-	async getInvite(params: {inviteCode: InviteCode; requestCache: RequestCache}): Promise<InviteResponseSchema> {
+	// keeps a failed fill, so an unknown invite is not cached. Accept reads the database as before. The per-viewer
+	// visits offer is added after the cache.
+	async getInvite(params: {
+		inviteCode: InviteCode;
+		requestCache: RequestCache;
+		userId?: UserID | null;
+	}): Promise<InviteResponseSchema> {
 		const load = async () =>
 			this.mapInviteResponse(await this.inviteService.getInvite(params.inviteCode), params.requestCache);
-		if (!this.cacheService) return load();
-		return this.cacheService.getOrSet(inviteResponseKey(params.inviteCode), load, INVITE_RESPONSE_TTL_SECONDS);
+		const response = this.cacheService
+			? await this.cacheService.getOrSet(inviteResponseKey(params.inviteCode), load, INVITE_RESPONSE_TTL_SECONDS)
+			: await load();
+		return withVisitsOffer(response, params.userId ?? null);
 	}
 
 	async acceptInvite(params: {
 		userId: UserID;
 		inviteCode: InviteCode;
 		requestCache: RequestCache;
+		tierContext: TierContext;
 	}): Promise<InviteResponseSchema> {
 		const invite = await this.inviteService.acceptInvite(params);
 		return this.mapInviteResponse(invite, params.requestCache);

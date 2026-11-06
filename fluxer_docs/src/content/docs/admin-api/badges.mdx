@@ -1,291 +1,376 @@
 ---
 # SPDX-License-Identifier: AGPL-3.0-or-later
-title: Badges
-description: Administrative management of the catalog badges shown on user profiles.
+title: Admin badges
+description: Admin API routes for making custom badges and giving them to users and guilds.
 ---
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-A badge is an icon with a short text that an Admin gives to an account. Every badge an account holds is listed in `badges` on its [full user profile](/http-api/users/#full-user-profile-object) object. Badges are separate from the [public user flags](/http-api/users/#public-user-flags): giving a badge never changes an account's flags, and no badge grants the permissions of the staff flag.
+A custom badge is an image that instance admins make and give out. A user badge shows on the [profile](/http-api/users/#profile-badge-object) of each account it's given to, after the built-in badges. A guild badge shows next to the guild name, after its verified, partnered or discoverable badge. Clients get guild badges from [List guild badges](/http-api/instance/#list-guild-badges), and [instance discovery](/http-api/instance/#guild-badge-object) lists the first 100.
 
-This resource has seven operations: listing, creating, and updating catalog badges, giving a badge to an account or taking it back, and starting or stopping [pioneer numbering](#numbered-badges). No operation deletes a badge from the catalog.
+Admins can also replace the image of a built-in badge, which is staff or premium on profiles and verified, partnered or discoverable on guilds. The badge keeps its name, tooltip and meaning, and everyone sees the new image in its place. See [Replace built-in badge image](#replace-built-in-badge-image).
 
-:::note[Profiles pick up catalog changes within a minute]
-Each API process caches the catalog for up to one minute, so a new badge, icon, or text can take that long to reach every profile read. Giving and taking a badge applies to the next profile read. No operation here emits a Gateway Dispatch, so a client reads badges from the profile.
-:::
+Admins can also hide a built-in guild badge so that clients stop showing it. The guild keeps what the badge stands for: a discoverable guild stays listed in discovery without the badge next to its name. See [Hide built-in guild badge](#hide-built-in-guild-badge).
 
-## Badge object
+There is no limit on how many badges an instance can have. The [badge settings](#badge-settings-object) set how many one account or one guild can be given, 100 per account and 50 per guild by default. Give badges with [Update user badges](/admin-api/users/#update-user-badges) and the `badge_ids` field of [Update guild](/admin-api/guilds/#update-guild). Deleting a badge takes it off everyone who had it.
+
+Each badge type has its own display order. A new badge goes to the end of its type. [Move badge](#move-badge) moves one badge, and the Badges page of the admin panel uses it for its Move up, Move down, Move to top and Move to bottom buttons. [Reorder badges](#reorder-badges) sets the whole order on instances with up to 1,000 badges.
+
+## Admin custom badge object
 
 ### Structure
 
 | Field | Type | Description |
 | --- | --- | --- |
 | id | snowflake | The ID of the badge |
-| icon<sup>1</sup> | string | The hash of the badge icon |
-| description | string | The text shown for the badge (1-128 characters) |
-
-<sup>1</sup> Eight lowercase hexadecimal characters, prefixed with `a_` when the icon is animated. The media proxy serves the icon as [instance branding](/media-proxy/routes/#get-instance-branding) with the entity key `badge-{id}`, for example `/branding/badge-1215712461409427456/9f3c2b1a.webp?size=128`
+| type | string | `user` or `guild` |
+| position | string | The display position. Badges of a type show in ascending order of this 64-bit integer |
+| name | string | The name of the badge (1-64 characters) |
+| description | ?string | The tooltip text under the name (1-256 characters), or null |
+| asset_url | string | The badge image as WebP from the media proxy |
+| href | ?string | The `https` URL a click opens, or null |
 
 ### Example
 
 ```json
 {
-  "id": "1215712461409427456",
-  "icon": "9f3c2b1a",
-  "description": "Early supporter"
+  "id": "1489002177550843904",
+  "type": "user",
+  "position": "4294967296",
+  "name": "Translator",
+  "description": "Helps translate Fluxer",
+  "asset_url": "https://media.example.com/custom-badges/1489002177550843904/3f2a9c1d.webp",
+  "href": null
 }
 ```
 
-## Badge icons
+## Built-in badge image object
 
-An icon is a base64 string of at most 256 KB, sent with or without a `data:` URL prefix. The media type in the prefix is ignored. The decoded bytes have to start with a PNG signature or a RIFF WebP header, and the media proxy has to read them as PNG, APNG, or WebP. Any other image, SVG included, returns 400 `INVALID_FORM_BODY` with the validation code `INVALID_IMAGE_FORMAT` at path `icon`, and nothing is stored.
+### Structure
 
-sanalyer removes the metadata chunks of the image before it stores the icon. A new icon gets a new hash, and the previous icon file stays in storage so that URLs already cached keep resolving.
+| Field | Type | Description |
+| --- | --- | --- |
+| kind | string | The built-in badge<sup>1</sup> |
+| asset_url | ?string | The replacement image as WebP from the media proxy, or null when the built-in image is used |
+| built_in_asset | ?string | The hash of the built-in image at `{static_cdn}/badges/{hash}.webp`, or null for a guild badge |
+| hidden | boolean | Whether clients leave the badge out. Only guild badges can be hidden, so this is always false for `staff` and `premium` |
 
-## Numbered badges
+<sup>1</sup> One of the profile badges `staff` and `premium`, or one of the guild badges `guild_verified`, `guild_partnered` and `guild_discoverable`
 
-A badge whose text contains `{n}` is numbered. Profiles and the data export show its text with `{n}` replaced by the number stored for the account, so the text `Pioneer #{n}` reads `Pioneer #1234`. A renamed badge keeps the numbers, and the catalog operations return the text with `{n}` in place.
+## Badge settings object
 
-sanalyer numbers one badge, the pioneer badge, which [Start pioneer numbering](#start-pioneer-numbering) selects. Numbers run from 1 to 10000 in the order accounts qualify: number 1 goes to the account the request names, the accounts that already qualify follow in ascending ID order, and after that each account gets the next number when it qualifies. A number is never given twice or reused, and no account gets a pioneer badge once number 10000 is given.
+### Structure
 
-An account qualifies when its e-mail address is verified and it is not a bot or the system user, not deleted or waiting for deletion, not permanently banned, not disabled for suspicious activity or marked as a spammer, and is not under an [account limitation](/http-api/users/#account-limitation). A timed ban and a user disabling their own account do not stop it. An account held back by a limitation gets the next number when the limitation ends.
+| Field | Type | Description |
+| --- | --- | --- |
+| max_per_user | integer | How many custom badges one account can be given (1-1000, 100 by default) |
+| max_per_guild | integer | How many custom badges one guild can be given (1-200, 50 by default) |
 
-A permanent Admin ban or a CSAM ban takes the pioneer badge off the profile. The account keeps its number, and [Give badge to user](#give-badge-to-user) gives the same number back. Account deletion unlinks the number from the account, and no other account gets it.
+Lowering a limit keeps the badges already given. A change that adds a badge to an account or guild that would then be over the limit fails with `MAX_BADGES`. A change that only removes badges always works.
+
+Each profile response holds every custom badge of the account with its name, description and link, and each guild object holds every badge ID of the guild. A higher limit makes these responses larger. Older app versions show every badge of a profile or guild in one row, with no control that opens the rest in a list.
+
+Guilds have a lower ceiling because every guild a person is in sends its `badge_ids` in the Gateway Ready event. Every badge an account shows comes back in each [profile](/http-api/users/#full-user-profile-object). With 1,000 badges that have long descriptions and links, a profile response can be several megabytes.
 
 ## List badges
 
 <RouteHeader method="GET" path="/v1/admin/badges" auditReason />
 
-Returns every [badge](#badge-object) in the catalog in ascending ID order, which is creation order. Requires `badges:manage`.
+Returns one page of custom badges in display order, with the badge settings and the built-in badge images. Without `type` the list holds every user badge, then every guild badge. You need `badge:list`.
+
+### Query parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| type? | string | `user` or `guild` |
+| query? | string | Only badges whose ID is this value, or whose name holds it, ignoring case (1-64 characters) |
+| ids? | string | Up to 100 badge IDs separated by commas. Only these come back, and `next` is null. Not with `query` or `after` |
+| after? | string | The `next` value of the previous page |
+| limit? | integer | How many badges to return (1-200, default 100) |
+
+A page with `query` looks at up to 5,000 badges. It can hold fewer badges than `limit` and still have a `next` value. Keep asking until `next` is null.
 
 ### Response body
 
-The body is an array of [badge](#badge-object) objects.
+| Field | Type | Description |
+| --- | --- | --- |
+| badges | array[[Admin custom badge](#admin-custom-badge-object) object] | One page of badges |
+| next | ?string | Send this as `after` to get the next page, or null when there are no more badges to look at |
+| version | string | The catalog version, the same value as `custom_badges_version` in [instance discovery](/http-api/instance/#instance-discovery-object) |
+| settings | [badge settings](#badge-settings-object) object | The badge limits |
+| built_in | array[[Built-in badge image](#built-in-badge-image-object) object] | Every built-in badge and the image the instance shows for it |
 
 ### Response
 
 | Status | Body | Condition |
 | --- | --- | --- |
-| 200 | response body | The catalog was returned |
-| 403<sup>1</sup> | [error response](/admin-api/#error-response) | The account does not hold `admin:authenticate` or `badges:manage` |
+| 200 | response body | The page was returned |
+| 400 | [error response](/admin-api/#error-response) | `INVALID_FORM_BODY` for a bad parameter, a cursor of the other type, or `ids` sent with `query` or `after` |
 
-<sup>1</sup> Returned as `MISSING_PERMISSIONS` without `admin:authenticate`, and as `MISSING_ACL` with that but without `badges:manage`
-
-### Side effects
-
-The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `list_badges`, target type `badge`, target ID `0`, and metadata key `result_count`.
-
-### Rate limit
-
-60 requests per minute for each authenticated user, on the `admin:badge:list` bucket.
+The rate limit is 200 requests per minute, on the `admin:lookup` bucket.
 
 ## Create badge
 
 <RouteHeader method="POST" path="/v1/admin/badges" auditReason />
 
-Stores the icon and adds a badge to the catalog. Requires `badges:manage`. Returns the new [badge](#badge-object).
+Uploads the image to the media proxy, makes the badge and returns it. You need `badge:create`.
 
 ### JSON body
 
 | Field | Type | Description |
 | --- | --- | --- |
-| icon | string | The [badge icon](#badge-icons), base64 PNG, APNG, or WebP (at most 256 KB) |
-| description | string | The text shown for the badge (1-128 characters) |
+| type | string | `user` or `guild` |
+| name | string | The name of the badge (1-64 characters) |
+| description? | ?string | The tooltip text (1-256 characters) |
+| href? | ?string | The `https` URL a click opens |
+| image<sup>1</sup> | string | The image as a base64 data URI (up to 16000000 characters) |
+
+<sup>1</sup> Up to the `avatar_max_size` limit, 10 MiB by default, as PNG, JPEG, WebP, GIF, APNG, still AVIF, HEIC, HEIF, JXL or SVG, and at least 128 by 128 pixels. Clients always get a WebP version
 
 ### Response
 
 | Status | Body | Condition |
 | --- | --- | --- |
-| 200 | [badge](#badge-object) object | The badge was created |
-| 400 | [error response](/admin-api/#error-response) | The body fails validation or the icon is refused, returned as `INVALID_FORM_BODY` |
-| 403<sup>1</sup> | [error response](/admin-api/#error-response) | The account does not hold `admin:authenticate` or `badges:manage` |
+| 200 | [Admin custom badge](#admin-custom-badge-object) object | The badge was made |
+| 400 | [error response](/admin-api/#error-response) | `INVALID_FORM_BODY` for a bad field |
+| 400 | [error response](/admin-api/#error-response) | `IMAGE_SIZE_EXCEEDS_LIMIT`, `INVALID_IMAGE_FORMAT` or `FAILED_TO_UPLOAD_IMAGE` for a bad image |
 
-<sup>1</sup> Returned as `MISSING_PERMISSIONS` without `admin:authenticate`, and as `MISSING_ACL` with that but without `badges:manage`
-
-### Side effects
-
-A failed request after the icon upload can leave an icon file that no badge uses. Retrying creates a new badge with a new ID.
-
-The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `create_badge`, target type `badge`, the new badge as the target ID, and metadata keys `icon` and `description`. It emits no Gateway Dispatch.
-
-### Rate limit
-
-30 requests per minute for each authenticated user, on the `admin:badge:update` bucket.
+The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
 
 ## Update badge
 
 <RouteHeader method="PATCH" path="/v1/admin/badges/{badge_id}" auditReason />
 
-Changes the icon or the text of a catalog badge. Requires `badges:manage`. Returns the updated [badge](#badge-object). Every account holding the badge shows the change.
-
-### Path parameters
-
-| Field | Type | Description |
-| --- | --- | --- |
-| badge_id | snowflake | The ID of the badge |
-
-### JSON body
-
-Every field is optional and an omitted field is left unchanged.
-
-| Field | Type | Description |
-| --- | --- | --- |
-| icon? | string | The new [badge icon](#badge-icons), base64 PNG, APNG, or WebP (at most 256 KB) |
-| description? | string | The new text shown for the badge (1-128 characters) |
-
-### Response
-
-| Status | Body | Condition |
-| --- | --- | --- |
-| 200 | [badge](#badge-object) object | The badge was updated |
-| 400 | [error response](/admin-api/#error-response) | The body fails validation or the icon is refused, returned as `INVALID_FORM_BODY` |
-| 403<sup>1</sup> | [error response](/admin-api/#error-response) | The account does not hold `admin:authenticate` or `badges:manage` |
-| 404 | [error response](/admin-api/#error-response) | No badge has the ID, returned as `NOT_FOUND` |
-
-<sup>1</sup> Returned as `MISSING_PERMISSIONS` without `admin:authenticate`, and as `MISSING_ACL` with that but without `badges:manage`
-
-### Side effects
-
-The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `update_badge`, target type `badge`, the badge as the target ID, and metadata keys `icon` and `description` holding the values after the update. It emits no Gateway Dispatch.
-
-### Rate limit
-
-30 requests per minute for each authenticated user, on the `admin:badge:update` bucket that [Create badge](#create-badge) also counts against.
-
-## Give badge to user
-
-<RouteHeader method="POST" path="/v1/admin/users/{user_id}/badges/{badge_id}" auditReason />
-
-Adds a catalog badge to the profile of an account and returns 204 with an empty body. Requires `badges:manage`. Giving a badge the account already holds changes nothing visible.
-
-A [numbered badge](#numbered-badges) is only given with its number. For the pioneer badge the operation gives back the number the account already holds, and every other numbered badge is refused.
-
-### Path parameters
-
-| Field | Type | Description |
-| --- | --- | --- |
-| user_id | snowflake | The ID of the target account |
-| badge_id | snowflake | The ID of the badge |
-
-### Response
-
-| Status | Body | Condition |
-| --- | --- | --- |
-| 204 | empty | The account holds the badge |
-| 403<sup>1</sup> | [error response](/admin-api/#error-response) | The account does not hold `admin:authenticate` or `badges:manage` |
-| 404 | [error response](/admin-api/#error-response) | `UNKNOWN_USER` when the target account does not exist, or `NOT_FOUND` when no badge has the ID |
-| 409 | [error response](/admin-api/#error-response) | `CONFLICT` for a numbered badge the account holds no number for |
-
-<sup>1</sup> Returned as `MISSING_PERMISSIONS` without `admin:authenticate`, and as `MISSING_ACL` with that but without `badges:manage`
-
-### Side effects
-
-The account's [public user flags](/http-api/users/#public-user-flags) are not changed. The badge is dropped with the rest of the account data when the account is deleted, and the account's data export lists it.
-
-The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `grant_user_badge`, target type `user`, the account as the target ID, and metadata key `badge_id`. It emits no Gateway Dispatch.
-
-### Rate limit
-
-100 requests per minute for each authenticated user, on the `admin:user:badge:update` bucket.
-
-## Take badge from user
-
-<RouteHeader method="DELETE" path="/v1/admin/users/{user_id}/badges/{badge_id}" auditReason />
-
-Removes a badge from the profile of an account and returns 204 with an empty body. Requires `badges:manage`. Taking a badge the account does not hold, or a badge that does not exist, also returns 204. Taking the pioneer badge keeps the account's number for a later [Give badge to user](#give-badge-to-user).
-
-### Path parameters
-
-| Field | Type | Description |
-| --- | --- | --- |
-| user_id | snowflake | The ID of the target account |
-| badge_id | snowflake | The ID of the badge |
-
-### Response
-
-| Status | Body | Condition |
-| --- | --- | --- |
-| 204 | empty | The account no longer holds the badge |
-| 403<sup>1</sup> | [error response](/admin-api/#error-response) | The account does not hold `admin:authenticate` or `badges:manage` |
-| 409 | [error response](/admin-api/#error-response) | `CONFLICT` when the pioneer record kept changing. The badge is off the profile, and a retry settles the record |
-
-<sup>1</sup> Returned as `MISSING_PERMISSIONS` without `admin:authenticate`, and as `MISSING_ACL` with that but without `badges:manage`
-
-### Side effects
-
-The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `revoke_user_badge`, target type `user`, the account as the target ID, and metadata key `badge_id`. The 409 answer records the same entry with the extra metadata key `record_settled` set to `false`. It emits no Gateway Dispatch.
-
-### Rate limit
-
-100 requests per minute for each authenticated user, on the `admin:user:badge:update` bucket that [Give badge to user](#give-badge-to-user) also counts against.
-
-## Start pioneer numbering
-
-<RouteHeader method="POST" path="/v1/admin/badges/pioneer/backfill" auditReason />
-
-Makes a catalog badge the pioneer badge and queues a background job that numbers today's accounts, then opens numbering on e-mail verification. Returns 204 with an empty body. Requires `badges:manage`. Runs only while numbering is stopped and has never finished. See [numbered badges](#numbered-badges) for the order of the numbers.
+Replaces the name, description and link of a badge, and its image when you send one, and returns the badge. The type can't change. You need `badge:update`.
 
 ### JSON body
 
 | Field | Type | Description |
 | --- | --- | --- |
-| badge_id | snowflake | The catalog badge whose text carries `{n}` |
-| first_user_id | snowflake | The account that gets number 1 |
-| excluded_user_ids | array[snowflake] | Accounts that never get a number (max 100 entries) |
-| dry_run? | boolean | Only count the accounts that would get a number (default `false`) |
+| name | string | The name of the badge (1-64 characters) |
+| description | ?string | The tooltip text under the name (1-256 characters), or null |
+| href | ?string | The `https` URL a click opens, or null |
+| image?<sup>1</sup> | string | A new image as a base64 data URI. Leave it out to keep the current one |
+
+<sup>1</sup> The same formats and limits as [Create badge](#create-badge)
 
 ### Response
 
 | Status | Body | Condition |
 | --- | --- | --- |
-| 204 | empty | The job was queued |
-| 400 | [error response](/admin-api/#error-response) | The body fails validation, returned as `INVALID_FORM_BODY` |
-| 403<sup>1</sup> | [error response](/admin-api/#error-response) | The account does not hold `admin:authenticate` or `badges:manage` |
-| 404 | [error response](/admin-api/#error-response) | `NOT_FOUND` when no badge has the ID, or `UNKNOWN_USER` when the first account does not exist |
-| 409<sup>2</sup> | [error response](/admin-api/#error-response) | `CONFLICT` when the request cannot start numbering |
+| 200 | [Admin custom badge](#admin-custom-badge-object) object | The badge was updated |
+| 400 | [error response](/admin-api/#error-response) | `INVALID_FORM_BODY` for a bad field |
+| 400 | [error response](/admin-api/#error-response) | `IMAGE_SIZE_EXCEEDS_LIMIT`, `INVALID_IMAGE_FORMAT` or `FAILED_TO_UPLOAD_IMAGE` for a bad image |
+| 404 | [error response](/admin-api/#error-response) | `UNKNOWN_BADGE` when the badge doesn't exist |
 
-<sup>1</sup> Returned as `MISSING_PERMISSIONS` without `admin:authenticate`, and as `MISSING_ACL` with that but without `badges:manage`
+The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
 
-<sup>2</sup> The badge text has no `{n}`, numbering already belongs to another badge, the first account does not qualify or is excluded, numbering is running or has finished, or another dry run is running
+## Delete badge
 
-### Side effects
+<RouteHeader method="DELETE" path="/v1/admin/badges/{badge_id}" auditReason />
 
-Without `dry_run`, the request switches numbering to the backfill state and queues one `backfillPioneerBadges` job in the `lifecycle` [processing lane](/admin-api/jobs/#processing-lanes). The job records the excluded accounts, gives number 1 to the first account, numbers every qualifying account in ascending ID order, opens numbering on e-mail verification, and then numbers the accounts that qualified while it ran. An exclusion is permanent, and an account that already holds a number keeps it.
+Deletes a badge and its image and returns 204. Accounts and guilds that had it stop showing it. You need `badge:delete`.
 
-A dry run writes no number and no numbering state. Only one dry run runs at a time.
-
-When the job cannot be queued the request fails, and numbering stays stopped. The badge stays the pioneer badge, so a retry has to name the same badge.
-
-The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `start_pioneer_backfill`, target type `badge`, the badge as the target ID, and metadata keys `first_user_id`, `excluded_count`, and `dry_run`. When the job ends it records an entry with action `pioneer_backfill` whose metadata names the first and the excluded accounts in `first_username` and `excluded_usernames` and counts the verified accounts waiting only on a suspicious activity requirement in `flagged_waiting`. A dry run adds `would_assign`, the number of accounts that would get a number, and a real run adds `first_user_number`, `status`, `next_slot`, `catch_up_count`, and `catch_up_failed`. It emits no Gateway Dispatch.
-
-### Rate limit
-
-30 requests per minute for each authenticated user, on the `admin:badge:update` bucket that [Create badge](#create-badge) also counts against.
-
-## Stop pioneer numbering
-
-<RouteHeader method="POST" path="/v1/admin/badges/pioneer/stop" auditReason />
-
-Stops numbering new accounts and returns 204 with an empty body. Requires `badges:manage`. Numbers already given stay. Queued numbering jobs and the remaining items of a running backfill job give no number. Stopping numbering that is stopped or has finished changes nothing.
-
-[Start pioneer numbering](#start-pioneer-numbering) runs again after a stop. Accounts keep their numbers, and an account whose numbering was cut short completes with its own number.
+The image of a badge made before the upgrade that moved badges into their own tables stays in storage. The instance settings keep a copy of those badges for older versions, and a later release removes that copy.
 
 ### Response
 
 | Status | Body | Condition |
 | --- | --- | --- |
-| 204 | empty | Numbering is stopped |
-| 403<sup>1</sup> | [error response](/admin-api/#error-response) | The account does not hold `admin:authenticate` or `badges:manage` |
-| 409 | [error response](/admin-api/#error-response) | `CONFLICT` when the numbering state changed during the request. A retry stops it |
+| 204 | none | The badge was deleted |
+| 404 | [error response](/admin-api/#error-response) | `UNKNOWN_BADGE` when the badge doesn't exist |
 
-<sup>1</sup> Returned as `MISSING_PERMISSIONS` without `admin:authenticate`, and as `MISSING_ACL` with that but without `badges:manage`
+The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
 
-### Side effects
+## Move badge
 
-A stop does not cancel a running backfill job. Cancel it through [background jobs](/admin-api/jobs/) and wait for its `pioneer_backfill` audit entry before starting numbering again. A cancelled backfill job never opens numbering: it stops numbering that is still in the backfill and records `stopped_by_cancel` in that entry. Once the job has opened numbering, cancelling it stops nothing, not even its numbering of the accounts that qualified while it ran. This operation stops both.
+<RouteHeader method="PATCH" path="/v1/admin/badges/order" auditReason />
 
-The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `stop_pioneer`, target type `badge`, target ID `0`, and no metadata. It emits no Gateway Dispatch.
+Moves one badge within the badges of its type and returns it. Send either `direction` or `after_id`. Moving the first badge up or the last badge down changes nothing. You need `badge:update`.
 
-### Rate limit
+### JSON body
 
-30 requests per minute for each authenticated user, on the `admin:badge:update` bucket that [Create badge](#create-badge) also counts against.
+| Field | Type | Description |
+| --- | --- | --- |
+| badge_id | snowflake | The badge to move |
+| direction? | string | `up` or `down` swaps it with the badge before or after it. `first` or `last` puts it before or after every badge of its type |
+| after_id? | ?snowflake | Put the badge right after this badge of the same type, or first when null |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [Admin custom badge](#admin-custom-badge-object) object | The badge was moved, or was already in place |
+| 400 | [error response](/admin-api/#error-response) | `INVALID_FORM_BODY` when the body has both or neither of `direction` and `after_id`, or `after_id` is the badge itself |
+| 404 | [error response](/admin-api/#error-response) | `UNKNOWN_BADGE` when the badge doesn't exist, or `after_id` isn't a badge of the same type |
+
+The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
+
+## Reorder badges
+
+<RouteHeader method="PUT" path="/v1/admin/badges/order" auditReason />
+
+Sets the display order of the custom badges and returns the first page of [List badges](#list-badges) with up to 200 badges. Send every user and guild badge on the instance exactly once. Profiles and guilds show their badges in this order. You need `badge:update`.
+
+It works on instances with up to 1,000 badges. Larger instances move badges one at a time with [Move badge](#move-badge). The new order is saved in groups of badges. A request that fails part of the way can leave part of the new order. Sending the same request again finishes it.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| badge_ids | array[snowflake] | Every badge ID on the instance in the new order (up to 1000) |
+
+### Response body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| badges | array[[Admin custom badge](#admin-custom-badge-object) object] | The first page of badges, up to 200 |
+| next | ?string | Send this as `after` to [List badges](#list-badges) for the next page, or null when there are no more badges |
+| version | string | The catalog version |
+| settings | [badge settings](#badge-settings-object) object | The badge limits |
+| built_in | array[[Built-in badge image](#built-in-badge-image-object) object] | Every built-in badge and the image the instance shows for it |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | response body | The order was saved |
+| 400 | [error response](/admin-api/#error-response) | `INVALID_FORM_BODY` when `badge_ids` leaves out a badge or lists one twice, or the instance has more than 1,000 badges |
+| 404 | [error response](/admin-api/#error-response) | `UNKNOWN_BADGE` when an ID isn't a badge on the instance |
+
+The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
+
+## Update badge settings
+
+<RouteHeader method="PATCH" path="/v1/admin/badges/settings" auditReason />
+
+Changes the [badge settings](#badge-settings-object) and returns them. Leave a field out to keep its value. You need `badge:update`.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| max_per_user? | integer | How many custom badges one account can be given (1-1000) |
+| max_per_guild? | integer | How many custom badges one guild can be given (1-200) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [badge settings](#badge-settings-object) object | The settings were saved |
+| 400 | [error response](/admin-api/#error-response) | `INVALID_FORM_BODY` for a value out of range |
+
+The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
+
+## Errors while a change is published
+
+Every create, edit, delete and move saves the badge and then publishes a new catalog version, which tells API servers and clients to load the badges again. If the API can't publish the version, the request fails with 503 `SERVICE_UNAVAILABLE` although the change was saved. The next badge change, or the next API restart, publishes it. Until then some clients can show the old badge. An image that the change replaced or deleted is cleaned up the same way as when the version is published.
+
+## Replace built-in badge image
+
+<RouteHeader method="PUT" path="/v1/admin/badges/built-in/{kind}" auditReason />
+
+Uploads an image and shows it everywhere the built-in badge appears, then returns the first page of [List badges](#list-badges) with up to 200 badges. Profiles and guilds keep the badge, its tooltip and its link. You need `badge:update`.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| image<sup>1</sup> | string | The image as a base64 data URI (up to 16000000 characters) |
+
+<sup>1</sup> The same formats and limits as [Create badge](#create-badge)
+
+### Response body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| badges | array[[Admin custom badge](#admin-custom-badge-object) object] | The first page of badges, up to 200 |
+| next | ?string | Send this as `after` to [List badges](#list-badges) for the next page, or null when there are no more badges |
+| version | string | The catalog version |
+| settings | [badge settings](#badge-settings-object) object | The badge limits |
+| built_in | array[[Built-in badge image](#built-in-badge-image-object) object] | Every built-in badge and the image the instance shows for it |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | response body | The image was replaced |
+| 400 | [error response](/admin-api/#error-response) | `INVALID_FORM_BODY` for an unknown `kind` |
+| 400 | [error response](/admin-api/#error-response) | `IMAGE_SIZE_EXCEEDS_LIMIT`, `INVALID_IMAGE_FORMAT` or `FAILED_TO_UPLOAD_IMAGE` for a bad image |
+
+The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
+
+## Use built-in badge image
+
+<RouteHeader method="DELETE" path="/v1/admin/badges/built-in/{kind}" auditReason />
+
+Goes back to the built-in image for a badge, deletes the uploaded one and returns the first page of [List badges](#list-badges) with up to 200 badges. You need `badge:update`.
+
+### Response body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| badges | array[[Admin custom badge](#admin-custom-badge-object) object] | The first page of badges, up to 200 |
+| next | ?string | Send this as `after` to [List badges](#list-badges) for the next page, or null when there are no more badges |
+| version | string | The catalog version |
+| settings | [badge settings](#badge-settings-object) object | The badge limits |
+| built_in | array[[Built-in badge image](#built-in-badge-image-object) object] | Every built-in badge and the image the instance shows for it |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | response body | The built-in image is used again |
+| 400 | [error response](/admin-api/#error-response) | `INVALID_FORM_BODY` for an unknown `kind` |
+
+The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
+
+## Hide built-in guild badge
+
+<RouteHeader method="PUT" path="/v1/admin/badges/built-in/{kind}/hidden" auditReason />
+
+Stops clients on this instance from showing a built-in guild badge, then returns the first page of [List badges](#list-badges) with up to 200 badges. `kind` is `guild_verified`, `guild_partnered` or `guild_discoverable`. Guilds keep the feature behind the badge, so a discoverable guild stays listed in discovery. When a guild has more than one of these badges, clients show the next one that isn't hidden. You need `badge:update`.
+
+### Response body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| badges | array[[Admin custom badge](#admin-custom-badge-object) object] | The first page of badges, up to 200 |
+| next | ?string | Send this as `after` to [List badges](#list-badges) for the next page, or null when there are no more badges |
+| version | string | The catalog version |
+| settings | [badge settings](#badge-settings-object) object | The badge limits |
+| built_in | array[[Built-in badge image](#built-in-badge-image-object) object] | Every built-in badge and the image the instance shows for it |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | response body | The badge is hidden |
+| 400 | [error response](/admin-api/#error-response) | `INVALID_FORM_BODY` for a `kind` that isn't a guild badge |
+
+The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
+
+## Show built-in guild badge
+
+<RouteHeader method="DELETE" path="/v1/admin/badges/built-in/{kind}/hidden" auditReason />
+
+Shows a hidden built-in guild badge again and returns the first page of [List badges](#list-badges) with up to 200 badges. You need `badge:update`.
+
+### Response body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| badges | array[[Admin custom badge](#admin-custom-badge-object) object] | The first page of badges, up to 200 |
+| next | ?string | Send this as `after` to [List badges](#list-badges) for the next page, or null when there are no more badges |
+| version | string | The catalog version |
+| settings | [badge settings](#badge-settings-object) object | The badge limits |
+| built_in | array[[Built-in badge image](#built-in-badge-image-object) object] | Every built-in badge and the image the instance shows for it |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | response body | The badge is shown again |
+| 400 | [error response](/admin-api/#error-response) | `INVALID_FORM_BODY` for a `kind` that isn't a guild badge |
+
+The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.

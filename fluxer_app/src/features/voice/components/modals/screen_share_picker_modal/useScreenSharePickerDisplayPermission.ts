@@ -47,10 +47,10 @@ function updateScreenRecordingPermissionStore(permission: ScreenSharePickerScree
 async function checkPickerScreenRecordingPermission(): Promise<ScreenSharePickerScreenRecordingPermission> {
 	const electronApi = getElectronAPI();
 	if (electronApi && isNativeMacOS() && typeof electronApi.getScreenRecordingPermissionStatus === 'function') {
-		const status = await electronApi.getScreenRecordingPermissionStatus();
+		const status = await electronApi.getScreenRecordingPermissionStatus(true);
 		return status === 'restart-required' ? status : normalizeNativePermissionResult(status);
 	}
-	return checkNativePermission('screen');
+	return checkNativePermission('screen', {liveProbe: true});
 }
 
 export async function readScreenSharePickerScreenRecordingPermission(

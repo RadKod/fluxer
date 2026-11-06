@@ -1,10 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 ARG BUILD_VERSION
-ARG FLUXER_DOCS_PRODUCT_NAME="Fluxer"
-ARG FLUXER_BASE_DOMAIN="localhost"
-ARG FLUXER_PUBLIC_SCHEME="http"
-ARG FLUXER_PUBLIC_PORT=""
-ARG FLUXER_DOCS_ENDPOINT=""
 
 FROM node:26-trixie-slim AS base
 
@@ -14,17 +9,6 @@ RUN npm install -g pnpm@11.27.0
 
 FROM base AS deploy
 
-ARG FLUXER_DOCS_PRODUCT_NAME
-ARG FLUXER_BASE_DOMAIN
-ARG FLUXER_PUBLIC_SCHEME
-ARG FLUXER_PUBLIC_PORT
-ARG FLUXER_DOCS_ENDPOINT
-ENV FLUXER_DOCS_PRODUCT_NAME=${FLUXER_DOCS_PRODUCT_NAME}
-ENV FLUXER_BASE_DOMAIN=${FLUXER_BASE_DOMAIN}
-ENV FLUXER_PUBLIC_SCHEME=${FLUXER_PUBLIC_SCHEME}
-ENV FLUXER_PUBLIC_PORT=${FLUXER_PUBLIC_PORT}
-ENV FLUXER_DOCS_ENDPOINT=${FLUXER_DOCS_ENDPOINT}
-
 RUN apt-get update && apt-get install -y --no-install-recommends \
 		build-essential \
 		gcc \
@@ -32,6 +16,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 		pkg-config \
 		python3 && \
 	rm -rf /var/lib/apt/lists/*
+
+ENV FLUXER_DOCS_ENDPOINT=https://docs.fluxer.com
+ENV FLUXER_DOCS_SEARCH_INDEXING=true
 
 COPY . .
 
@@ -44,11 +31,6 @@ FROM node:26-trixie-slim
 ARG BUILD_VERSION=""
 ARG SOURCE_SHA=""
 ARG SOURCE_DATE=""
-ARG FLUXER_DOCS_PRODUCT_NAME
-ARG FLUXER_BASE_DOMAIN
-ARG FLUXER_PUBLIC_SCHEME
-ARG FLUXER_PUBLIC_PORT
-ARG FLUXER_DOCS_ENDPOINT
 
 WORKDIR /usr/src/app/fluxer_docs
 
@@ -64,8 +46,8 @@ LABEL org.opencontainers.image.title="fluxer-docs"
 LABEL org.opencontainers.image.description="Fluxer API and protocol reference"
 LABEL org.opencontainers.image.licenses="AGPL-3.0-or-later"
 LABEL org.opencontainers.image.vendor="Fluxer"
-LABEL org.opencontainers.image.url="https://fluxer.app"
-LABEL org.opencontainers.image.documentation="https://docs.fluxer.app"
+LABEL org.opencontainers.image.url="https://fluxer.com"
+LABEL org.opencontainers.image.documentation="https://docs.fluxer.com"
 LABEL org.opencontainers.image.source="https://github.com/fluxerapp/fluxer"
 LABEL org.opencontainers.image.version="${BUILD_VERSION}"
 LABEL org.opencontainers.image.revision="${SOURCE_SHA}"
@@ -82,11 +64,8 @@ ENV NODE_ENV=production
 ENV NODE_OPTIONS="--enable-source-maps"
 ENV NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
 ENV BUILD_VERSION=${BUILD_VERSION}
-ENV FLUXER_DOCS_PRODUCT_NAME=${FLUXER_DOCS_PRODUCT_NAME}
-ENV FLUXER_BASE_DOMAIN=${FLUXER_BASE_DOMAIN}
-ENV FLUXER_PUBLIC_SCHEME=${FLUXER_PUBLIC_SCHEME}
-ENV FLUXER_PUBLIC_PORT=${FLUXER_PUBLIC_PORT}
-ENV FLUXER_DOCS_ENDPOINT=${FLUXER_DOCS_ENDPOINT}
+ENV FLUXER_DOCS_ENDPOINT=https://docs.fluxer.com
+ENV FLUXER_DOCS_SEARCH_INDEXING=true
 
 USER 65532:65532
 

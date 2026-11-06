@@ -18,6 +18,7 @@
 			"@fluxer/game_catalog/*": ["../packages/game_catalog/*"],
 			"@fluxer/voice_engine_v2": ["../packages/voice_engine_v2/src/index.ts"],
 			"@fluxer/voice_engine_v2/*": ["../packages/voice_engine_v2/*"],
+			"@fluxer/account-engine-core": ["../packages/desktop_ipc/src/AccountEngineCoreModule.d.ts"],
 			"@fluxer/*": ["../packages/*", "../packages/*/src/index.ts"]
 		}
 	},

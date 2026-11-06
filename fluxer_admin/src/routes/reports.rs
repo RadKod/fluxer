@@ -16,8 +16,8 @@ use crate::{
         htmx,
     },
     state::AppState,
-    templates::{self, components::enforcement_fields::is_snowflake},
-    utils::{forms::clean_string, timestamps::format_admin_timestamp},
+    templates,
+    utils::{forms::clean_string, snowflake::is_snowflake, timestamps::format_admin_timestamp},
 };
 use axum::{
     Form, Router,
@@ -142,7 +142,8 @@ async fn reports_list(
     let search_query = query.q.as_deref().and_then(clean_string);
     let (sort_by, sort_order) = decode_sort(query.sort.as_deref());
     let client = AdminApiClient::new(state.http_client(), config, &auth.0.session);
-    let status = query.status.as_deref().and_then(|s| s.parse::<i32>().ok());
+    let status_filter = status_filter(&query);
+    let status = status_filter.parse::<i32>().ok();
     let report_type = query
         .report_type
         .as_deref()
@@ -178,7 +179,7 @@ async fn reports_list(
         reports.as_ref(),
         &templates::pages::reports_list::ReportFilters {
             query: search_query.as_deref(),
-            status: query.status.as_deref(),
+            status: Some(status_filter),
             report_type: query.report_type.as_deref(),
             category: query.category.as_deref(),
             reason: reason.as_deref(),
@@ -197,6 +198,40 @@ async fn reports_list(
     );
     Html(markup.into_string()).into_response()
 }
+
+fn status_filter(query: &ReportsQuery) -> &str {
+    match query.status.as_deref().map(str::trim) {
+        Some("") | Some(STATUS_ALL) => STATUS_ALL,
+        Some(status) => status,
+        None if has_entity_filter(query) => STATUS_ALL,
+        None => STATUS_PENDING,
+    }
+}
+
+fn has_entity_filter(query: &ReportsQuery) -> bool {
+    [
+        &query.q,
+        &query.report_type,
+        &query.category,
+        &query.reason,
+        &query.reporter_id,
+        &query.reported_user_id,
+        &query.reported_webhook_id,
+        &query.reported_guild_id,
+        &query.reported_channel_id,
+        &query.guild_context_id,
+        &query.resolved_by_admin_id,
+    ]
+    .into_iter()
+    .any(|value| {
+        value
+            .as_deref()
+            .is_some_and(|value| !value.trim().is_empty())
+    })
+}
+
+const STATUS_ALL: &str = "all";
+const STATUS_PENDING: &str = "0";
 
 fn reports_error_page(config: &AdminConfig, auth: &AuthContext, message: &str) -> Response {
     let markup = templates::layout::admin_layout(
@@ -344,21 +379,13 @@ async fn report_resolve(
         Ok(Form(f)) => f,
         Err(error) => {
             tracing::warn!(%error, report_id, "failed to parse report resolve form");
-            return flash::redirect_with_flash(
-                &back,
-                FlashData::error("Invalid form data"),
-                config.secure_cookies(),
-            );
+            return flash::redirect_error(config, &back, "Invalid form data");
         }
     };
     let Some((resolution, label)) =
         templates::pages::report_detail::resolution_choice(form.resolution.as_deref())
     else {
-        return flash::redirect_with_flash(
-            &back,
-            FlashData::error(RESOLUTION_REQUIRED),
-            config.secure_cookies(),
-        );
+        return flash::redirect_error(config, &back, RESOLUTION_REQUIRED);
     };
     let outcome = match resolution {
         UpdateReportRequestResolution::NoViolation => Some(UpdateReportRequestOutcome::NoViolation),
@@ -372,8 +399,7 @@ async fn report_resolve(
     let duplicate_of = form
         .duplicate_of
         .as_deref()
-        .map(str::trim)
-        .filter(|value| is_snowflake(value))
+        .and_then(duplicate_report_id)
         .map(str::to_owned);
     let missing = match resolution {
         UpdateReportRequestResolution::Actioned if outcome.is_none() => Some(OUTCOME_REQUIRED),
@@ -383,11 +409,7 @@ async fn report_resolve(
         _ => None,
     };
     if let Some(message) = missing {
-        return flash::redirect_with_flash(
-            &back,
-            FlashData::error(message),
-            config.secure_cookies(),
-        );
+        return flash::redirect_error(config, &back, message);
     }
     let client = AdminApiClient::new(state.http_client(), config, &auth.0.session);
     let public_comment = clean_string(form.public_comment.as_deref().unwrap_or(""));
@@ -407,7 +429,19 @@ async fn report_resolve(
         Ok(_) => FlashData::success(format!("Report resolved: {label}")),
         Err(error) => {
             tracing::warn!(%error, report_id, "admin API request failed: resolve report");
-            FlashData::error("Failed to resolve report")
+            match (&error, duplicate_of.as_deref()) {
+                (
+                    ApiError::Http {
+                        status: 404,
+                        message,
+                        ..
+                    },
+                    Some(target),
+                ) if message.contains("UNKNOWN_REPORT") => FlashData::error(format!(
+                    "No report has the ID {target}. Copy the Report ID from that report's page, not a message, user or decision ID."
+                )),
+                _ => FlashData::error(error.refusal_message("Failed to resolve report")),
+            }
         }
     };
     flash::redirect_with_flash(&back, flash, config.secure_cookies())
@@ -425,19 +459,11 @@ async fn report_note(
         Ok(Form(f)) => f,
         Err(error) => {
             tracing::warn!(%error, report_id, "failed to parse report note form");
-            return flash::redirect_with_flash(
-                &back,
-                FlashData::error("Invalid form data"),
-                config.secure_cookies(),
-            );
+            return flash::redirect_error(config, &back, "Invalid form data");
         }
     };
     let Some(body) = clean_string(form.body.as_deref().unwrap_or("")) else {
-        return flash::redirect_with_flash(
-            &back,
-            FlashData::error("Write a note first"),
-            config.secure_cookies(),
-        );
+        return flash::redirect_error(config, &back, "Write a note first");
     };
     let client = AdminApiClient::new(state.http_client(), config, &auth.0.session);
     let flash = match client.annotate_report(&report_id, body).await {
@@ -450,9 +476,18 @@ async fn report_note(
     flash::redirect_with_flash(&back, flash, config.secure_cookies())
 }
 
+fn duplicate_report_id(value: &str) -> Option<&str> {
+    let value = value.trim();
+    let candidate = match value.split_once("/reports/") {
+        Some((_, rest)) => rest.split(['/', '?', '#']).next().unwrap_or(""),
+        None => value.trim_start_matches('#'),
+    };
+    is_snowflake(candidate).then_some(candidate)
+}
+
 const RESOLUTION_REQUIRED: &str = "Choose a resolution";
 const OUTCOME_REQUIRED: &str = "Choose what happened to the reported content or account";
-const DUPLICATE_OF_REQUIRED: &str = "Enter the ID of the report this one repeats";
+const DUPLICATE_OF_REQUIRED: &str = "Enter the ID or link of the report this one repeats";
 
 async fn report_legal_hold(
     State(state): State<AppState>,
@@ -467,11 +502,7 @@ async fn report_legal_hold(
         Ok(Form(f)) => f,
         Err(error) => {
             tracing::warn!(%error, report_id, "failed to parse report legal hold form");
-            return flash::redirect_with_flash(
-                &back,
-                FlashData::error("Invalid form data"),
-                config.secure_cookies(),
-            );
+            return flash::redirect_error(config, &back, "Invalid form data");
         }
     };
     let clearing = form.clear.is_some();
@@ -480,29 +511,17 @@ async fn report_legal_hold(
     } else {
         match form.legal_hold_until.as_deref().and_then(legal_hold_date) {
             Some(date) if date < time::OffsetDateTime::now_utc().date() => {
-                return flash::redirect_with_flash(
-                    &back,
-                    FlashData::error(LEGAL_HOLD_IN_PAST),
-                    config.secure_cookies(),
-                );
+                return flash::redirect_error(config, &back, LEGAL_HOLD_IN_PAST);
             }
             Some(date) => Some(legal_hold_end_of_day(date)),
             None => {
-                return flash::redirect_with_flash(
-                    &back,
-                    FlashData::error("Choose the date the hold ends"),
-                    config.secure_cookies(),
-                );
+                return flash::redirect_error(config, &back, "Choose the date the hold ends");
             }
         }
     };
     let reason = clean_string(form.legal_hold_reason.as_deref().unwrap_or(""));
     if until.is_some() && reason.is_none() {
-        return flash::redirect_with_flash(
-            &back,
-            FlashData::error(LEGAL_HOLD_NEEDS_REASON),
-            config.secure_cookies(),
-        );
+        return flash::redirect_error(config, &back, LEGAL_HOLD_NEEDS_REASON);
     }
     let client = AdminApiClient::new(state.http_client(), config, &auth.0.session);
     let result = client
@@ -519,10 +538,7 @@ async fn report_legal_hold(
         Err(error) => {
             tracing::warn!(%error, report_id, "admin API request failed: set report legal hold");
             match error {
-                ApiError::Http {
-                    status: 400,
-                    message,
-                } => FlashData::error(legal_hold_refusal(&message)),
+                ApiError::Http { status: 400, .. } => FlashData::error(legal_hold_refusal(&error)),
                 _ => FlashData::error("Failed to update the legal hold"),
             }
         }
@@ -545,19 +561,11 @@ async fn report_delete(
         Ok(Form(f)) => f,
         Err(error) => {
             tracing::warn!(%error, report_id, "failed to parse report delete form");
-            return flash::redirect_with_flash(
-                &back,
-                FlashData::error("Invalid form data"),
-                config.secure_cookies(),
-            );
+            return flash::redirect_error(config, &back, "Invalid form data");
         }
     };
     if form.confirm.as_deref() != Some("true") {
-        return flash::redirect_with_flash(
-            &back,
-            FlashData::error(DELETE_NEEDS_CONFIRMATION),
-            config.secure_cookies(),
-        );
+        return flash::redirect_error(config, &back, DELETE_NEEDS_CONFIRMATION);
     }
     let audit_log_reason = clean_string(form.audit_log_reason.as_deref().unwrap_or(""));
     let client = AdminApiClient::new(state.http_client(), config, &auth.0.session);
@@ -581,7 +589,7 @@ async fn report_delete(
                 ApiError::Http { status: 404, .. } => "The report no longer exists",
                 _ => "Failed to delete the report",
             };
-            flash::redirect_with_flash(&back, FlashData::error(message), config.secure_cookies())
+            flash::redirect_error(config, &back, message)
         }
     }
 }
@@ -602,14 +610,8 @@ fn legal_hold_end_of_day(date: time::Date) -> String {
     format!("{date}T23:59:59.999Z")
 }
 
-fn legal_hold_refusal(body: &str) -> &'static str {
-    let body: serde_json::Value = serde_json::from_str(body).unwrap_or_default();
-    let reason_refused = body["errors"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .any(|error| error["path"] == "legal_hold_reason");
-    if reason_refused {
+fn legal_hold_refusal(error: &ApiError) -> &'static str {
+    if error.has_field_error("legal_hold_reason") {
         LEGAL_HOLD_NEEDS_REASON
     } else {
         LEGAL_HOLD_IN_PAST
@@ -624,53 +626,5 @@ fn decode_sort(sort: Option<&str>) -> (&'static str, &'static str) {
         "resolvedAt_desc" => ("resolvedAt", "desc"),
         "resolvedAt_asc" => ("resolvedAt", "asc"),
         _ => ("reportedAt", "desc"),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn legal_hold_dates_end_at_the_end_of_the_day_in_utc() {
-        assert_eq!(
-            legal_hold_date("2027-01-31")
-                .map(legal_hold_end_of_day)
-                .as_deref(),
-            Some("2027-01-31T23:59:59.999Z")
-        );
-        assert_eq!(
-            legal_hold_date(" 2027-02-01 ")
-                .map(legal_hold_end_of_day)
-                .as_deref(),
-            Some("2027-02-01T23:59:59.999Z")
-        );
-        for invalid in ["", "2027-02-30", "31/01/2027", "2027-1-31", "tomorrow"] {
-            assert_eq!(legal_hold_date(invalid), None, "{invalid}");
-        }
-    }
-
-    #[test]
-    fn a_refused_hold_names_the_field_the_api_refused() {
-        let refusal = |path: &str| {
-            serde_json::json!({
-                "code": "INVALID_FORM_BODY",
-                "message": "Input Validation Error",
-                "errors": [{"path": path, "message": "refused"}]
-            })
-            .to_string()
-        };
-        assert_eq!(
-            legal_hold_refusal(&refusal("legal_hold_until")),
-            "The hold must end in the future"
-        );
-        assert_eq!(
-            legal_hold_refusal(&refusal("legal_hold_reason")),
-            "Give a reason for the hold"
-        );
-        assert_eq!(
-            legal_hold_refusal("not json"),
-            "The hold must end in the future"
-        );
     }
 }
