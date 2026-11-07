@@ -263,12 +263,10 @@
 	}
 }
 
-.formSideWide {
-	padding: 2.5rem;
-}
-
-:global(html.reduced-motion) .card {
-	transition: none;
+@media (prefers-reduced-motion: reduce) {
+	.card {
+		transition: none;
+	}
 }
 
 @media (max-width: 640px) {
@@ -377,9 +375,4 @@
 		padding-bottom: env(safe-area-inset-bottom);
 		padding-left: env(safe-area-inset-left);
 	}
-}
-
-/* Micup: the splash behind auth and invite pages stays dark when the coal and dark accent turns white */
-:global(html:is(.theme-coal, .theme-dark)) .container {
-	background-color: var(--background-secondary-lighter);
 }

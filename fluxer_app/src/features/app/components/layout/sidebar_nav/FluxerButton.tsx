@@ -126,6 +126,7 @@ export const FluxerButton = observer(() => {
 	}, []);
 	const shouldShowHoverState = isHovering || contextMenuOpen;
 	const indicatorTarget = resolveGuildListIndicatorBarTarget({isSelected, showHoverState: shouldShowHoverState});
+	const isActive = shouldShowHoverState || isSelected;
 	return (
 		<Tooltip
 			position="right"
@@ -168,7 +169,7 @@ export const FluxerButton = observer(() => {
 						<motion.div
 							ref={iconRef}
 							className={clsx(styles.fluxerButtonIcon, isSelected && styles.fluxerButtonIconSelected)}
-							animate={{borderRadius: '30%'}}
+							animate={{borderRadius: isActive ? '30%' : '50%'}}
 							initial={false}
 							transition={{duration: 0.07, ease: 'easeOut'}}
 							data-flx="app.sidebar-nav.fluxer-button.fluxer-button-icon"

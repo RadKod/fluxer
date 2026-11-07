@@ -452,8 +452,3 @@
 		transform: rotate(360deg);
 	}
 }
-
-/* Micup: menu row hover (--control-button-active-bg) in the coal and dark themes */
-:global(html:is(.theme-coal, .theme-dark)) .popup {
-	--background-modifier-hover: var(--control-button-active-bg);
-}

@@ -152,13 +152,3 @@
 		width: 100%;
 	}
 }
-
-/* Micup: the gift mark takes the white accent instead of the violet gradient in the coal and dark themes */
-:global(html:is(.theme-coal, .theme-dark)) .giftIconActive {
-	background: var(--brand-primary);
-	color: var(--text-on-brand-primary);
-}
-
-:global(html:is(.theme-coal, .theme-dark)) .giftIconActive .giftIconImage {
-	color: var(--text-on-brand-primary);
-}

@@ -649,3 +649,12 @@
 		color: var(--text-tertiary);
 	}
 }
+
+@media (prefers-reduced-motion: reduce) {
+	.sidebarItemChevron,
+	.sidebarSubItemsWrap,
+	.sidebarSubItemsWrap > .sidebarSubItems,
+	.sidebarSubItems::before {
+		transition: none;
+	}
+}

@@ -64,6 +64,7 @@ export const FavoritesButton = observer(({className}: FavoritesButtonProps = {})
 	};
 	const shouldShowHoverState = isHovering || contextMenuOpen;
 	const indicatorTarget = resolveGuildListIndicatorBarTarget({isSelected, showHoverState: shouldShowHoverState});
+	const isActive = shouldShowHoverState || isSelected;
 	if (!Accessibility.showFavorites) {
 		return null;
 	}
@@ -109,7 +110,7 @@ export const FavoritesButton = observer(({className}: FavoritesButtonProps = {})
 						<motion.div
 							ref={iconRef}
 							className={clsx(styles.fluxerButtonIcon, isSelected && styles.fluxerButtonIconSelected)}
-							animate={{borderRadius: '30%'}}
+							animate={{borderRadius: isActive ? '30%' : '50%'}}
 							initial={false}
 							transition={{duration: 0.07, ease: 'easeOut'}}
 							data-flx="app.sidebar-nav.favorites-button.fluxer-button-icon"

@@ -24,6 +24,13 @@ interface GuildListItemContentProps extends GuildListItemProps {
 	readonly dragAndDrop: GuildListItemDragAndDrop | null;
 }
 
+function guildIconBorderRadius(isEmphasized: boolean): string {
+	if (isEmphasized) {
+		return '30%';
+	}
+	return '50%';
+}
+
 export const GuildListItemContent = observer((props: GuildListItemContentProps) => {
 	const {i18n} = useLingui();
 	const state = useGuildListItemState({
@@ -117,7 +124,7 @@ export const GuildListItemContent = observer((props: GuildListItemContentProps) 
 						showGuildIndicator={showGuildIndicator}
 						indicatorTarget={indicatorTarget}
 						backgroundImage={interaction.backgroundImage}
-						iconBorderRadius="30%"
+						iconBorderRadius={guildIconBorderRadius(props.isSelected || showHoverState)}
 						mentionCount={state.mentionCount}
 						canManageGuild={state.canManageGuild}
 						hasVoiceActivity={state.hasVoiceActivity}

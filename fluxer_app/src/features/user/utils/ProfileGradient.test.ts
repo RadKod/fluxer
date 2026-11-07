@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {readFileSync} from 'node:fs';
 import {
 	compositeOver,
 	contrastRatio,
@@ -145,26 +144,5 @@ describe('nameReadsOnProfileTheme', () => {
 	it('keeps any name without a theme and has nothing to drop without a name style', () => {
 		expect(nameReadsOnProfileTheme({font_id: 1, colors: [0xffffff]}, null)).toBe(true);
 		expect(nameReadsOnProfileTheme(null, PASTEL)).toBe(true);
-	});
-});
-
-describe('profile theme inside the coal and dark card rules', () => {
-	const coalBlock = (file: string, selector: string): string => {
-		const css = readFileSync(`src/features/user/components/profile/${file}`, 'utf8');
-		const start = css.indexOf(`:global(html:is(.theme-coal, .theme-dark)) ${selector} {`);
-		expect(start).toBeGreaterThanOrEqual(0);
-		return css.slice(start, css.indexOf('}', start));
-	};
-
-	it('keeps the themed avatar ring see-through, the card surface otherwise', () => {
-		const ring = coalBlock('profile_card/ProfileCardBanner.module.css', '.avatarButton');
-		expect(ring).toContain('border-color: var(--profile-card-avatar-ring, var(--background-secondary-alt));');
-		expect(ring).toContain('background-color: var(--profile-card-avatar-ring, var(--background-secondary-alt));');
-	});
-
-	it('puts the voice card on the theme scrim, the hover well otherwise', () => {
-		expect(coalBlock('VoiceActivityCard.module.css', '.card')).toContain(
-			'background-color: var(--profile-panel-background, var(--background-modifier-hover));',
-		);
 	});
 });

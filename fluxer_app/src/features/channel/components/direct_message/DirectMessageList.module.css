@@ -755,8 +755,3 @@
 	composes: dmItemSubtext;
 	display: flex;
 }
-
-/* Micup: lighter side panels in the coal theme */
-:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .dmListContainer {
-	--background-secondary: var(--side-panel-background);
-}

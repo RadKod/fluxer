@@ -32,7 +32,7 @@ export const FeedButton = observer(() => {
 	const mergedRef = useMergeRefs([hoverRef, buttonRef]);
 	const location = useLocation();
 	const isSelected = Routes.isFeedRoute(location.pathname);
-	// Micup: the instance icon (branding icon_url) is the feed glyph on the home tile's gray (white when selected or
+	// Micup: the instance icon (branding icon_url) is the feed glyph on the home tile's gray (the accent when selected or
 	// hovered, with the rail's left bar); if it does not load, the newspaper tile comes back.
 	const [failedIconUrl, setFailedIconUrl] = useState<string | null>(null);
 	const iconUrl = RuntimeConfig.iconUrl !== failedIconUrl ? RuntimeConfig.iconUrl : null;
@@ -85,8 +85,8 @@ export const FeedButton = observer(() => {
 									? clsx(guildStyles.fluxerButtonIcon, isHighlighted && guildStyles.fluxerButtonIconSelected)
 									: guildStyles.createGuildButtonIcon
 							}
-							animate={{borderRadius: '30%'}}
-							initial={{borderRadius: '30%'}}
+							animate={{borderRadius: isHighlighted ? '30%' : '50%'}}
+							initial={{borderRadius: isHighlighted ? '30%' : '50%'}}
 							transition={{duration: Accessibility.useReducedMotion ? 0 : 0.07, ease: 'easeOut'}}
 							style={
 								isSelected && !iconUrl

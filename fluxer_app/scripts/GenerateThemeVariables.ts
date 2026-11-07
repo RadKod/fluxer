@@ -553,8 +553,7 @@ const SKELETON_SURFACE_INVARIANTS: ReadonlyArray<SkeletonSurfaceInvariant> = [
 			'.guildListScrollContainer.guildListScrollContainer {\n\toverflow-anchor: auto;\n}',
 			'--layout-user-area-overlay-height',
 			'\tpadding-bottom: calc(\n\t\tvar(--layout-user-area-overlay-height, var(--layout-user-area-reserved-height, 0px)) +\n\t\tvar(--spacing-2)\n\t);',
-			// Micup: home glyph smaller (upstream 1.75rem); the skeleton's .fluxerIconGlyph matches it
-			'.messageBubbleIcon {\n\theight: 1.375rem;\n\twidth: 1.375rem;',
+			'.messageBubbleIcon {\n\theight: 1.75rem;\n\twidth: 1.75rem;',
 			'.guildIndicator {',
 			'.guildIndicatorBar {',
 		],

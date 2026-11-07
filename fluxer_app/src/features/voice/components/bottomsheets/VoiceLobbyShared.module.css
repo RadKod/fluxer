@@ -160,8 +160,3 @@
 .maxWidth {
 	max-width: 100%;
 }
-
-/* Micup: white accent in the coal and dark themes */
-.iconContainerBrand .actionIcon {
-	color: var(--text-on-brand-primary);
-}

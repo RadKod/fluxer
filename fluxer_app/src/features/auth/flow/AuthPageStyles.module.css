@@ -339,13 +339,3 @@ img.entityIcon {
 	color: var(--text-tertiary);
 	text-align: center;
 }
-
-/* Micup: the gift mark takes the white accent instead of the violet gradient in the coal and dark themes */
-:global(html:is(.theme-coal, .theme-dark)) .giftIconContainer {
-	background: var(--brand-primary);
-	color: var(--text-on-brand-primary);
-}
-
-:global(html:is(.theme-coal, .theme-dark)) .giftIcon {
-	color: var(--text-on-brand-primary);
-}

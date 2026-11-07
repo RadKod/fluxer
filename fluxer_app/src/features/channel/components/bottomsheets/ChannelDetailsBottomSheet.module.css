@@ -659,8 +659,3 @@
 		background-position: -200% 0;
 	}
 }
-
-/* Micup: static list skeletons */
-.skeleton {
-	animation: none;
-}

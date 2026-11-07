@@ -286,8 +286,10 @@
 	white-space: nowrap;
 }
 
-:global(html.reduced-motion) .avatar {
-	animation: none;
+@media (prefers-reduced-motion: reduce) {
+	.avatar {
+		animation: none;
+	}
 }
 
 .bottomSheetStack {

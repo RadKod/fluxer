@@ -43,6 +43,8 @@
 	}
 }
 
-:global(html.reduced-motion) .overlay {
-	animation: none;
+@media (prefers-reduced-motion: reduce) {
+	.overlay {
+		animation: none;
+	}
 }

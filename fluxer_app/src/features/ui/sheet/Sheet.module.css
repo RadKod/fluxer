@@ -242,6 +242,8 @@
 	height: 1.25rem;
 }
 
-:global(html.reduced-motion) .overlayRoot {
-	--sheet-transition-duration: 1ms;
+@media (prefers-reduced-motion: reduce) {
+	.overlayRoot {
+		--sheet-transition-duration: 1ms;
+	}
 }

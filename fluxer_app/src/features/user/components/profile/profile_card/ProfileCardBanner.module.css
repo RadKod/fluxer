@@ -41,15 +41,3 @@
 	outline: none;
 	overflow: visible;
 }
-
-/* Micup: follows the profile card's corner and surface in the coal and dark themes; the avatar ring is the card (on a
-   profile theme the theme's ring hook wins). */
-:global(html:is(.theme-coal, .theme-dark)) .bannerWrapper {
-	border-top-left-radius: calc(var(--radius-xl) - var(--profile-card-border-width, 0.15625rem));
-	border-top-right-radius: calc(var(--radius-xl) - var(--profile-card-border-width, 0.15625rem));
-}
-
-:global(html:is(.theme-coal, .theme-dark)) .avatarButton {
-	border-color: var(--profile-card-avatar-ring, var(--background-secondary-alt));
-	background-color: var(--profile-card-avatar-ring, var(--background-secondary-alt));
-}

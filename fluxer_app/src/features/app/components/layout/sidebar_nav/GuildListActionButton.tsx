@@ -36,12 +36,13 @@ export const GuildListActionButton = observer(
 		buttonDataFlx,
 		'data-flx': dataFlx,
 	}: GuildListActionButtonProps) => {
-		const [hoverRef] = useHover();
+		const [hoverRef, isHovering] = useHover();
 		const buttonRef = useRef<HTMLButtonElement | null>(null);
 		const iconRef = useRef<HTMLDivElement | null>(null);
 		const itemRef = useRef<HTMLElement | null>(null);
 		const contextMenuOpen = useContextMenuHoverState(itemRef);
 		const mergedButtonRef = useMergeRefs([hoverRef, buttonRef, itemRef]);
+		const shouldShowHoverState = isHovering || contextMenuOpen;
 		return (
 			<div
 				className={clsx(guildStyles.createGuildButton, contextMenuOpen && guildStyles.contextMenuHover)}
@@ -63,8 +64,8 @@ export const GuildListActionButton = observer(
 							<motion.div
 								ref={iconRef}
 								className={guildStyles.createGuildButtonIcon}
-								animate={{borderRadius: '30%'}}
-								initial={{borderRadius: '30%'}}
+								animate={{borderRadius: shouldShowHoverState ? '30%' : '50%'}}
+								initial={{borderRadius: shouldShowHoverState ? '30%' : '50%'}}
 								transition={{duration: Accessibility.useReducedMotion ? 0 : 0.07, ease: 'easeOut'}}
 								data-flx={`${dataFlx}.div--2`}
 							>

@@ -103,8 +103,10 @@
 	}
 }
 
-:global(html.reduced-motion) .callParticipantRinging .callParticipantAvatar {
-	animation: none;
+@media (prefers-reduced-motion: reduce) {
+	.callParticipantRinging .callParticipantAvatar {
+		animation: none;
+	}
 }
 
 .callBanner {

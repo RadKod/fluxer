@@ -657,9 +657,3 @@
 .nsSliderTitleRow .nsSliderLabel {
 	flex: 1;
 }
-
-/* Micup: voice panel channel line 10% larger */
-.channelSourceLink {
-	font-size: 0.825rem;
-	line-height: 1.1rem;
-}
