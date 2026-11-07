@@ -195,7 +195,7 @@ const SETTINGS_WITHOUT_SERVER_RECORD = {
 	status: 'online',
 	status_resets_at: null,
 	status_resets_to: null,
-	theme: ThemeTypes.COAL,
+	theme: ThemeTypes.DARK,
 	time_format: TimeFormatTypes.AUTO,
 	restricted_guilds: [],
 	bot_restricted_guilds: [],
@@ -396,7 +396,7 @@ class UserSettingsState {
 	status: StatusType = StatusTypes.ONLINE;
 	statusResetsAt: string | null = null;
 	statusResetsTo: string | null = null;
-	theme: string = ThemeTypes.COAL;
+	theme: string = ThemeTypes.DARK;
 	timeFormat: number = TimeFormatTypes.AUTO;
 	locale: string = 'en-US';
 	restrictedGuilds: Array<string> = [];

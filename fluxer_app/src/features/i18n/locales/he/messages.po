@@ -60808,9 +60808,9 @@ msgid "Use at least 4 characters. Letters, numbers, and _ are allowed."
 msgstr "השתמש ב-4 תווים לפחות. מותר להשתמש באותיות, מספרים ו-_."
 
 #. Label in the theme tab content.
-#: src/features/user/components/modals/tabs/appearance_tab/theme/ThemeTabContent.tsx
-msgid "Use coal theme (near-black surfaces)"
-msgstr "Use coal theme (near-black surfaces)"
+#: src/features/theme_settings/components/ThemeSelector.tsx
+msgid "Use coal theme (pitch-black surfaces)"
+msgstr "שימוש בערכת נושא פחם (משטחים שחורים לחלוטין)"
 
 #. IAR modal: rule description.
 #: src/features/feed/utils/FeedReportCopy.ts

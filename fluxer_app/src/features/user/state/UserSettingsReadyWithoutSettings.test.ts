@@ -213,7 +213,7 @@ describe('a READY whose user settings are null', () => {
 		expect.soft(UserSettings.sensitiveContentFriendDmFilter).toBe(SensitiveMediaFilterLevel.BLUR);
 		expect.soft(UserSettings.sensitiveContentNonFriendDmFilter).toBe(SensitiveMediaFilterLevel.BLOCK);
 		expect.soft(UserSettings.sensitiveContentGuildFilter).toBe(SensitiveMediaFilterLevel.BLUR);
-		expect.soft(UserSettings.theme).toBe(ThemeTypes.COAL);
+		expect.soft(UserSettings.theme).toBe(ThemeTypes.DARK);
 		expect.soft(UserSettings.timeFormat).toBe(TimeFormatTypes.AUTO);
 		expect.soft(UserSettings.getAfkTimeout()).toBe(600);
 		expect.soft(UserSettings.messageDisplayCompact).toBe(false);

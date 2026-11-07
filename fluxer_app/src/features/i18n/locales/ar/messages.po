@@ -61424,9 +61424,9 @@ msgid "Use at least 4 characters. Letters, numbers, and _ are allowed."
 msgstr "استخدم 4 أحرف على الأقل. يُسمح باستخدام الحروف والأرقام و_."
 
 #. Label in the theme tab content.
-#: src/features/user/components/modals/tabs/appearance_tab/theme/ThemeTabContent.tsx
-msgid "Use coal theme (near-black surfaces)"
-msgstr "Use coal theme (near-black surfaces)"
+#: src/features/theme_settings/components/ThemeSelector.tsx
+msgid "Use coal theme (pitch-black surfaces)"
+msgstr "استخدام سمة الفحم (أسطح سوداء حالكة)"
 
 #. IAR modal: rule description.
 #: src/features/feed/utils/FeedReportCopy.ts

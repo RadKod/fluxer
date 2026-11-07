@@ -18,7 +18,7 @@ interface InstallationThemeSnapshot {
 }
 
 export const DEFAULT_INSTALLATION_THEME: InstallationThemeSnapshot = Object.freeze({
-	baseTheme: ThemeTypes.COAL,
+	baseTheme: ThemeTypes.DARK,
 	customThemeCss: null,
 });
 

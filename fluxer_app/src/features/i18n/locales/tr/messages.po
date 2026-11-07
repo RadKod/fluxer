@@ -61906,9 +61906,9 @@ msgid "Use at least 4 characters. Letters, numbers, and _ are allowed."
 msgstr "En az 4 karakter olmalı. Harf, rakam ve _ kullanabilirsiniz."
 
 #. Label in the theme tab content.
-#: src/features/user/components/modals/tabs/appearance_tab/theme/ThemeTabContent.tsx
-msgid "Use coal theme (near-black surfaces)"
-msgstr "Kömür temasını kullan (siyaha yakın yüzeyler)"
+#: src/features/theme_settings/components/ThemeSelector.tsx
+msgid "Use coal theme (pitch-black surfaces)"
+msgstr "Kömür temasını kullan (zifiri siyah yüzeyler)"
 
 #. IAR modal: rule description.
 #: src/features/feed/utils/FeedReportCopy.ts

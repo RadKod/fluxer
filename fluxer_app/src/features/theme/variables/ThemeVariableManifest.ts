@@ -136,7 +136,6 @@ export type ThemeVariableName =
 	| "--button-secondary-active-text"
 	| "--button-secondary-fill"
 	| "--button-secondary-text"
-	| "--channel-category-gap"
 	| "--channel-header-action-icon-size"
 	| "--channel-header-action-size"
 	| "--channel-header-action-size-mobile"
@@ -152,8 +151,6 @@ export type ThemeVariableName =
 	| "--channel-header-name-gap-group-dm"
 	| "--channel-header-padding-inline"
 	| "--channel-header-topic-divider-gap"
-	| "--channel-item-gap"
-	| "--channel-item-padding-block"
 	| "--chat-horizontal-padding"
 	| "--chat-horizontal-padding-default"
 	| "--chat-mobile-horizontal-padding"
@@ -613,7 +610,6 @@ export const THEME_VARIABLES: ReadonlyArray<ThemeVariableDefinition> = [
 	{name: "--button-secondary-active-text", kind: "color", groupId: "buttons", groupLabel: "Buttons", source: "color-system"},
 	{name: "--button-secondary-fill", kind: "color", groupId: "buttons", groupLabel: "Buttons", source: "color-system"},
 	{name: "--button-secondary-text", kind: "color", groupId: "buttons", groupLabel: "Buttons", source: "color-system"},
-	{name: "--channel-category-gap", kind: "dimension", groupId: "layout", groupLabel: "Layout", source: "globals"},
 	{name: "--channel-header-action-icon-size", kind: "dimension", groupId: "layout", groupLabel: "Layout", source: "globals"},
 	{name: "--channel-header-action-size", kind: "dimension", groupId: "layout", groupLabel: "Layout", source: "globals"},
 	{name: "--channel-header-action-size-mobile", kind: "dimension", groupId: "layout", groupLabel: "Layout", source: "globals"},
@@ -629,8 +625,6 @@ export const THEME_VARIABLES: ReadonlyArray<ThemeVariableDefinition> = [
 	{name: "--channel-header-name-gap-group-dm", kind: "dimension", groupId: "layout", groupLabel: "Layout", source: "globals"},
 	{name: "--channel-header-padding-inline", kind: "dimension", groupId: "layout", groupLabel: "Layout", source: "globals"},
 	{name: "--channel-header-topic-divider-gap", kind: "dimension", groupId: "layout", groupLabel: "Layout", source: "globals"},
-	{name: "--channel-item-gap", kind: "dimension", groupId: "layout", groupLabel: "Layout", source: "globals"},
-	{name: "--channel-item-padding-block", kind: "dimension", groupId: "layout", groupLabel: "Layout", source: "globals"},
 	{name: "--chat-horizontal-padding", kind: "dimension", groupId: "layout", groupLabel: "Layout", source: "runtime-accessibility"},
 	{name: "--chat-horizontal-padding-default", kind: "dimension", groupId: "layout", groupLabel: "Layout", source: "globals"},
 	{name: "--chat-mobile-horizontal-padding", kind: "dimension", groupId: "layout", groupLabel: "Layout", source: "globals"},
@@ -1091,7 +1085,6 @@ export const THEME_VARIABLE_NAMES: ReadonlyArray<string> = [
 	"--button-secondary-active-text",
 	"--button-secondary-fill",
 	"--button-secondary-text",
-	"--channel-category-gap",
 	"--channel-header-action-icon-size",
 	"--channel-header-action-size",
 	"--channel-header-action-size-mobile",
@@ -1107,8 +1100,6 @@ export const THEME_VARIABLE_NAMES: ReadonlyArray<string> = [
 	"--channel-header-name-gap-group-dm",
 	"--channel-header-padding-inline",
 	"--channel-header-topic-divider-gap",
-	"--channel-item-gap",
-	"--channel-item-padding-block",
 	"--chat-horizontal-padding",
 	"--chat-horizontal-padding-default",
 	"--chat-mobile-horizontal-padding",
@@ -1569,7 +1560,6 @@ export const THEME_DARK_DEFAULT_VARIABLE_VALUES: Readonly<Record<string, string>
 	"--button-secondary-active-text": "hsl(0, 0%, 100%)",
 	"--button-secondary-fill": "hsla(0, 0%, 100%, 0.1)",
 	"--button-secondary-text": "hsl(0, 0%, 100%)",
-	"--channel-category-gap": "0.375rem",
 	"--channel-header-action-icon-size": "1.5rem",
 	"--channel-header-action-size": "2rem",
 	"--channel-header-action-size-mobile": "2.5rem",
@@ -1585,8 +1575,6 @@ export const THEME_DARK_DEFAULT_VARIABLE_VALUES: Readonly<Record<string, string>
 	"--channel-header-name-gap-group-dm": "0.5rem",
 	"--channel-header-padding-inline": "1rem",
 	"--channel-header-topic-divider-gap": "0.5rem",
-	"--channel-item-gap": "0.125rem",
-	"--channel-item-padding-block": "0.25rem",
 	"--chat-horizontal-padding": "1rem",
 	"--chat-horizontal-padding-default": "1rem",
 	"--chat-mobile-horizontal-padding": "0.75rem",
@@ -1801,7 +1789,7 @@ export const THEME_DARK_DEFAULT_VARIABLE_VALUES: Readonly<Record<string, string>
 	"--mobile-bottom-nav-height": "3.75rem",
 	"--native-titlebar-height": "32px",
 	"--outline-frame-border-width": "0.0625rem",
-	"--outline-frame-radius-native": "1.125rem",
+	"--outline-frame-radius-native": "clamp(0.5rem, 1.2vw, 0.875rem)",
 	"--panel-control-bg": "color-mix( in srgb, hsl(258, calc(10% * var(--saturation-factor)), 14.15%) 90%, hsl(258, calc(10% * var(--saturation-factor)), 2%) 10% )",
 	"--panel-control-border": "hsla(258, calc(30% * var(--saturation-factor)), 65%, 0.45)",
 	"--panel-control-divider": "hsla(258, calc(30% * var(--saturation-factor)), 55%, 0.35)",
@@ -2047,7 +2035,6 @@ export const THEME_LIGHT_DEFAULT_VARIABLE_VALUES: Readonly<Record<string, string
 	"--button-secondary-active-text": "hsl(220, calc(10% * var(--saturation-factor)), 10%)",
 	"--button-secondary-fill": "hsla(220, calc(10% * var(--saturation-factor)), 10%, 0.1)",
 	"--button-secondary-text": "hsl(220, calc(10% * var(--saturation-factor)), 15%)",
-	"--channel-category-gap": "0.375rem",
 	"--channel-header-action-icon-size": "1.5rem",
 	"--channel-header-action-size": "2rem",
 	"--channel-header-action-size-mobile": "2.5rem",
@@ -2063,8 +2050,6 @@ export const THEME_LIGHT_DEFAULT_VARIABLE_VALUES: Readonly<Record<string, string
 	"--channel-header-name-gap-group-dm": "0.5rem",
 	"--channel-header-padding-inline": "1rem",
 	"--channel-header-topic-divider-gap": "0.5rem",
-	"--channel-item-gap": "0.125rem",
-	"--channel-item-padding-block": "0.25rem",
 	"--chat-horizontal-padding": "1rem",
 	"--chat-horizontal-padding-default": "1rem",
 	"--chat-mobile-horizontal-padding": "0.75rem",
@@ -2279,7 +2264,7 @@ export const THEME_LIGHT_DEFAULT_VARIABLE_VALUES: Readonly<Record<string, string
 	"--mobile-bottom-nav-height": "3.75rem",
 	"--native-titlebar-height": "32px",
 	"--outline-frame-border-width": "0.0625rem",
-	"--outline-frame-radius-native": "1.125rem",
+	"--outline-frame-radius-native": "clamp(0.5rem, 1.2vw, 0.875rem)",
 	"--panel-control-bg": "color-mix(in srgb, hsl(220, calc(10% * var(--saturation-factor)), 92.84%) 65%, hsl(0, 0%, 100%) 35%)",
 	"--panel-control-border": "hsla(220, calc(25% * var(--saturation-factor)), 45%, 0.25)",
 	"--panel-control-divider": "hsla(220, calc(30% * var(--saturation-factor)), 35%, 0.2)",

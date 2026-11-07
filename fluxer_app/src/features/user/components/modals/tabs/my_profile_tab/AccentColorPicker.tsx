@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {getDefaultPickerHex} from '@app/features/app/components/floating/ColorPickerMath';
-import Theme from '@app/features/theme/state/Theme';
 import {ColorPickerField} from '@app/features/ui/components/form/ColorPickerField';
 import myProfileTabStyles from '@app/features/user/components/modals/tabs/MyProfileTab.module.css';
 import styles from '@app/features/user/components/modals/tabs/my_profile_tab/AccentColorPicker.module.css';
@@ -9,6 +7,8 @@ import {ACCENT_COLOR_DESCRIPTOR} from '@app/features/user/utils/UserMessageDescr
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
 import {observer} from 'mobx-react-lite';
+
+const DEFAULT_PROFILE_ACCENT_COLOR = 0x4641d9;
 
 const CUSTOMIZES_THE_BORDER_AND_BANNER_COLOR_ON_YOUR_DESCRIPTOR = msg({
 	message: 'Customizes the border and banner color on your profile',
@@ -24,16 +24,15 @@ interface AccentColorPickerProps {
 
 export const AccentColorPicker = observer(({value, onChange, disabled, errorMessage}: AccentColorPickerProps) => {
 	const {i18n} = useLingui();
-	const defaultAccentColor = Number.parseInt(getDefaultPickerHex(Theme.effectiveTheme).slice(1), 16);
 	return (
 		<div data-flx="user.my-profile-tab.accent-color-picker.div">
 			<ColorPickerField
 				label={i18n._(ACCENT_COLOR_DESCRIPTOR)}
 				description={i18n._(CUSTOMIZES_THE_BORDER_AND_BANNER_COLOR_ON_YOUR_DESCRIPTOR)}
 				descriptionClassName={myProfileTabStyles.inputFooter}
-				value={value ?? defaultAccentColor}
+				value={value ?? DEFAULT_PROFILE_ACCENT_COLOR}
 				onChange={onChange}
-				defaultValue={defaultAccentColor}
+				defaultValue={DEFAULT_PROFILE_ACCENT_COLOR}
 				isDefaultValue={value === null}
 				onReset={() => onChange(null)}
 				disabled={disabled}

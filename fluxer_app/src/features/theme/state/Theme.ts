@@ -16,7 +16,6 @@ type ExplicitTheme =
 
 const EXPLICIT_THEMES = new Set<string>([ThemeTypes.DARK, ThemeTypes.DARK_LEGACY, ThemeTypes.LIGHT, ThemeTypes.COAL]);
 const STORAGE_KEY = 'theme';
-// Micup: new visitors and accounts use Coal (upstream: Dark); the system preference keeps upstream Dark for dark mode.
 
 function isExplicitTheme(theme: string | null | undefined): theme is ExplicitTheme {
 	return typeof theme === 'string' && EXPLICIT_THEMES.has(theme);

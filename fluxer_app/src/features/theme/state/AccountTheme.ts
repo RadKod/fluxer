@@ -20,8 +20,8 @@ const VALID_THEMES = new Set<string>(Object.values(ThemeTypes));
 
 const DEFAULT_ACCOUNT_THEME: AccountThemeSnapshot = Object.freeze({
 	syncAcrossDevices: true,
-	localTheme: ThemeTypes.COAL,
-	serverTheme: ThemeTypes.COAL,
+	localTheme: ThemeTypes.DARK,
+	serverTheme: ThemeTypes.DARK,
 });
 
 export function isThemeType(theme: unknown): theme is ThemeType {
@@ -116,8 +116,7 @@ class AccountTheme {
 	}
 
 	updateServerTheme(theme: string | null | undefined): void {
-		// Micup: an unknown server theme falls back to Coal, the sanalyer default (upstream: Dark).
-		this.serverTheme = isThemeType(theme) ? theme : ThemeTypes.COAL;
+		this.serverTheme = isThemeType(theme) ? theme : ThemeTypes.DARK;
 		this.persist();
 	}
 

@@ -61962,9 +61962,9 @@ msgid "Use at least 4 characters. Letters, numbers, and _ are allowed."
 msgstr "Použijte alespoň 4 znaky. Písmena, čísla a _ jsou povoleny."
 
 #. Label in the theme tab content.
-#: src/features/user/components/modals/tabs/appearance_tab/theme/ThemeTabContent.tsx
-msgid "Use coal theme (near-black surfaces)"
-msgstr "Use coal theme (near-black surfaces)"
+#: src/features/theme_settings/components/ThemeSelector.tsx
+msgid "Use coal theme (pitch-black surfaces)"
+msgstr "Použít uhelný motiv (černočerné plochy)"
 
 #. IAR modal: rule description.
 #: src/features/feed/utils/FeedReportCopy.ts
