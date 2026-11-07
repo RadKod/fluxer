@@ -62,7 +62,7 @@ function micupSection(file: string, marker: string): string {
 
 describe('user area in the channel list column', () => {
 	const COLUMN =
-		'--user-area-avatar-lead: var(--user-area-padding-x); left: calc(var(--layout-guild-list-width) + var(--outline-frame-border-width)); width: var(--layout-sidebar-width);';
+		'--user-area-avatar-lead: var(--user-area-padding-x); inset-inline-start: calc(var(--layout-guild-list-width) + var(--outline-frame-border-width)); width: var(--layout-sidebar-width);';
 
 	it('starts the user area after the frame line and spans the channel list, the rail reserving nothing', () => {
 		expect(micupSection('features/app/components/layout/GuildsLayout.module.css', USER_AREA_MARKER)).toBe(

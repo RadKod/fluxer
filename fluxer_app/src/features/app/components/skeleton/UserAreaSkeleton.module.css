@@ -84,6 +84,6 @@
 /* Micup: user area in the channel list column */
 .userArea {
 	--user-area-avatar-lead: var(--user-area-padding-x);
-	left: calc(var(--layout-guild-list-width) + var(--outline-frame-border-width));
+	inset-inline-start: calc(var(--layout-guild-list-width) + var(--outline-frame-border-width));
 	width: var(--layout-sidebar-width);
 }
