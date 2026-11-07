@@ -208,10 +208,8 @@ vi.mock('@app/features/user/components/VerifiedUserBadge', () => ({VerifiedUserB
 vi.mock('@app/features/user/utils/AvatarUtils', () => ({getGuildMemberDisplayAvatarURL: () => null}));
 vi.mock('@app/features/accessibility/state/Accessibility', () => ({
 	default: {zoomLevel: 1},
-	DEFAULT_ZOOM_LEVEL: 1,
 	ACCESSIBILITY_CUSTOM_THEME_STORAGE_KEY: 'Accessibility:customThemeCss',
 	ACCESSIBILITY_CUSTOM_THEME_SYNC_STORAGE_KEY: 'Accessibility:customThemeCssSyncAcrossDevices',
-	setAccessibilityUserSettings: () => {},
 	readLocalCustomThemeCss: () => null,
 	normalizeCustomThemeCss: (css: string | null | undefined) => css ?? null,
 	DMMessagePreviewMode: {},

@@ -2,7 +2,6 @@
 
 import * as AccessibilityCommands from '@app/features/accessibility/commands/AccessibilityCommands';
 import Accessibility, {
-	DEFAULT_ZOOM_LEVEL,
 	ZOOM_LEVEL_MARKERS,
 	ZOOM_LEVEL_MAX,
 	ZOOM_LEVEL_MIN,
@@ -35,10 +34,10 @@ const PERCENT_DESCRIPTOR = msg({
 });
 const RESET_ZOOM_DESCRIPTOR = msg({
 	message: 'Reset zoom',
-	comment: 'Label for controls that reset app zoom to its default level, including the app zoom slider button.',
+	comment: 'Label for controls that reset app zoom to 100%, including the app zoom slider button.',
 });
-const DEFAULT_FONT_SIZE = 15;
-const DEFAULT_ZOOM_PERCENT = Math.round(DEFAULT_ZOOM_LEVEL * 100);
+const DEFAULT_FONT_SIZE = 16;
+const DEFAULT_ZOOM_PERCENT = 100;
 const FONT_SIZE_OPTIONS = [12, 14, 15, 16, 18, 20, 24] as const;
 
 const getNearestFontSize = (value: number): number => {
@@ -113,7 +112,7 @@ export const AppZoomLevelResetAction: React.FC = observer(() => {
 	return (
 		<SliderResetIconButton
 			canReset={true}
-			onReset={() => AccessibilityCommands.update({zoomLevel: DEFAULT_ZOOM_LEVEL})}
+			onReset={() => AccessibilityCommands.update({zoomLevel: 1})}
 			ariaLabel={i18n._(RESET_ZOOM_DESCRIPTOR)}
 			dataFlx="user.appearance-tab.scaling-tab.reset-button.app-zoom-level"
 			data-flx="user.appearance-tab.scaling-tab.app-zoom-level-reset-action.slider-reset-icon-button"

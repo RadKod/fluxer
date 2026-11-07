@@ -36,7 +36,6 @@ vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: {getSnapshotOr
 vi.mock('@app/features/accessibility/state/Accessibility', async (importOriginal) => ({
 	...(await importOriginal<object>()),
 	default: {},
-	setAccessibilityUserSettings: vi.fn(),
 }));
 vi.mock('@app/features/auth/commands/AuthenticationCommands', () => ({
 	register,

@@ -44,8 +44,7 @@
 	background: none;
 	color: #fff;
 	font-weight: 400;
-	/* Keep the 11px floor after Micup's font-size shrink, while respecting app zoom. */
-	font-size: calc(max(11px, 0.6875rem) + 0.0625rem);
+	font-size: max(11px, 0.6875rem);
 	line-height: max(14px, 0.875rem);
 	white-space: nowrap;
 	cursor: pointer;

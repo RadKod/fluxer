@@ -18,7 +18,6 @@ vi.mock('@lingui/react/macro', () => ({
 vi.mock('@app/app/Routes', () => ({Routes: {guildMembers: (guildId: string) => `/channels/${guildId}/members`}}));
 vi.mock('@app/features/accessibility/state/Accessibility', () => ({
 	default: {showFadedUnreadOnMutedChannels: false},
-	setAccessibilityUserSettings: vi.fn(),
 }));
 vi.mock('@app/features/app/components/alerts/GenericErrorModal', () => ({GenericErrorModal: () => null}));
 vi.mock('@app/features/activities/components/VoiceChannelActivityLine', () => ({VoiceChannelActivityLine: () => null}));

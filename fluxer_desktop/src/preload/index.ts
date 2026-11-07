@@ -117,7 +117,7 @@ const NATIVE_TITLEBAR_HEIGHT = '0px';
 const STARTUP_NATIVE_TITLEBAR_ID = 'fluxer-startup-native-titlebar';
 const ZOOM_LEVEL_MIN = 0.5;
 const ZOOM_LEVEL_MAX = 2.0;
-const DEFAULT_ZOOM_LEVEL = 0.95;
+const DEFAULT_ZOOM_LEVEL = 1;
 const SERVED_PRODUCT_NAME_SELECTOR = 'meta[name="apple-mobile-web-app-title"]:not([data-fluxer-branding])';
 const DESKTOP_CAPABILITY_MANIFEST_KEYS = Object.freeze(['appStore', 'gatewaySocket'] as const);
 

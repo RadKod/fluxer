@@ -13,7 +13,6 @@ import {
 	readStoredSessionUserId,
 } from '@app/features/platform/state/auth_session/AuthSessionStorage';
 import AppStorage, {
-	ACCESSIBILITY_FONT_SIZE_DEFAULT_MIGRATED_V1_STORAGE_KEY,
 	ACCESSIBILITY_MOTION_STORAGE_KEY,
 	ACCESSIBILITY_MOTION_SYNC_DEFAULT_OFF_MIGRATED_V1_STORAGE_KEY,
 } from '@app/features/platform/state/PersistentStorage';
@@ -25,7 +24,6 @@ import {
 import {initializeStore} from '@app/features/platform/utils/StoreInitialization';
 import MobileLayout from '@app/features/ui/state/MobileLayout';
 import {applyAppZoomToDocument} from '@app/features/ui/utils/AppZoomUtils';
-import {shouldShowAppZoomLevel} from '@app/features/user/components/settings_utils/AppZoomLevelUtils';
 import {makeSyncedField} from '@app/features/user/state/SyncedField';
 import {StickerAnimationOptions} from '@fluxer/constants/src/UserConstants';
 import {isRecord} from '@fluxer/record_utils/src/RecordGuards';
@@ -36,21 +34,14 @@ import {
 	DmMessagePreviewMode as ProtoDmMessagePreviewMode,
 	HdrDisplayMode as ProtoHdrDisplayMode,
 } from '@fluxer/schema/src/gen/fluxer/user/preferences/v1/accessibility_pb';
-import {makeAutoObservable, observable, reaction, runInAction} from 'mobx';
+import {makeAutoObservable, reaction, runInAction} from 'mobx';
 
 export const ZOOM_LEVEL_MIN = 0.5;
 export const ZOOM_LEVEL_MAX = 2.0;
 const ZOOM_KEYBOARD_STEP_PCT = 10;
-export const DEFAULT_ZOOM_LEVEL = shouldShowAppZoomLevel() ? 0.95 : 1.0;
 export const ZOOM_LEVEL_MARKERS = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0] as const;
-// Micup: earlier builds defaulted to 80%, then 95% (V1 flag), then 100% (V2 flag); the default is 95% again.
-const MICUP_80_DEFAULT_ZOOM_LEVEL = 0.8;
-const MICUP_100_DEFAULT_ZOOM_LEVEL = 1.0;
 const ACCESSIBILITY_STORE_STORAGE_KEY = 'Accessibility';
 const ACCESSIBILITY_ZOOM_STORAGE_KEY = 'Accessibility:zoomLevel';
-const ACCESSIBILITY_ZOOM_DEFAULT_MIGRATED_V1_STORAGE_KEY = 'Accessibility:zoomLevelDefault95MigratedV1';
-const ACCESSIBILITY_ZOOM_DEFAULT_MIGRATED_V2_STORAGE_KEY = 'Accessibility:zoomLevelDefault100MigratedV1';
-const ACCESSIBILITY_ZOOM_DEFAULT_MIGRATED_V3_STORAGE_KEY = 'Accessibility:zoomLevelDefault95RestoredV1';
 export const ACCESSIBILITY_CUSTOM_THEME_STORAGE_KEY = 'Accessibility:customThemeCss';
 export const ACCESSIBILITY_CUSTOM_THEME_SYNC_STORAGE_KEY = 'Accessibility:customThemeCssSyncAcrossDevices';
 const ACCESSIBILITY_SHOW_NEKO_STORAGE_KEY = 'Accessibility:showNeko';
@@ -63,18 +54,6 @@ const getShowNekoStorageKey = (userId: string): string => `${ACCESSIBILITY_SHOW_
 const getKeepNekoStillStorageKey = (userId: string): string => `${ACCESSIBILITY_KEEP_NEKO_STILL_STORAGE_KEY}:${userId}`;
 const getLegacyPinNekoToTextareaStorageKey = (userId: string): string =>
 	`${ACCESSIBILITY_PIN_NEKO_TO_TEXTAREA_STORAGE_KEY}:${userId}`;
-
-// Micup: UserSettings imports this store, so it hands itself over here (like LocalPresence) instead of being imported.
-interface AccessibilityUserSettings {
-	isHydrated(): boolean;
-	getSubPreference(field: 'accessibility'): {fontSize?: number} | undefined;
-}
-
-const accessibilityUserSettings = observable.box<AccessibilityUserSettings | null>(null, {deep: false});
-
-export function setAccessibilityUserSettings(settings: AccessibilityUserSettings): void {
-	runInAction(() => accessibilityUserSettings.set(settings));
-}
 
 interface AccessibilityStartupSettings {
 	zoomLevel: number;
@@ -119,10 +98,7 @@ const DEFAULT_LOCAL_MOTION_SETTINGS: LocalMotionSettings = {
 
 const FONT_SIZE_MIN = 8;
 const FONT_SIZE_MAX = 48;
-// Micup: chat text defaults to 15px, 1px under upstream like the rest of the UI text (the build shrinks every other
-// font-size by 1px).
-const DEFAULT_FONT_SIZE_PX = 15;
-const PREVIOUS_DEFAULT_FONT_SIZE_PX = 16;
+const DEFAULT_FONT_SIZE_PX = 16;
 const MESSAGE_GROUP_SPACING_MIN = 0;
 const MESSAGE_GROUP_SPACING_MAX = 64;
 const MESSAGE_GUTTER_MIN = 0;
@@ -144,7 +120,7 @@ function clampMessageGutter(gutter: number): number {
 }
 
 function clampZoomLevel(level: number): number {
-	if (!Number.isFinite(level)) return DEFAULT_ZOOM_LEVEL;
+	if (!Number.isFinite(level)) return 1;
 	const pct = Math.round(level * 100);
 	const clampedPct = Math.max(Math.round(ZOOM_LEVEL_MIN * 100), Math.min(Math.round(ZOOM_LEVEL_MAX * 100), pct));
 	return clampedPct / 100;
@@ -479,7 +455,7 @@ function readLegacyAccessibilityStartupSettings(
 	if (isRecord(metadata) && metadata.version !== 1) {
 		return null;
 	}
-	const zoomLevel = typeof parsed.zoomLevel === 'number' ? clampZoomLevel(parsed.zoomLevel) : DEFAULT_ZOOM_LEVEL;
+	const zoomLevel = typeof parsed.zoomLevel === 'number' ? clampZoomLevel(parsed.zoomLevel) : 1.0;
 	const syncReducedMotionWithSystem =
 		typeof parsed.syncReducedMotionWithSystem === 'boolean' ? parsed.syncReducedMotionWithSystem : undefined;
 	const reducedMotionOverride =
@@ -521,9 +497,7 @@ function readAccessibilityStartupSettings(
 	}
 	const preserveLegacyZoomLevel = shouldPreserveLegacyZoomLevel();
 	return {
-		zoomLevel:
-			localZoomLevel ??
-			(preserveLegacyZoomLevel ? (legacySettings?.zoomLevel ?? DEFAULT_ZOOM_LEVEL) : DEFAULT_ZOOM_LEVEL),
+		zoomLevel: localZoomLevel ?? (preserveLegacyZoomLevel ? (legacySettings?.zoomLevel ?? 1.0) : 1.0),
 		syncReducedMotionWithSystem:
 			localMotionSettings?.syncReducedMotionWithSystem ??
 			legacySettings?.syncReducedMotionWithSystem ??
@@ -549,41 +523,12 @@ function readAccessibilityStartupSettings(
 	};
 }
 
-// Micup: a zoom written by this build is never a stale old default, so the migration flag travels with it;
-// otherwise a storage reset (auth failure) followed by an in-page re-login rewrites the zoom without the flag.
 function persistLocalZoomLevel(level: number): void {
 	try {
 		AppStorage.setItem(ACCESSIBILITY_ZOOM_STORAGE_KEY, JSON.stringify(clampZoomLevel(level)));
-		AppStorage.setItem(ACCESSIBILITY_ZOOM_DEFAULT_MIGRATED_V3_STORAGE_KEY, 'true');
 	} catch {}
 }
 
-// Micup: the app persists the zoom level even when the user never touched it, so an old default sits in storage for
-// everyone who opened the app. Once, move to the 95% default an exact 100% that the 100% build wrote (V2 flag: its
-// migration or its default), or an exact 80% that no later build ever wrote (no V1 or V2 flag); keep every other value,
-// including a 100% chosen under the 95% build and an 80% chosen after a move. A 100% chosen under the 100% build cannot
-// be told apart from its default and moves too. The desktop preload paints the stored value before this runs, so a
-// moved zoom shows one frame at the old size on the first launch.
-function applyZoomLevelDefaultMigrationV3(): void {
-	try {
-		if (AppStorage.getItem(ACCESSIBILITY_ZOOM_DEFAULT_MIGRATED_V3_STORAGE_KEY) !== null) {
-			return;
-		}
-		const stored = readLocalZoomLevel();
-		const movedTo95 = AppStorage.getItem(ACCESSIBILITY_ZOOM_DEFAULT_MIGRATED_V1_STORAGE_KEY) !== null;
-		const movedTo100 = AppStorage.getItem(ACCESSIBILITY_ZOOM_DEFAULT_MIGRATED_V2_STORAGE_KEY) !== null;
-		if (
-			(stored === MICUP_100_DEFAULT_ZOOM_LEVEL && movedTo100) ||
-			(stored === MICUP_80_DEFAULT_ZOOM_LEVEL && !movedTo95 && !movedTo100)
-		) {
-			persistLocalZoomLevel(DEFAULT_ZOOM_LEVEL);
-		}
-		AppStorage.setItem(ACCESSIBILITY_ZOOM_DEFAULT_MIGRATED_V3_STORAGE_KEY, 'true');
-	} catch {}
-}
-
-// Micup: motion settings written by this build are never the stale old default, so the move flag travels with them
-// (as with the zoom).
 function writeZoomPrebootMirror(level: number, isDesktop: boolean): void {
 	if (!isDesktop) {
 		writeRawStorageItem(ZOOM_PREBOOT_MIRROR_STORAGE_KEY, null);
@@ -593,6 +538,7 @@ function writeZoomPrebootMirror(level: number, isDesktop: boolean): void {
 	writeRawStorageItem(ZOOM_PREBOOT_MIRROR_STORAGE_KEY, String(zoomPercent));
 }
 
+// Micup: motion settings written by this build are never the stale old default, so the move flag travels with them.
 function persistLocalMotionSettings(settings: LocalMotionSettings): void {
 	try {
 		AppStorage.setItem(ACCESSIBILITY_MOTION_STORAGE_KEY, JSON.stringify(settings));
@@ -828,7 +774,7 @@ class Accessibility {
 	customThemeCssSyncAcrossDevices = false;
 	private serverCustomThemeCss: string | null = null;
 	showFavorites = true;
-	zoomLevel = DEFAULT_ZOOM_LEVEL;
+	zoomLevel = 1.0;
 	dmMessagePreviewMode: DMMessagePreviewMode = getDefaultDmMessagePreviewMode();
 	enableTTSCommand = true;
 	ttsRate = 1.0;
@@ -849,7 +795,6 @@ class Accessibility {
 	// Micup: fonts and colours Plus members pick for their names; local to this device.
 	showNameStyles = true;
 	mediaQuery: MediaQueryList | null = null;
-	private _hydrated = false;
 	private unsubscribeZoomStorage: (() => void) | null = null;
 	private unsubscribeMotionStorage: (() => void) | null = null;
 	private unsubscribeShowNekoSession: (() => void) | null = null;
@@ -858,7 +803,6 @@ class Accessibility {
 	private unsubscribeShowNameStylesStorage: (() => void) | null = null;
 
 	constructor() {
-		applyZoomLevelDefaultMigrationV3();
 		applyMotionSyncDefaultOffMigrationV1();
 		const startupSettings = readAccessibilityStartupSettings();
 		if (startupSettings !== null) {
@@ -890,10 +834,6 @@ class Accessibility {
 		this.initializeVideoSeekPreviewThumbnailsStorageSync();
 		this.initializeShowNameStylesStorageSync();
 		this.applyStartupPresentationSettings();
-	}
-
-	get isHydrated(): boolean {
-		return this._hydrated;
 	}
 
 	private async initPersistence(): Promise<void> {
@@ -1120,44 +1060,6 @@ class Accessibility {
 			},
 		});
 		await this.applyStoredZoom();
-		runInAction(() => {
-			this._hydrated = true;
-		});
-		this.applyFontSizeDefaultMigrationV1();
-	}
-
-	// Micup: the synced accessibility preferences carry font_size 16 for everyone whose client ever synced, chosen or not.
-	// Once per device, after that synced value has reached this store, move exactly 16 to the 15px default through the
-	// normal settings path (which syncs it back); any other synced size, or none, only records that the check ran.
-	private applyFontSizeDefaultMigrationV1(): void {
-		try {
-			if (AppStorage.getItem(ACCESSIBILITY_FONT_SIZE_DEFAULT_MIGRATED_V1_STORAGE_KEY) !== null) return;
-		} catch {
-			return;
-		}
-		const settle = (): boolean => {
-			const UserSettings = accessibilityUserSettings.get();
-			if (!UserSettings?.isHydrated()) return false;
-			const synced = UserSettings.getSubPreference('accessibility')?.fontSize;
-			if (synced === PREVIOUS_DEFAULT_FONT_SIZE_PX) {
-				if (this.fontSize !== PREVIOUS_DEFAULT_FONT_SIZE_PX) return false;
-				this.updateSettings({fontSize: DEFAULT_FONT_SIZE_PX});
-			}
-			try {
-				AppStorage.setItem(ACCESSIBILITY_FONT_SIZE_DEFAULT_MIGRATED_V1_STORAGE_KEY, 'true');
-			} catch {}
-			return true;
-		};
-		if (settle()) return;
-		const dispose = reaction(
-			() => {
-				const UserSettings = accessibilityUserSettings.get();
-				return [UserSettings?.isHydrated(), UserSettings?.getSubPreference('accessibility')?.fontSize, this.fontSize];
-			},
-			() => {
-				if (settle()) dispose();
-			},
-		);
 	}
 
 	private initializeMotionDetection() {

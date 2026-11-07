@@ -27,12 +27,12 @@ const {default: Accessibility} = await import('@app/features/accessibility/state
 const {useDesktopElectronBridges} = await import('@app/features/app/hooks/useDesktopElectronBridges');
 
 describe('desktop menu zoom reset', () => {
-	it('resets app zoom to the 95% default', () => {
+	it('resets app zoom to 100%', () => {
 		useDesktopElectronBridges();
 		Accessibility.updateSettings({zoomLevel: 1.25});
 
 		zoomReset?.();
 
-		expect(Accessibility.zoomLevel).toBe(0.95);
+		expect(Accessibility.zoomLevel).toBe(1);
 	});
 });

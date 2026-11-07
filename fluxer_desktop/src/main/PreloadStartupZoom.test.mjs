@@ -78,8 +78,8 @@ function runPreload(storedItems = {}, {systemReducedMotion = false} = {}) {
 }
 
 describe('preload startup zoom', () => {
-	test('paints a fresh install at the 95% default', () => {
-		assert.equal(runPreload().customZoom, '95');
+	test('paints a fresh install at the 100% default', () => {
+		assert.equal(runPreload().customZoom, '100');
 	});
 
 	test('reads the zoom the app saved under Accessibility:zoomLevel', () => {

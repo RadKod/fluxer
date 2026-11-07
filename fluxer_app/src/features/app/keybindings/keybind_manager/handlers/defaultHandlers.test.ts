@@ -79,7 +79,7 @@ const {registerDefaultKeybindHandlers} = await import(
 );
 
 describe('system_zoom_reset keybind', () => {
-	it('resets app zoom to the 95% default', () => {
+	it('resets app zoom to 100%', () => {
 		const handlers = new Map<string, KeybindHandler>();
 		const host = {
 			register: (action, handler) => {
@@ -91,6 +91,6 @@ describe('system_zoom_reset keybind', () => {
 
 		handlers.get('system_zoom_reset')?.({type: 'press'} as Parameters<KeybindHandler>[0]);
 
-		expect(Accessibility.zoomLevel).toBe(0.95);
+		expect(Accessibility.zoomLevel).toBe(1);
 	});
 });

@@ -1007,9 +1007,6 @@ const AppStorage = createStorage();
 
 export default AppStorage;
 
-// Micup: the device flag of Accessibility's one-time 16px to 15px chat text move. The size is synced, the flag is not:
-// once cleared, the move runs again and takes a 16px chosen since back to 15px on every device. Resets and logout keep it.
-export const ACCESSIBILITY_FONT_SIZE_DEFAULT_MIGRATED_V1_STORAGE_KEY = 'Accessibility:fontSizeDefault15MigratedV1';
 // Discovery belongs to this device and survives logout and authentication storage resets.
 export const VOICE_ROOM_CONTROL_DISCOVERY_STORAGE_KEY = 'VoiceRoomControlDiscovery';
 // The taskbar offer is dismissed once per device, including after logout or an authentication reset.
@@ -1017,7 +1014,6 @@ export const TASKBAR_PIN_STORAGE_KEY = 'TaskbarPin';
 
 export const PRESERVED_DEVICE_STORAGE_KEYS = [
 	'analytics_consent',
-	ACCESSIBILITY_FONT_SIZE_DEFAULT_MIGRATED_V1_STORAGE_KEY,
 	ACCESSIBILITY_MOTION_STORAGE_KEY,
 	ACCESSIBILITY_MOTION_SYNC_DEFAULT_OFF_MIGRATED_V1_STORAGE_KEY,
 	VOICE_ROOM_CONTROL_DISCOVERY_STORAGE_KEY,

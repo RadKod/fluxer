@@ -16,7 +16,6 @@ vi.mock('@app/features/platform/transport/RestTransport', () => ({http}));
 vi.mock('@app/app/I18n', () => ({applyLocaleChange: (locale: string) => locale}));
 vi.mock('@app/features/accessibility/state/Accessibility', () => ({
 	default: {},
-	setAccessibilityUserSettings: vi.fn(),
 }));
 vi.mock('@app/features/platform/state/PersistentStorage', () => ({
 	default: {

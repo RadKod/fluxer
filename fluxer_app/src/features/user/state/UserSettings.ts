@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {applyLocaleChange, getRequestedLocale} from '@app/app/I18n';
-import Accessibility, {setAccessibilityUserSettings} from '@app/features/accessibility/state/Accessibility';
+import Accessibility from '@app/features/accessibility/state/Accessibility';
 import {migrateLegacyMessageGroupSpacing} from '@app/features/accessibility/state/MessageGroupSpacing';
 import {
 	createMotionPreferencesContext,
@@ -1407,7 +1407,6 @@ class UserSettingsState {
 
 const UserSettings = new UserSettingsState();
 setLocalPresenceUserSettings(UserSettings);
-setAccessibilityUserSettings(UserSettings);
 setSyncedFieldUserSettings(UserSettings);
 AccountScopedWork.registerTransition({
 	suspend: () => {},

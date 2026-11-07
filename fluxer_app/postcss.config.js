@@ -3,14 +3,12 @@
 import autoprefixer from 'autoprefixer';
 import postcssDiscardComments from 'postcss-discard-comments';
 import postcssPresetEnv from 'postcss-preset-env';
-import {micupShrinkFontSize} from './scripts/build/postcss/micup-shrink-font-size.mjs';
 
 export default {
 	plugins: [
 		postcssDiscardComments({
 			removeAll: true,
 		}),
-		micupShrinkFontSize(),
 		postcssPresetEnv({
 			stage: 3,
 			features: {
