@@ -887,6 +887,33 @@ jobs:
           printf '## sanalyer desktop preparation\n\nVersion: %s\n\nSource: main (%s)\n\nPayload: sanalyer-desktop-prepared-%s\n\nNo release was published.\n' \
             "$BUILD_VERSION" "$SOURCE_SHA" "$BUILD_CHANNEL" >> "$GITHUB_STEP_SUMMARY"
 
+  scoop:
+    name: Update Scoop bucket
+    if: ${{ !cancelled() && inputs.publish_release && inputs.channel != 'canary' && needs.upload.result == 'success' }}
+    needs:
+      - matrix
+      - upload
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 5
+    permissions: {}
+    continue-on-error: true
+    steps:
+      - name: Dispatch scoop-bucket Excavator
+        env:
+          GH_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}
+          SKIP_TARGETS: ${{ needs.matrix.outputs.skip_targets }}
+        run: |
+          set -euo pipefail
+          if [[ ",${SKIP_TARGETS// /}," == *",windows,"* ]]; then
+            echo "::notice::Windows x64 was not built in this release; skipping the Scoop update."
+            exit 0
+          fi
+          if [[ -z "$GH_TOKEN" ]]; then
+            echo "::warning::SCOOP_BUCKET_TOKEN is not set; the Scoop bucket will update on the next scheduled Excavator run."
+            exit 0
+          fi
+          gh workflow run excavator.yml --repo RadKod/scoop-bucket --ref main
+
   publish_release:
     name: Publish GitHub desktop release
     if: ${{ !cancelled() && inputs.publish_release && needs.upload.result == 'success' }}
