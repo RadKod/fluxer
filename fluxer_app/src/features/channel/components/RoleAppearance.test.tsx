@@ -484,16 +484,14 @@ describe('role editor entitlement controls', () => {
 	it('locks new assignments after downgrade but allows clearing saved appearance', () => {
 		const html = renderEditor(false, false);
 		expect(html).toContain('aria-label="Second role color" disabled=""');
-		expect(html).toContain('aria-label="Unicode role icon" disabled=""');
 		expect(html).toContain('<button type="button">Remove role gradient</button>');
-		expect(html).toContain('<button type="button">Remove role icon</button>');
 		expect(html).toContain('Server Boost Level 1');
 		expect(html).toContain('Server Boost Level 2');
 	});
 	it('enables both appearance controls when their entitlements are available', () => {
 		const html = renderEditor(true, true);
 		expect(html).toContain('aria-label="Second role color"/>');
-		expect(html).toContain('aria-label="Unicode role icon"/>');
+		expect(html).not.toContain('Server Boost Level 1');
 	});
 });
 
@@ -613,15 +611,6 @@ describe('role settings save and duplicate flow', () => {
 			await act(async () => editor.save!());
 			expect(requests.patch).toHaveBeenLastCalledWith('/guilds/100/roles/401', {body: {color_secondary: null}});
 			expect(editor.dirty).toBe(false);
-		});
-	});
-	it('refreshes server emoji choices when the real emoji event removes an option', async () => {
-		state.guildEmojis = [{id: '800', name: 'wave', guildId: '100'} as GuildEmoji];
-		await withTab(async (container) => {
-			expect(container.querySelector('option[value="800"]')).not.toBeNull();
-			state.guildEmojis = [];
-			await act(async () => ComponentBus.dispatch('EMOJI_PICKER_RERENDER'));
-			expect(container.querySelector('option[value="800"]')).toBeNull();
 		});
 	});
 	it.each([true, false])('duplicates appearance only with current assignment rights: %s', async (entitled) => {

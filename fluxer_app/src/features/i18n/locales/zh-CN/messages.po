@@ -60587,11 +60587,6 @@ msgstr "Boost to Level 1 to upload animated icons."
 msgid "Boost to Level 3 to upload animated banners."
 msgstr "Boost to Level 3 to upload animated banners."
 
-#. Explains the two mutually exclusive role icon choices.
-#: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:47
-msgid "Enter one emoji, or choose an emoji from this server."
-msgstr "Enter one emoji, or choose an emoji from this server."
-
 #. Explanation of the static two-color role gradient perk.
 #: src/features/boost/components/GuildBoostPerks.tsx:65
 msgid "Give roles a static gradient with two colors."
@@ -60622,11 +60617,6 @@ msgstr "No custom emoji slots"
 msgid "No custom sticker slots"
 msgstr "No custom sticker slots"
 
-#. Empty option in the role icon server emoji selector.
-#: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:55
-msgid "No server emoji"
-msgstr "No server emoji"
-
 #. Soundboard capacity is disabled in the effective instance limits.
 #: src/features/boost/utils/GuildBoostMessages.ts:104
 msgid "No soundboard slots"
@@ -60636,11 +60626,6 @@ msgstr "No soundboard slots"
 #: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:63
 msgid "Remove role gradient"
 msgstr "Remove role gradient"
-
-#. Button that clears both role icon fields, including after boost downgrade.
-#: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:59
-msgid "Remove role icon"
-msgstr "Remove role icon"
 
 #. Role editor hint when new gradient assignments are locked.
 #: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:35
@@ -60669,11 +60654,6 @@ msgstr "Role icons: Unicode or community emoji"
 #: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:31
 msgid "Second role color"
 msgstr "Second role color"
-
-#. Role editor selector restricted to emojis belonging to this server.
-#: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:51
-msgid "Server emoji role icon"
-msgstr "Server emoji role icon"
 
 #. Community file uploads have no extra allowance above the personal allowance
 #. at this level.
@@ -60717,11 +60697,6 @@ msgstr "Total channels and roles available to this community."
 #: src/features/boost/components/GuildBoostPerks.tsx:51
 msgid "Total sounds in the community soundboard."
 msgstr "Total sounds in the community soundboard."
-
-#. Role editor input for a single standard emoji.
-#: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:43
-msgid "Unicode role icon"
-msgstr "Unicode role icon"
 
 #. Independent community unlimited-emoji feature.
 #: src/features/boost/utils/GuildBoostMessages.ts:116

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import Emoji from '@app/features/emoji/state/Emoji';
-import type {GuildEmoji} from '@app/features/expressions/models/GuildEmoji';
 import {buildCustomEmojiURL} from '@app/features/expressions/utils/CustomEmojiImageUrl';
 import styles from '@app/features/guild/components/RoleAppearance.module.css';
 import type {GuildRole} from '@app/features/guild/models/GuildRole';
@@ -13,7 +12,6 @@ import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
 import {type CSSProperties, type ReactNode, useSyncExternalStore} from 'react';
 
-const EMPTY_ROLE_EMOJIS: ReadonlyArray<GuildEmoji> = Object.freeze([]);
 const emojiUpdateListeners = new Set<() => void>();
 let unsubscribeEmojiUpdates: (() => void) | null = null;
 
@@ -34,18 +32,6 @@ function subscribeRoleEmojiUpdates(listener: () => void): () => void {
 }
 
 const subscribeWithoutEmojiUpdates = () => () => {};
-
-export function useGuildRoleEmojis(guildId: string | undefined): ReadonlyArray<GuildEmoji> {
-	const getSnapshot = () => {
-		const emojis = guildId ? Emoji.getGuildEmoji(guildId) : EMPTY_ROLE_EMOJIS;
-		return emojis.length > 0 ? emojis : EMPTY_ROLE_EMOJIS;
-	};
-	return useSyncExternalStore(
-		guildId ? subscribeRoleEmojiUpdates : subscribeWithoutEmojiUpdates,
-		getSnapshot,
-		getSnapshot,
-	);
-}
 
 export const RoleIcon = observer(({role}: {role?: GuildRole | null}) => {
 	const iconEmojiId = role?.iconEmojiId;

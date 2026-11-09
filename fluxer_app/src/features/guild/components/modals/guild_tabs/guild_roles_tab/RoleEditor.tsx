@@ -5,13 +5,11 @@ import {LayoutToggleButtons} from '@app/features/channel/components/modals/chann
 import styles from '@app/features/guild/components/modals/guild_tabs/GuildRolesTab.module.css';
 import {RoleIconField} from '@app/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleIconField';
 import type {RoleUpdate} from '@app/features/guild/components/modals/guild_tabs/guild_roles_tab/shared';
-import {RoleIcon, useGuildRoleEmojis} from '@app/features/guild/components/RoleAppearance';
 import type {GuildRole} from '@app/features/guild/models/GuildRole';
 import type * as PermissionUtils from '@app/features/permissions/utils/PermissionUtils';
 import {remFromPx} from '@app/features/theme/layout/RemFromPx';
 import {Button} from '@app/features/ui/button/Button';
 import {ColorPickerField} from '@app/features/ui/components/form/ColorPickerField';
-import {Combobox} from '@app/features/ui/components/form/FormCombobox';
 import {Input} from '@app/features/ui/components/form/FormInput';
 import {Switch} from '@app/features/ui/components/form/FormSwitch';
 import {msg} from '@lingui/core/macro';
@@ -39,26 +37,6 @@ const ROLE_GRADIENT_LOCK_DESCRIPTOR = msg({
 const ROLE_ICON_LOCK_DESCRIPTOR = msg({
 	message: 'Role icons require Server Boost Level 1. You can still remove an existing icon.',
 	comment: 'Role editor hint when new icon assignments are locked.',
-});
-const UNICODE_ROLE_ICON_DESCRIPTOR = msg({
-	message: 'Unicode role icon',
-	comment: 'Role editor input for a single standard emoji.',
-});
-const ROLE_ICON_HINT_DESCRIPTOR = msg({
-	message: 'Enter one emoji, or choose an emoji from this server.',
-	comment: 'Explains the two mutually exclusive role icon choices.',
-});
-const SERVER_ROLE_ICON_DESCRIPTOR = msg({
-	message: 'Server emoji role icon',
-	comment: 'Role editor selector restricted to emojis belonging to this server.',
-});
-const NO_ROLE_ICON_DESCRIPTOR = msg({
-	message: 'No server emoji',
-	comment: 'Empty option in the role icon server emoji selector.',
-});
-const REMOVE_ROLE_ICON_DESCRIPTOR = msg({
-	message: 'Remove role icon',
-	comment: 'Button that clears both role icon fields, including after boost downgrade.',
 });
 const REMOVE_ROLE_GRADIENT_DESCRIPTOR = msg({
 	message: 'Remove role gradient',
@@ -139,7 +117,6 @@ export const RoleEditor: React.FC<RoleEditorProps> = observer(
 	}) => {
 		const {i18n} = useLingui();
 		const appearanceLocked = selectedRoleLocked || !canManageRoles;
-		const guildEmojis = useGuildRoleEmojis(selectedRoleWithUpdates?.guildId);
 		return (
 			<div className={styles.container} data-flx="guild.guild-tabs.guild-roles-tab.container--2">
 				<div className={styles.right} data-flx="guild.guild-tabs.guild-roles-tab.right">
@@ -237,53 +214,16 @@ export const RoleEditor: React.FC<RoleEditorProps> = observer(
 											{i18n._(REMOVE_ROLE_GRADIENT_DESCRIPTOR)}
 										</Button>
 									)}
-									<Input
-										label={i18n._(UNICODE_ROLE_ICON_DESCRIPTOR)}
-										value={selectedRoleWithUpdates.unicodeEmoji ?? ''}
-										maxLength={64}
-										disabled={appearanceLocked || !canSetRoleIcons}
-										onChange={(event) =>
-											selectedRole &&
-											onRoleUpdate(selectedRole.id, {unicodeEmoji: event.target.value || null, iconEmojiId: null})
-										}
-									/>
-									<Combobox<string | null>
-										label={i18n._(SERVER_ROLE_ICON_DESCRIPTOR)}
-										value={selectedRoleWithUpdates.iconEmojiId}
-										options={[
-											{value: null, label: i18n._(NO_ROLE_ICON_DESCRIPTOR)},
-											...guildEmojis.map((emoji) => ({value: emoji.id, label: emoji.name})),
-										]}
-										disabled={appearanceLocked || !canSetRoleIcons}
-										onChange={(iconEmojiId) =>
-											selectedRole && onRoleUpdate(selectedRole.id, {iconEmojiId, unicodeEmoji: null})
-										}
-									/>
-									<p className={styles.subtleText}>
-										{i18n._(canSetRoleIcons ? ROLE_ICON_HINT_DESCRIPTOR : ROLE_ICON_LOCK_DESCRIPTOR)}
-									</p>
-									{(selectedRoleWithUpdates.iconEmojiId || selectedRoleWithUpdates.unicodeEmoji) && (
-										<div className={styles.sectionRow}>
-											<RoleIcon role={selectedRoleWithUpdates} />
-											<Button
-												small
-												variant="secondary"
-												disabled={appearanceLocked}
-												onClick={() =>
-													selectedRole && onRoleUpdate(selectedRole.id, {iconEmojiId: null, unicodeEmoji: null})
-												}
-											>
-												{i18n._(REMOVE_ROLE_ICON_DESCRIPTOR)}
-											</Button>
-										</div>
-									)}
+									{!canSetRoleIcons && <p className={styles.subtleText}>{i18n._(ROLE_ICON_LOCK_DESCRIPTOR)}</p>}
 								</div>
 								{!selectedRoleWithUpdates.isEveryone && (
 									<RoleIconField
 										key={selectedRoleWithUpdates.id}
 										role={selectedRoleWithUpdates}
 										disabled={selectedRoleLocked || !canManageRoles}
-										onChange={(updates) => selectedRole && onRoleUpdate(selectedRole.id, updates)}
+										onChange={(updates) =>
+											selectedRole && onRoleUpdate(selectedRole.id, {...updates, iconEmojiId: null})
+										}
 										data-flx="guild.guild-tabs.guild-roles-tab.role-editor.role-icon-field"
 									/>
 								)}
