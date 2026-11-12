@@ -68,6 +68,29 @@ COPY packages/markdown_parser/rust/.cargo/ ./packages/markdown_parser/rust/.carg
 COPY packages/markdown_parser/rust/benches/parser.rs ./packages/markdown_parser/rust/benches/
 COPY packages/markdown_parser/rust/src/ ./packages/markdown_parser/rust/src/
 COPY fluxer_app/rust/ ./fluxer_app/rust/
+# sanalyer: upstream dropped the wasm crates' own lockfiles; they resolve against the root Cargo.lock through this stub workspace.
+COPY Cargo.lock ./
+RUN printf '%s\n' \
+	'[workspace]' \
+	'members = [' \
+	'    "fluxer_app/rust/libfluxcore",' \
+	'    "fluxer_app/rust/libfluxwebp",' \
+	'    "packages/markdown_parser/rust",' \
+	']' \
+	'exclude = [' \
+	'    "tools/ci",' \
+	']' \
+	'resolver = "2"' \
+	'' \
+	'[profile.wasm-release]' \
+	'inherits = "release"' \
+	'codegen-units = 1' \
+	'lto = true' \
+	'opt-level = "z"' \
+	'panic = "abort"' \
+	'strip = true' \
+	> Cargo.toml \
+	&& cargo update --workspace
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
 	--mount=type=cache,target=/usr/local/cargo/git \
 	/usr/local/bin/fluxer-ci build-app-wasm --app-dir /usr/src/app/fluxer_app
