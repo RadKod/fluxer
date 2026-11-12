@@ -154,7 +154,7 @@ COPY fluxer_app/src/ ./fluxer_app/src/
 COPY --from=app-wasm /usr/local/bin/fluxer-ci /usr/local/bin/fluxer-ci
 COPY --from=app-wasm /usr/src/app/fluxer_app/pkgs/libfluxcore/ ./fluxer_app/pkgs/libfluxcore/
 COPY --from=app-wasm /usr/src/app/fluxer_app/pkgs/libfluxwebp/ ./fluxer_app/pkgs/libfluxwebp/
-COPY --from=app-wasm /usr/src/app/fluxer_app/src/features/messaging/utils/markdown/parser/MarkdownParserWasmBytes.ts ./fluxer_app/src/features/messaging/utils/markdown/parser/MarkdownParserWasmBytes.ts
+COPY --from=app-wasm /usr/src/app/fluxer_app/pkgs/markdown_parser/ ./fluxer_app/pkgs/markdown_parser/
 
 ARG BUILD_VERSION
 ARG PUBLIC_ASSET_BASE_URL

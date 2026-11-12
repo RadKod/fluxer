@@ -33,7 +33,7 @@ pub fn run_build_app_wasm(args: BuildAppWasmArgs) -> Result<()> {
     // with this flag set the codegen only checks that they are there.
     if env::var("FLUXER_APP_WASM_PREBUILT").is_ok_and(|value| value == "1") {
         for relative in [
-            "src/features/messaging/utils/markdown/parser/MarkdownParserWasmBytes.ts",
+            "pkgs/markdown_parser/markdown_parser.wasm",
             "pkgs/libfluxcore/libfluxcore_bg.wasm",
             "pkgs/libfluxwebp",
         ] {
