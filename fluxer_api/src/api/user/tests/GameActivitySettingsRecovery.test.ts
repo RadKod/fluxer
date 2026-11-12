@@ -29,7 +29,8 @@ async function fixture() {
 		gateway,
 	});
 	const service = new UserAccountSettingsService({
-		// The account is a stub; settings reads and writes reach the real settings table.
+				labsRoleService: null,
+// The account is a stub; settings reads and writes reach the real settings table.
 		userAccountRepository: Object.assign(Object.create(repository), {findUnique: async () => account}) as never,
 		updatePropagator: {dispatchUserSettingsUpdate: async () => {}} as never,
 		gatewayService: gateway,

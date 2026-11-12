@@ -68,6 +68,8 @@ function renderMethodStep(registerLink: ReactElement<Record<string, unknown>>): 
 				identifierField: 'email',
 				leadingAction: null,
 				passkeyAvailableForInstance: false,
+				legacyPasskeyHost: null,
+				onLegacyPasskeyLogin: vi.fn(),
 				registerLink,
 				showBrowserOption: false,
 				showPasskeyOption: false,

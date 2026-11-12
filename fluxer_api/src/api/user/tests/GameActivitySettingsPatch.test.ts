@@ -46,7 +46,8 @@ async function fixture(
 	};
 	const account = {id: userId, isBot: false, isSystem: false, dateOfBirth};
 	const service = new UserAccountSettingsService({
-		// The account is a stub; settings reads and writes reach the real settings table.
+				labsRoleService: null,
+// The account is a stub; settings reads and writes reach the real settings table.
 		userAccountRepository: Object.assign(Object.create(repository), {findUnique: vi.fn(async () => account)}) as never,
 		updatePropagator: {dispatchUserSettingsUpdate: vi.fn(async () => {})} as never,
 		gatewayService: {} as never,

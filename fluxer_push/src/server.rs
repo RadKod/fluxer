@@ -12,7 +12,7 @@ use axum::extract::ConnectInfo;
 use axum::{Extension, Router};
 use fluxer_common::secret::SecretString;
 use fluxer_svc::server::MetricsAllowList;
-use fluxer_svc::shutdown::{DEFAULT_DRAIN_TIMEOUT, drain_with_timeout, wait_for_shutdown};
+use fluxer_svc::shutdown::{DEFAULT_DRAIN_TIMEOUT, drain_with_timeout};
 use fluxer_svc::transport::NatsTransport;
 use hyper::body::Incoming;
 use hyper::service::service_fn;
@@ -28,8 +28,9 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{Notify, oneshot, watch};
 use tokio::task::JoinHandle;
 use tokio::time::{Instant, sleep};
+use tokio_util::sync::CancellationToken;
 use tower_service::Service;
-use tracing::{error, info};
+use tracing::{Instrument as _, error, info};
 
 const JOB_DRAIN_TIMEOUT: Duration = Duration::from_secs(25);
 const FIRST_REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
@@ -82,7 +83,7 @@ pub async fn serve(addr: SocketAddr, router: Router) -> anyhow::Result<Serving> 
     let router = router.layer(Extension(Arc::new(MetricsAllowList::from_env()?)));
     let listener = TcpListener::bind(addr).await?;
     let (stop, stopped) = oneshot::channel::<()>();
-    let served = tokio::spawn(accept_connections(listener, router, stopped));
+    let served = tokio::spawn(accept_connections(listener, router, stopped).in_current_span());
     Ok(Serving { stop, served })
 }
 
@@ -104,13 +105,16 @@ async fn accept_connections(
             },
             _ = &mut stopped => break,
         };
-        tokio::spawn(serve_connection(
-            stream,
-            remote_addr,
-            router.clone(),
-            stopping.subscribe(),
-            open_rx.clone(),
-        ));
+        tokio::spawn(
+            serve_connection(
+                stream,
+                remote_addr,
+                router.clone(),
+                stopping.subscribe(),
+                open_rx.clone(),
+            )
+            .in_current_span(),
+        );
     }
     stopping.send_replace(true);
     drop(open_rx);
@@ -144,7 +148,7 @@ async fn serve_connection(
         move |mut req: hyper::Request<Incoming>| {
             activity.notify_one();
             req.extensions_mut().insert(ConnectInfo(remote_addr));
-            router.clone().call(req)
+            router.clone().call(req).in_current_span()
         }
     });
     let mut builder = Builder::new(TokioExecutor::new());
@@ -211,14 +215,14 @@ impl AppState {
     }
 }
 
-pub async fn run(cfg: Config) -> anyhow::Result<()> {
+pub async fn run(cfg: Config, shutdown: CancellationToken) -> anyhow::Result<()> {
     match cfg {
-        Config::Delivery(cfg) => run_delivery(*cfg).await,
-        Config::Relay(cfg) => relay::run(*cfg).await,
+        Config::Delivery(cfg) => run_delivery(*cfg, shutdown).await,
+        Config::Relay(cfg) => relay::run(*cfg, shutdown).await,
     }
 }
 
-async fn run_delivery(cfg: DeliveryConfig) -> anyhow::Result<()> {
+async fn run_delivery(cfg: DeliveryConfig, shutdown: CancellationToken) -> anyhow::Result<()> {
     let state = Arc::new(AppState::try_new(cfg)?);
     let addr = state.cfg.bind_addr;
     let serving = serve(addr, state.sidecar.router()).await?;
@@ -245,10 +249,13 @@ async fn run_delivery(cfg: DeliveryConfig) -> anyhow::Result<()> {
             )
             .await
         }
+        .in_current_span()
     });
-    let jobs = tokio::spawn(delivery::run_job_subscribers(transport, Arc::clone(&state)));
+    let jobs = tokio::spawn(
+        delivery::run_job_subscribers(transport, Arc::clone(&state)).in_current_span(),
+    );
 
-    wait_for_shutdown().await;
+    shutdown.cancelled().await;
     state.sidecar.set_serving(false);
     subscriber.abort();
     drain_jobs(&state, jobs, JOB_DRAIN_TIMEOUT).await;

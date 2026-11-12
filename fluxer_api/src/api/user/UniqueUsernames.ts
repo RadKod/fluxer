@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {createUserID, type UserID} from '@app/api/BrandedTypes';
+import {getInstanceProductName} from '@app/api/instance/ProductName';
 import {getUsernameOwnershipService} from '@app/api/middleware/ServiceRegistry';
 import {getCacheService, getInstanceConfigRepository} from '@app/api/middleware/ServiceSingletons';
 import type {User} from '@app/api/models/User';
@@ -272,7 +273,9 @@ export async function isUsernameTaken(
 	username: string,
 	exceptUserId?: UserID,
 ): Promise<boolean> {
-	if (username.toLowerCase() === DELETED_USER_USERNAME.toLowerCase()) return true;
+	const usernameLower = username.toLowerCase();
+	if (usernameLower === DELETED_USER_USERNAME.toLowerCase()) return true;
+	if (usernameLower === getInstanceProductName().toLowerCase()) return true;
 	const holders = await findUsernameHolders(users, username);
 	return holders.some(
 		(user) =>

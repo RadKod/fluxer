@@ -50,7 +50,7 @@ import type {GuildMember} from '@app/api/models/GuildMember';
 import type {User} from '@app/api/models/User';
 import type {UserGuildSettings} from '@app/api/models/UserGuildSettings';
 import type {UserSettings} from '@app/api/models/UserSettings';
-import {resolveOperatorPassJoinRoleIds} from '@app/api/operator_pass/OperatorPassLabsRole';
+import {finishOperatorPassJoin, resolveOperatorPassJoin} from '@app/api/operator_pass/OperatorPassLabsRole';
 import {assertAccountNotLimited} from '@app/api/user/AccountLimit';
 import type {TierContext} from '@app/api/user/AccountTier';
 import {assertTierAllows, NO_TIER_CONTEXT} from '@app/api/user/AccountTier';
@@ -499,7 +499,7 @@ export class GuildMemberOperationsService {
 			metadata?.communication_disabled_until && metadata.communication_disabled_until.getTime() > Date.now()
 				? metadata.communication_disabled_until
 				: null;
-		const joinRoleIds = await resolveOperatorPassJoinRoleIds(guildId, user, this.guildRepository);
+		const labsJoin = await resolveOperatorPassJoin(guildId, user, this.guildRepository, this.userRepository);
 		const memberRow: GuildMemberRow = {
 			guild_id: guildId,
 			user_id: userId,
@@ -516,7 +516,7 @@ export class GuildMemberOperationsService {
 			deaf: false,
 			mute: false,
 			communication_disabled_until: restoredTimeout,
-			role_ids: joinRoleIds,
+			role_ids: labsJoin?.roleIds ?? null,
 			is_premium_sanitized: null,
 			temporary: isTemporary,
 			profile_flags: null,
@@ -561,6 +561,7 @@ export class GuildMemberOperationsService {
 		await this.applyJoinUserSettings({userId, guildId, user, mentionsOnlyNotifications});
 		await eventService.dispatchGuildMemberAdd({member: guildMember, requestCache});
 		await this.gatewayService.joinGuild({userId, guildId});
+		await finishOperatorPassJoin(userId, labsJoin);
 		const includeDefault = guild.membersIndexedAt != null;
 		if (includeDefault) {
 			void this.searchIndexService.indexMember(guildMember, user, {includeDefault});
@@ -870,6 +871,17 @@ export class GuildMemberOperationsService {
 				if (!bioRateLimit.allowed) {
 					const minutes = Math.ceil((bioRateLimit.retryAfter || 0) / 60);
 					throw InputValidationError.fromCode('bio', ValidationErrorCodes.BIO_CHANGED_TOO_MANY_TIMES, {minutes});
+				}
+				const maxBioLength = resolveLimitSafe(
+					this.limitConfigService.getConfigSnapshot(),
+					createLimitMatchContext({user: targetUser}),
+					'max_bio_length',
+					DEFAULT_STOCK_LIMITS.max_bio_length,
+				);
+				if (data.bio && data.bio.length > maxBioLength) {
+					throw InputValidationError.fromCode('bio', ValidationErrorCodes.CONTENT_EXCEEDS_MAX_LENGTH, {
+						maxLength: maxBioLength,
+					});
 				}
 				this.enforceProfileSubstringBlocklist(targetUser, 'bio', data.bio);
 				updateData.bio = data.bio;

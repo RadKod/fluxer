@@ -35,6 +35,7 @@ function userDataParams(overrides: Partial<Parameters<typeof buildUserDataJson>[
 		user: new User({...EMPTY_USER_ROW, user_id: AUTHOR, username: 'exporter', discriminator: 1}),
 		userId: AUTHOR,
 		productName: 'Fluxer',
+		appAttestKeys: [],
 		authSessions: [],
 		relationships: [],
 		userNotes: new Map(),

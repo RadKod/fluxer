@@ -24,28 +24,28 @@ function describeStatsSnapshotError(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
 }
 
-function renderOpeningStatsHtml(): string {
+async function renderOpeningStatsHtml(): Promise<string> {
 	const generatedAtIso = getGeneratedAtIso();
 	try {
-		return renderVoiceDebugStatsHtml(collectStatsForNerdsSnapshot(), generatedAtIso);
+		return await renderVoiceDebugStatsHtml(collectStatsForNerdsSnapshot(), generatedAtIso);
 	} catch (error) {
-		return renderVoiceDebugStatsUnavailableHtml(
+		return await renderVoiceDebugStatsUnavailableHtml(
 			`Failed to collect stats snapshot before opening event sink: ${describeStatsSnapshotError(error)}`,
 			generatedAtIso,
 		);
 	}
 }
 
-function publishOpeningStatsSnapshot(): void {
+async function publishOpeningStatsSnapshot(): Promise<void> {
 	const electron = getElectronAPI();
 	const canOpenBrowser = canOpenBrowserVoiceDebugEventSinkPopout();
 	if (!electron?.setVoiceDebugEventSinkStatsHtml && !canOpenBrowser) return;
-	const html = renderOpeningStatsHtml();
+	const html = await renderOpeningStatsHtml();
 	electron?.setVoiceDebugEventSinkStatsHtml?.(html);
 	if (canOpenBrowser) setBrowserVoiceDebugEventSinkStatsHtml(html);
 }
 
 export async function openVoiceDebugEventSinkPopout(): Promise<void> {
-	publishOpeningStatsSnapshot();
+	await publishOpeningStatsSnapshot();
 	await voiceEngineV2AppDebugEventSinkHostAdapter.openEventSinkPopout();
 }

@@ -17,8 +17,8 @@ import {
 	subscribeTooltipScrollHide,
 } from '@app/features/ui/tooltip/TooltipScrollCoordinator';
 import {
-	createTooltipSnapshot,
 	getTooltipStateValue,
+	initialTooltipSnapshot,
 	selectTooltipModel,
 	type TooltipEnvironment,
 	type TooltipMachineEvent,
@@ -45,6 +45,8 @@ const logger = new Logger('Tooltip');
 
 export type TooltipPosition = 'top' | 'left' | 'right' | 'bottom';
 type TooltipType = 'normal' | 'error';
+
+const HOVER_VERIFY_INTERVAL_MS = 100;
 
 const TOOLTIP_AUTO_UPDATE_OPTIONS = {
 	ancestorScroll: false,
@@ -282,7 +284,7 @@ export const Tooltip = observer(
 				mobileLayout.enabled,
 			],
 		);
-		const [tooltipSnapshot, setTooltipSnapshot] = useState(() => createTooltipSnapshot(tooltipEnvironment));
+		const [tooltipSnapshot, setTooltipSnapshot] = useState(() => initialTooltipSnapshot(tooltipEnvironment));
 		const tooltipModel = selectTooltipModel(tooltipSnapshot);
 		const tooltipStateValue = getTooltipStateValue(tooltipSnapshot);
 		const shouldRenderTooltip = tooltipModel.shouldRender;
@@ -543,7 +545,11 @@ export const Tooltip = observer(
 				longPressTimeoutRef.current = null;
 			}
 		}, []);
+		const mountEnvironmentRef = useRef<TooltipEnvironment | null>(tooltipEnvironment);
 		useEffect(() => {
+			const mountEnvironment = mountEnvironmentRef.current;
+			mountEnvironmentRef.current = null;
+			if (mountEnvironment === tooltipEnvironment) return;
 			sendTooltipEvent({type: 'tooltip.environmentChanged', environment: tooltipEnvironment});
 		}, [sendTooltipEvent, tooltipEnvironment]);
 		useEffect(() => {
@@ -679,21 +685,13 @@ export const Tooltip = observer(
 		useEffect(() => {
 			if (!tooltipModel.hovered || tooltipModel.dismissed || mobileLayout.enabled) return;
 			const ownerWindow = getTooltipOwnerWindow();
-			let frameId: number | null = null;
-			const verifyTargetHover = () => {
-				const target = targetRef.current;
-				if (!target?.matches(':hover')) {
+			const intervalId = ownerWindow.setInterval(() => {
+				if (!targetRef.current?.matches(':hover')) {
 					endVisibilityDriver('hover');
-					frameId = null;
-					return;
 				}
-				frameId = ownerWindow.requestAnimationFrame(verifyTargetHover);
-			};
-			frameId = ownerWindow.requestAnimationFrame(verifyTargetHover);
+			}, HOVER_VERIFY_INTERVAL_MS);
 			return () => {
-				if (frameId != null) {
-					ownerWindow.cancelAnimationFrame(frameId);
-				}
+				ownerWindow.clearInterval(intervalId);
 			};
 		}, [
 			endVisibilityDriver,

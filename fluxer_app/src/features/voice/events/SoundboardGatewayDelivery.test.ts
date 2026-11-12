@@ -29,6 +29,7 @@ it('marks resumed sound events as replay while delivering live events normally',
 			build_version: '1',
 		},
 		isMobileLayout: () => false,
+		showsRestoredView: () => false,
 		geo: () => ({latitude: null, longitude: null}),
 	});
 	const deliveries: Array<GatewayDispatchDelivery & {isReplay?: boolean}> = [];

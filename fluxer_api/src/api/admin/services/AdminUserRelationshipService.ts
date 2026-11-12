@@ -24,7 +24,7 @@ import type {
 interface AdminUserRelationshipServiceDeps {
 	apiContext: ApiContext;
 	auditService: AdminAuditService;
-	userRelationshipService: Pick<UserRelationshipService, 'endFriendship'>;
+	userRelationshipService: Pick<UserRelationshipService, 'endFriendship' | 'deleteFriendRequest'>;
 }
 
 const CATEGORY_TO_TYPE: Record<RelationshipCategory, number> = {
@@ -230,8 +230,7 @@ export class AdminUserRelationshipService {
 				return;
 			}
 			case 'outgoing_request': {
-				await userRepository.deleteRelationship(userId, targetUserId, RelationshipTypes.OUTGOING_REQUEST);
-				await userRepository.deleteRelationship(targetUserId, userId, RelationshipTypes.INCOMING_REQUEST);
+				await this.deps.userRelationshipService.deleteFriendRequest(userId, targetUserId);
 				await onPersisted();
 				await gatewayService.dispatchPresence({
 					userId,
@@ -246,8 +245,7 @@ export class AdminUserRelationshipService {
 				return;
 			}
 			case 'incoming_request': {
-				await userRepository.deleteRelationship(userId, targetUserId, RelationshipTypes.INCOMING_REQUEST);
-				await userRepository.deleteRelationship(targetUserId, userId, RelationshipTypes.OUTGOING_REQUEST);
+				await this.deps.userRelationshipService.deleteFriendRequest(targetUserId, userId);
 				await onPersisted();
 				await gatewayService.dispatchPresence({
 					userId,

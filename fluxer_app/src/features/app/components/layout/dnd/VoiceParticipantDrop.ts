@@ -5,7 +5,7 @@ import type {DragItem} from '@app/features/app/components/layout/types/DndTypes'
 import * as GuildMemberCommands from '@app/features/member/commands/GuildMemberCommands';
 import Permission from '@app/features/permissions/state/Permission';
 import Users from '@app/features/user/state/Users';
-import MediaEngine from '@app/features/voice/engine/MediaEngineFacade';
+import VoiceRuntime from '@app/features/voice/engine/VoiceRuntime';
 import {Permissions} from '@fluxer/constants/src/ChannelConstants';
 import {msg} from '@lingui/core/macro';
 
@@ -19,7 +19,7 @@ export function moveVoiceParticipantToChannel(item: DragItem, guildId: string, c
 	const currentUserId = Users.getCurrentUser()?.id ?? null;
 	if (currentUserId && item.userId === currentUserId) {
 		if (Permission.can(Permissions.CONNECT, {guildId, channelId})) {
-			void MediaEngine.connectToVoiceChannel(guildId, channelId);
+			void VoiceRuntime.withEngine('join', (engine) => engine.connectToVoiceChannel(guildId, channelId));
 		}
 		return;
 	}

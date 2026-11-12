@@ -88,7 +88,8 @@ do_session_connect(Pid, Attempt, State) when is_map(State) ->
         mobile => Mobile,
         socket_pid => SocketPid,
         game_activity_policy => maps:get(game_activity_policy, State, undefined),
-        game_activity_request_nonce => maps:get(game_activity_request_nonce, State, undefined)
+        game_activity_request_nonce => maps:get(game_activity_request_nonce, State, undefined),
+        guild_ids => session_visits:member_guild_ids(State)
     },
     ConnectStartedAt = gateway_timings:start(),
     Result = safe_call(fun() ->

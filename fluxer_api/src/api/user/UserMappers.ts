@@ -30,7 +30,7 @@ import {
 	isGameActivityDefaultPending,
 	isGameActivityEligible,
 } from '@app/api/user/services/GameActivityPolicyService';
-import {canUserAccessNsfwContent} from '@app/api/utils/AgeUtils';
+import {canUserAccessNsfwContent, isMatureContentUnlocked} from '@app/api/utils/AgeUtils';
 import {AccountTiers} from '@fluxer/constants/src/AccountTierConstants';
 import {PREMIUM_PROFILE_BADGE_KINDS} from '@fluxer/constants/src/BadgeConstants';
 import type {ChannelMessageNotifications} from '@fluxer/constants/src/NotificationConstants';
@@ -272,7 +272,7 @@ export function mapUserToPrivateResponse(user: User): UserPrivateResponse {
 			(user.giftInventoryClientSeq == null || user.giftInventoryClientSeq < user.giftInventoryServerSeq),
 		unread_gift_inventory_count:
 			user.giftInventoryServerSeq != null ? user.giftInventoryServerSeq - (user.giftInventoryClientSeq ?? 0) : 0,
-		age_verified_adult: !!(user.flags & UserFlags.AGE_VERIFIED_ADULT) || undefined,
+		mature_content_unlocked: isMatureContentUnlocked(user),
 		terms_agreed_at: user.termsAgreedAt?.toISOString() ?? null,
 		privacy_agreed_at: user.privacyAgreedAt?.toISOString() ?? null,
 		claimed: accountTier !== AccountTiers.UNCLAIMED,
@@ -280,6 +280,7 @@ export function mapUserToPrivateResponse(user: User): UserPrivateResponse {
 		verification_need: getVerificationNeed(user),
 		has_password: user.passwordHash !== null,
 		date_of_birth_required: isDateOfBirthMissing(user),
+		has_age_range: user.attestedAgeFloor !== null,
 		profile_restricted: isProfileRestricted(user),
 		pending_bulk_message_deletion:
 			user.pendingBulkMessageDeletionAt != null
@@ -411,6 +412,7 @@ export function mapUserSettingsToResponse(params: {
 		status_resets_to: settings.statusResetsTo,
 		theme: settings.theme,
 		locale: settings.locale,
+		regional_format: settings.regionalFormat,
 		restricted_guilds: [...settings.restrictedGuilds].map(String),
 		bot_restricted_guilds: [...settings.botRestrictedGuilds].map(String),
 		default_guilds_restricted: settings.defaultGuildsRestricted,
@@ -439,6 +441,7 @@ export function mapUserSettingsToResponse(params: {
 			: null,
 		afk_timeout: settings.afkTimeout,
 		time_format: settings.timeFormat,
+		timestamp_format: settings.timestampFormat,
 		developer_mode: settings.developerMode,
 		trusted_domains: [...settings.trustedDomains],
 		default_hide_muted_channels: settings.defaultHideMutedChannels,

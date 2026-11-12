@@ -31,7 +31,7 @@ function LoginDecision() {
 	const showInstanceSelector = shouldRenderInstanceStep();
 	const flow = useAuthLoginFlow({
 		startWithAddAccount: false,
-		forceCredentials: false,
+		relogin: false,
 		desktopHandoff: false,
 		hasStoredAccounts: false,
 		initialIdentifier: null,

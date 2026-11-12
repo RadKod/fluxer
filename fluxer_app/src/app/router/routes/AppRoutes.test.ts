@@ -59,7 +59,8 @@ vi.mock('@app/features/ui/state/MobileLayout', () => ({default: {isMobileLayout:
 vi.mock('@app/features/gateway/transport/GatewaySessionPool', () => ({default: {foregroundConnection: {}}}));
 vi.mock('@app/features/threads/state/ThreadGuilds', () => ({default: {}}));
 
-const {appRouteTree, premiumCallbackRoute} = await import('@app/app/router/routes/AppRoutes');
+const {appRouteTree} = await import('@app/app/router/routes/AppRoutes');
+const {premiumCallbackRoute} = await import('@app/app/router/routes/CallbackRoutes');
 
 const enter = (id: string) =>
 	appRouteTree

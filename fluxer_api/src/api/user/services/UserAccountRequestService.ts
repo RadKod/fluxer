@@ -366,7 +366,7 @@ export class UserAccountRequestService {
 				user.hiddenProfileBadges.has('operator_pass') !== updatedUser.hiddenProfileBadges.has('operator_pass') ||
 				userUpdateData.premium_badge_masked !== undefined)
 		) {
-			await this.labsRoleService.resyncLabsRoles(updatedUser);
+			await this.labsRoleService.resyncLabsRoles(updatedUser.id);
 		}
 		if (
 			(user.hiddenProfileBadges.has('operator_pass') !== updatedUser.hiddenProfileBadges.has('operator_pass') ||
@@ -649,7 +649,7 @@ export class UserAccountRequestService {
 		response.premium_grace_ends_at = null;
 		response.premium_discriminator = false;
 		response.last_voice_activity_sharing_change_at = null;
-		response.age_verified_adult = undefined;
+		response.mature_content_unlocked = undefined;
 		response.terms_agreed_at = null;
 		response.privacy_agreed_at = null;
 		response.claimed = undefined;
@@ -657,6 +657,7 @@ export class UserAccountRequestService {
 		response.verification_need = undefined;
 		response.has_password = undefined;
 		response.date_of_birth_required = undefined;
+		response.has_age_range = undefined;
 		response.profile_restricted = undefined;
 		response.mfa_enabled = false;
 		response.authenticator_types = undefined;
@@ -705,6 +706,9 @@ export class UserAccountRequestService {
 				verified: connection.verified,
 				visibility_flags: connection.visibility_flags,
 				sort_order: connection.sort_order,
+				// sanalyer: profile views cache only verified bsky/domain connections, which carry no provider link.
+				provider_id: null,
+				url: null,
 			}));
 	}
 }

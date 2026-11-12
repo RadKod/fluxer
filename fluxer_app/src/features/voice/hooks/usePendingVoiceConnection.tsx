@@ -4,7 +4,7 @@ import Accessibility from '@app/features/accessibility/state/Accessibility';
 import {ConfirmModal} from '@app/features/app/components/dialogs/ConfirmModal';
 import * as ModalCommands from '@app/features/ui/commands/ModalCommands';
 import {modal} from '@app/features/ui/commands/ModalCommands';
-import MediaEngine, {useMediaEngineConnectionVersion} from '@app/features/voice/engine/MediaEngineFacade';
+import VoiceRuntime, {useVoiceRuntimeVersion} from '@app/features/voice/engine/VoiceRuntime';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
 import {useCallback, useEffect, useRef, useState} from 'react';
@@ -40,16 +40,16 @@ export function usePendingVoiceConnection({
 	onConnected?: () => void;
 }): PendingVoiceConnectionResult {
 	const {i18n} = useLingui();
-	useMediaEngineConnectionVersion(Boolean(channelId));
+	useVoiceRuntimeVersion();
 	const [isPending, setIsPending] = useState(false);
 	const onConnectedRef = useRef(onConnected);
 	onConnectedRef.current = onConnected;
 	const isConnectedToTarget = channelId
-		? MediaEngine.channelId === channelId && MediaEngine.guildId === (guildId ?? null)
+		? VoiceRuntime.channelId === channelId && VoiceRuntime.guildId === (guildId ?? null)
 		: false;
-	const isConnected = Boolean(channelId) && MediaEngine.connected;
-	const isConnecting = Boolean(channelId) && MediaEngine.connecting;
-	const connectFailed = Boolean(channelId) && MediaEngine.connectFailed;
+	const isConnected = Boolean(channelId) && VoiceRuntime.connected;
+	const isConnecting = Boolean(channelId) && VoiceRuntime.connecting;
+	const connectFailed = Boolean(channelId) && VoiceRuntime.connectFailed;
 	const isTargetConnecting = isConnectedToTarget && isConnecting;
 	useEffect(() => {
 		if (!isPending) return;
@@ -70,9 +70,11 @@ export function usePendingVoiceConnection({
 		(options?: PendingVoiceConnectionStartOptions) => {
 			if (!channelId) return;
 			setIsPending(true);
-			void MediaEngine.connectToVoiceChannel(guildId ?? null, channelId, {
-				initialViewerStreamKeys: options?.initialViewerStreamKeys,
-			});
+			void VoiceRuntime.withEngine('join', (engine) =>
+				engine.connectToVoiceChannel(guildId ?? null, channelId, {
+					initialViewerStreamKeys: options?.initialViewerStreamKeys,
+				}),
+			);
 		},
 		[guildId, channelId],
 	);

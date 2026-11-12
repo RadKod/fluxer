@@ -59,6 +59,7 @@ import {
 	StickerAnimationOptions,
 	ThemeTypes,
 	TimeFormatTypes,
+	TimestampFormatTypes,
 } from '@fluxer/constants/src/UserConstants';
 import {
 	createEmptySyncedPreferences,
@@ -140,7 +141,9 @@ export interface UserSettings {
 	statusResetsTo: string | null;
 	theme: string;
 	timeFormat: number;
+	timestampFormat: number;
 	locale: string;
+	regionalFormat: string | null;
 	restrictedGuilds: Array<string>;
 	botRestrictedGuilds: Array<string>;
 	defaultGuildsRestricted: boolean;
@@ -236,6 +239,8 @@ const SETTINGS_WITHOUT_SERVER_RECORD = {
 	// returns 404), so it counts as reviewed here; otherwise the privacy setup would open again on every start.
 	privacy_setup_version: PRIVACY_SETUP_VERSION,
 	privacy_setup_completed_at: null,
+	timestamp_format: TimestampFormatTypes.AUTO,
+	regional_format: null,
 } satisfies Omit<UserSettingsResponse, 'locale'>;
 
 type UserSettingsUpdateOptions =
@@ -265,15 +270,27 @@ function writeDirtySyncedPreferenceFields(fields: ReadonlySet<SyncedPreferencesF
 	}
 }
 
-function readPersistedSyncedPreferences(key: string): SyncedPreferences {
+function decodePersistedSyncedPreferences(key: string, raw: string): SyncedPreferences {
 	try {
-		const raw = AppStorage.getItem(key);
-		if (raw == null || raw === '') return createEmptySyncedPreferences();
+		if (raw === '') return createEmptySyncedPreferences();
 		return decodeSyncedPreferencesLenient(raw);
 	} catch (error) {
 		logger.warn(`Failed to read persisted synced preferences (${key}):`, error);
 		return createEmptySyncedPreferences();
 	}
+}
+
+function readPersistedSyncedPreferencesRaw(key: string): string {
+	try {
+		return AppStorage.getItem(key) ?? '';
+	} catch (error) {
+		logger.warn(`Failed to read persisted synced preferences (${key}):`, error);
+		return '';
+	}
+}
+
+function readPersistedSyncedPreferences(key: string): SyncedPreferences {
+	return decodePersistedSyncedPreferences(key, readPersistedSyncedPreferencesRaw(key));
 }
 
 function writePersistedSyncedPreferences(key: string, preferences: SyncedPreferences): void {
@@ -398,7 +415,9 @@ class UserSettingsState {
 	statusResetsTo: string | null = null;
 	theme: string = ThemeTypes.DARK;
 	timeFormat: number = TimeFormatTypes.AUTO;
+	timestampFormat: number = TimestampFormatTypes.AUTO;
 	locale: string = 'en-US';
+	regionalFormat: string | null = null;
 	restrictedGuilds: Array<string> = [];
 	botRestrictedGuilds: Array<string> = [];
 	defaultGuildsRestricted: boolean = false;
@@ -458,6 +477,7 @@ class UserSettingsState {
 	private accountReleased = false;
 	private settingsRecordMissingEpoch: number | null = null;
 	private syncFlushGeneration = 0;
+	private observedLocalSyncedPreferencesRaw: string | null = null;
 
 	constructor() {
 		makeAutoObservable<
@@ -475,6 +495,7 @@ class UserSettingsState {
 			| 'inFlightSyncedPreferences'
 			| 'recentlyAckedSyncedPreferenceFields'
 			| 'syncFlushGeneration'
+			| 'observedLocalSyncedPreferencesRaw'
 		>(
 			this,
 			{
@@ -491,6 +512,7 @@ class UserSettingsState {
 				inFlightSyncedPreferences: false,
 				recentlyAckedSyncedPreferenceFields: false,
 				syncFlushGeneration: false,
+				observedLocalSyncedPreferencesRaw: false,
 			},
 			{autoBind: true},
 		);
@@ -500,9 +522,17 @@ class UserSettingsState {
 	private installSyncedPreferencesTabSync(): void {
 		try {
 			AppStorage.subscribe(
-				() => {
+				(event) => {
 					try {
-						const incoming = readPersistedSyncedPreferences(SYNCED_PREFERENCES_LOCAL_KEY);
+						if (event.key === null) {
+							this.dirtySyncedPreferenceFields = readDirtySyncedPreferenceFields();
+						}
+						const raw = readPersistedSyncedPreferencesRaw(SYNCED_PREFERENCES_LOCAL_KEY);
+						if (raw === this.observedLocalSyncedPreferencesRaw) {
+							return;
+						}
+						this.observedLocalSyncedPreferencesRaw = raw;
+						const incoming = decodePersistedSyncedPreferences(SYNCED_PREFERENCES_LOCAL_KEY, raw);
 						runInAction(() => this.mergeIncomingSyncedPreferences(incoming));
 					} catch (error) {
 						logger.warn('Failed to apply external synced preferences change:', error);
@@ -517,6 +547,7 @@ class UserSettingsState {
 
 	private persistLocalSyncedPreferences(): void {
 		writePersistedSyncedPreferences(SYNCED_PREFERENCES_LOCAL_KEY, this.syncedPreferences);
+		this.observedLocalSyncedPreferencesRaw = readPersistedSyncedPreferencesRaw(SYNCED_PREFERENCES_LOCAL_KEY);
 	}
 
 	private persistWireSyncedPreferences(): void {
@@ -606,7 +637,7 @@ class UserSettingsState {
 
 	isPrivacySetupPending(): boolean {
 		return (
-			this.hydrated &&
+			!this.awaitingAccountSettings &&
 			this.privacySetupVersion !== null &&
 			this.privacySetupVersion < PRIVACY_SETUP_VERSION &&
 			!RuntimeConfig.directMessagesDisabled
@@ -735,7 +766,7 @@ class UserSettingsState {
 			...changedSyncedPreferenceFields(this.syncedPreferences, this.wireSyncedPreferences),
 		]);
 		if (unsyncedFields.size > 0) {
-			logger.info(`Clearing ${unsyncedFields.size} unsynced synced preference field(s) left by the previous account`);
+			logger.debug(`Clearing ${unsyncedFields.size} unsynced synced preference field(s) left by the previous account`);
 		}
 		this.accountEpoch += 1;
 		this.settingsEpoch = this.accountEpoch;
@@ -758,6 +789,7 @@ class UserSettingsState {
 		writePersistedRecentAck(this.recentlyAckedSyncedPreferenceFields);
 		AppStorage.removeItem(SYNCED_PREFERENCES_LOCAL_KEY);
 		AppStorage.removeItem(SYNCED_PREFERENCES_WIRE_KEY);
+		this.observedLocalSyncedPreferencesRaw = null;
 		if (this.syncFlushTimer != null && this.syncFlushTimer !== 'microtask') {
 			clearTimeout(this.syncFlushTimer);
 		}
@@ -771,11 +803,6 @@ class UserSettingsState {
 		for (const resolver of resolvers) {
 			resolver.resolve();
 		}
-	}
-
-	setStatus(status: StatusType): void {
-		this.status = status;
-		LocalPresence.updatePresence();
 	}
 
 	handleGatewayReady(userSettings: unknown, settingsEpoch: number | null): void {
@@ -835,11 +862,15 @@ class UserSettingsState {
 			AccountTheme.updateServerTheme(camelCaseSettings.theme);
 		}
 		this.timeFormat = camelCaseSettings.timeFormat;
+		this.timestampFormat = camelCaseSettings.timestampFormat ?? TimestampFormatTypes.AUTO;
+		this.regionalFormat = camelCaseSettings.regionalFormat ?? null;
 		const localeToLoad = camelCaseSettings.locale ?? this.locale;
 		const normalizedLocale = applyLocaleChange(localeToLoad);
 		this.locale = normalizedLocale;
-		this.restrictedGuilds = [...camelCaseSettings.restrictedGuilds];
-		this.botRestrictedGuilds = [...camelCaseSettings.botRestrictedGuilds];
+		if (!isEqual(this.restrictedGuilds, camelCaseSettings.restrictedGuilds))
+			this.restrictedGuilds = [...camelCaseSettings.restrictedGuilds];
+		if (!isEqual(this.botRestrictedGuilds, camelCaseSettings.botRestrictedGuilds))
+			this.botRestrictedGuilds = [...camelCaseSettings.botRestrictedGuilds];
 		this.defaultGuildsRestricted = camelCaseSettings.defaultGuildsRestricted;
 		this.botDefaultGuildsRestricted = camelCaseSettings.botDefaultGuildsRestricted;
 		this.inlineAttachmentMedia = camelCaseSettings.inlineAttachmentMedia;
@@ -870,17 +901,19 @@ class UserSettingsState {
 		this.gameActivityEligible = camelCaseSettings.gameActivityEligible === true;
 		this.gameActivityDefaultPending = camelCaseSettings.gameActivityDefaultPending === true;
 		this.privacySetupVersion = camelCaseSettings.privacySetupVersion ?? null;
-		this.guildFolders = camelCaseSettings.guildFolders.map((folder) => ({
+		const guildFolders = camelCaseSettings.guildFolders.map((folder) => ({
 			...folder,
 			flags: folder.flags ?? 0,
 			icon: folder.icon ?? DEFAULT_GUILD_FOLDER_ICON,
 			guildIds: [...folder.guildIds],
 		}));
+		if (!isEqual(this.guildFolders, guildFolders)) this.guildFolders = guildFolders;
 		const newCustomStatus = normalizeCustomStatus(camelCaseSettings.customStatus ?? null);
-		this.customStatus = newCustomStatus ? {...newCustomStatus} : null;
+		if (!isEqual(this.customStatus, newCustomStatus)) this.customStatus = newCustomStatus;
 		this.afkTimeout = camelCaseSettings.afkTimeout;
 		if (camelCaseSettings.trustedDomains !== undefined) {
-			this.trustedDomains = [...camelCaseSettings.trustedDomains];
+			if (!isEqual(this.trustedDomains, camelCaseSettings.trustedDomains))
+				this.trustedDomains = [...camelCaseSettings.trustedDomains];
 		}
 		if (camelCaseSettings.defaultHideMutedChannels !== undefined) {
 			this.defaultHideMutedChannels = camelCaseSettings.defaultHideMutedChannels;
@@ -943,7 +976,9 @@ class UserSettingsState {
 			statusResetsTo: this.statusResetsTo,
 			theme: this.theme,
 			timeFormat: this.timeFormat,
+			timestampFormat: this.timestampFormat,
 			locale: this.locale,
+			regionalFormat: this.regionalFormat,
 			restrictedGuilds: [...this.restrictedGuilds],
 			botRestrictedGuilds: [...this.botRestrictedGuilds],
 			defaultGuildsRestricted: this.defaultGuildsRestricted,

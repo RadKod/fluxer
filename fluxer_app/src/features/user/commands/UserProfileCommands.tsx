@@ -208,6 +208,24 @@ export function openUserProfile(userId: string, guildId?: string, autoFocusNote?
 	return true;
 }
 
+export async function openLinkedUserProfile(
+	userId: string,
+	guildId?: string,
+	autoFocusNote?: boolean,
+): Promise<boolean> {
+	if (!canOpenUserProfileSurface()) {
+		logger.debug(`Skipping linked profile open before fetch for user ${userId}${profileScope(guildId)}`);
+		return false;
+	}
+	try {
+		await fetch(userId, guildId);
+	} catch (error) {
+		logger.error(`Failed to fetch linked profile for user ${userId}${guildId ? ` in guild ${guildId}` : ''}:`, error);
+		return false;
+	}
+	return openUserProfile(userId, guildId, autoFocusNote);
+}
+
 // Micup: a profile ID goes into request paths, so only a plain decimal snowflake passes —
 // isProbablyAValidSnowflake also takes '0x10', padded values and 21 digits, since it only asks BigInt().
 const PROFILE_ID = /^[0-9]{1,20}$/;

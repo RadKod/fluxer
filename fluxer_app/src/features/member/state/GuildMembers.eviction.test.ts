@@ -215,8 +215,8 @@ function resetWorld(): void {
 		Navigation.channelId = null;
 	});
 	// A claimed READY user avoids scheduling unrelated claim-account modal imports.
-	Users.handleGatewayReady('micup-test-account', {...wireMember('me').user, email: 'me@fluxer.test'} as never);
-	GuildMembers.handleGatewayReady([]);
+	Users.handleGatewayReady('micup-test-account', {...wireMember('me').user, email: 'me@fluxer.test'} as never, {keepRestoredUsers: false});
+	GuildMembers.handleGatewayReady([], {keepRestoredMembers: false});
 	MemberSidebar.handleSessionInvalidated();
 	idleCallbacks.length = 0;
 	socket.updateGuildSubscriptions.mockClear();
@@ -378,7 +378,7 @@ describe('GuildMembers eviction of inactive large guilds', {timeout: 30_000}, ()
 
 		it('but forgets holds from before a reconnect', () => {
 			GuildMembers.handleMemberAdd(GUILD_B, wireMember(userId(12)));
-			GuildMembers.handleGatewayReady([]);
+			GuildMembers.handleGatewayReady([], {keepRestoredMembers: false});
 			pushChunk(GUILD_A, MEMBER_COUNT);
 			leaveGuildA();
 			expect(Users.getUser(userId(12))).toBeUndefined();

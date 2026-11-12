@@ -10,12 +10,11 @@ import type {MessageAttachment} from '@app/api/database/types/MessageTypes';
 import type {FavoriteMemeRepository} from '@app/api/favorite_meme/FavoriteMemeRepository';
 import type {IMediaService} from '@app/api/infrastructure/IMediaService';
 import type {ISnowflakeService} from '@app/api/infrastructure/ISnowflakeService';
-import type {IStorageService} from '@app/api/infrastructure/IStorageService';
+import {type IStorageService, isStorageObjectMissing} from '@app/api/infrastructure/IStorageService';
 import {Logger} from '@app/api/Logger';
 import type {FavoriteMeme} from '@app/api/models/FavoriteMeme';
 import type {Message} from '@app/api/models/Message';
 import type {User} from '@app/api/models/User';
-import {S3ServiceException} from '@aws-sdk/client-s3';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {MessageAttachmentFlags} from '@fluxer/constants/src/ChannelConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
@@ -55,10 +54,12 @@ export class MessageOperationsHelpers {
 		userId,
 		nonce,
 		expectedChannelId,
+		forumParentId,
 	}: {
 		userId: UserID;
 		nonce?: string;
 		expectedChannelId: ChannelID;
+		forumParentId?: ChannelID;
 	}): Promise<Message | null> {
 		if (!nonce) return null;
 		const existingNonce = await this.deps.cacheService.get<{
@@ -67,7 +68,7 @@ export class MessageOperationsHelpers {
 		}>(messageNonceKey(userId, nonce));
 		if (!existingNonce) return null;
 		const cachedChannelId = createChannelID(BigInt(existingNonce.channel_id));
-		if (cachedChannelId !== expectedChannelId) {
+		if (cachedChannelId !== expectedChannelId && !(await this.isForumPost(cachedChannelId, forumParentId))) {
 			throw new UnknownMessageError();
 		}
 		return this.deps.channelRepository.messages.getMessage(
@@ -76,16 +77,24 @@ export class MessageOperationsHelpers {
 		);
 	}
 
+	private async isForumPost(channelId: ChannelID, forumParentId: ChannelID | undefined): Promise<boolean> {
+		if (forumParentId === undefined) return false;
+		const channel = await this.deps.channelRepository.channelData.findUnique(channelId);
+		return channel?.parentId === forumParentId;
+	}
+
 	async sendOncePerNonce<T>({
 		userId,
 		nonce,
 		expectedChannelId,
+		forumParentId,
 		existing,
 		send,
 	}: {
 		userId: UserID;
 		nonce?: string;
 		expectedChannelId: ChannelID;
+		forumParentId?: ChannelID;
 		existing: (message: Message) => T;
 		send: (recordNonce: RecordMessageNonce) => Promise<T>;
 	}): Promise<T> {
@@ -93,11 +102,20 @@ export class MessageOperationsHelpers {
 		const claimKey = messageNonceClaimKey(userId, nonce);
 		const deadline = Date.now() + MESSAGE_NONCE_WAIT_MS;
 		while (true) {
-			const existingMessage = await this.findExistingMessage({userId, nonce, expectedChannelId});
+			const existingMessage = await this.findExistingMessage({userId, nonce, expectedChannelId, forumParentId});
 			if (existingMessage) return existing(existingMessage);
 			const token = await this.deps.cacheService.acquireLock(claimKey, MESSAGE_NONCE_CLAIM_TTL_SECONDS);
 			if (token) {
-				return this.sendWithNonceClaim({userId, nonce, expectedChannelId, claimKey, token, existing, send});
+				return this.sendWithNonceClaim({
+					userId,
+					nonce,
+					expectedChannelId,
+					forumParentId,
+					claimKey,
+					token,
+					existing,
+					send,
+				});
 			}
 			if (Date.now() >= deadline) {
 				throw new ThrottledError({
@@ -114,6 +132,7 @@ export class MessageOperationsHelpers {
 		userId,
 		nonce,
 		expectedChannelId,
+		forumParentId,
 		claimKey,
 		token,
 		existing,
@@ -122,6 +141,7 @@ export class MessageOperationsHelpers {
 		userId: UserID;
 		nonce: string;
 		expectedChannelId: ChannelID;
+		forumParentId?: ChannelID;
 		claimKey: string;
 		token: string;
 		existing: (message: Message) => T;
@@ -135,7 +155,7 @@ export class MessageOperationsHelpers {
 		);
 		let keepClaim = false;
 		try {
-			const existingMessage = await this.findExistingMessage({userId, nonce, expectedChannelId});
+			const existingMessage = await this.findExistingMessage({userId, nonce, expectedChannelId, forumParentId});
 			if (existingMessage) return existing(existingMessage);
 			return await send(async (messageId) => {
 				try {
@@ -189,7 +209,7 @@ export class MessageOperationsHelpers {
 				newContentType: favoriteMeme.contentType,
 			});
 		} catch (error) {
-			if (error instanceof S3ServiceException && (error.name === 'NoSuchKey' || error.name === 'NotFound')) {
+			if (isStorageObjectMissing(error)) {
 				throw InputValidationError.fromCode('favorite_meme_id', ValidationErrorCodes.FAVORITE_MEME_NOT_FOUND);
 			}
 			throw error;

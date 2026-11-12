@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {UserAreaPopout} from '@app/features/app/components/floating/UserAreaPopout';
 import styles from '@app/features/app/components/layout/UserArea.module.css';
 import {
 	selectUserAreaMicrophoneState,
@@ -13,6 +12,8 @@ import {useContextMenuHoverState} from '@app/features/app/hooks/useContextMenuHo
 import * as VoiceStateCommands from '@app/features/devtools/commands/VoiceStateCommands';
 import Keybind from '@app/features/input/state/InputKeybind';
 import {getPushToTalkHoldLabel} from '@app/features/input/utils/PushToTalkHint';
+import {createNamedLoadableComponent} from '@app/features/platform/components/loadable/LoadableComponent';
+import NetworkReachability from '@app/features/platform/state/NetworkReachability';
 import {NameStyleText} from '@app/features/name_style/components/NameStyleText';
 import Presence from '@app/features/presence/state/Presence';
 import {SettingsContextMenu} from '@app/features/ui/action_menu/SettingsContextMenu';
@@ -34,10 +35,10 @@ import {
 import type {User} from '@app/features/user/models/User';
 import UserSettings from '@app/features/user/state/UserSettings';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
+import {LazyVoiceAudioSettingsMenu} from '@app/features/voice/components/LazyVoiceComponents';
 import {VoiceConnectionStatus} from '@app/features/voice/components/VoiceConnectionStatus';
-import {VoiceAudioSettingsMenu} from '@app/features/voice/components/VoiceSettingsMenus';
-import MediaEngine from '@app/features/voice/engine/MediaEngineFacade';
 import {getEffectiveAudioState} from '@app/features/voice/engine/VoiceEffectiveAudioState';
+import VoiceRuntime from '@app/features/voice/engine/VoiceRuntime';
 import {useMediaDevices} from '@app/features/voice/hooks/useMediaDevices';
 import LocalVoiceState from '@app/features/voice/state/LocalVoiceState';
 import {
@@ -47,12 +48,18 @@ import {
 	VOICE_NO_SPEAK_PERMISSION_DESCRIPTOR,
 	VOICE_UNDEAFEN_SELF_DESCRIPTOR,
 } from '@app/features/voice/utils/VoiceMessageDescriptors';
+import {StatusTypes} from '@fluxer/constants/src/StatusConstants';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
 import {GearIcon, MicrophoneIcon, MicrophoneSlashIcon, SpeakerHighIcon, SpeakerSlashIcon} from '@phosphor-icons/react';
 import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
 import {useEffect, useRef} from 'react';
+
+const UserAreaPopout = createNamedLoadableComponent<Record<string, never>>({
+	displayName: 'UserAreaPopout',
+	load: async () => (await import('@app/features/app/components/floating/UserAreaPopout')).UserAreaPopout,
+});
 
 const PUSH_TO_TALK_IS_ON_HOLD_TO_SPEAK_DESCRIPTOR = msg({
 	message: 'Push to talk is on. Hold {pushToTalkHint} to speak.',
@@ -88,7 +95,7 @@ export function getResizeObserverEntryBlockSize(entry: ResizeObserverEntry): num
 const UserAreaAudioSettingsMenu = ({onClose}: {onClose: () => void}) => {
 	const {inputDevices, outputDevices} = useMediaDevices();
 	return (
-		<VoiceAudioSettingsMenu
+		<LazyVoiceAudioSettingsMenu
 			inputDevices={inputDevices}
 			outputDevices={outputDevices}
 			onClose={onClose}
@@ -119,7 +126,7 @@ const UserAreaInner = observer(
 	}: UserAreaInnerProps) => {
 		const {i18n} = useLingui();
 		const {isOpen, openProps} = usePopout('user-area');
-		const status = Presence.getStatus(user.id);
+		const status = NetworkReachability.online ? Presence.getStatus(user.id) : StatusTypes.OFFLINE;
 		const customStatus = Presence.getCustomStatus(user.id);
 		const voiceConnectionRef = useRef<HTMLDivElement | null>(null);
 		const voiceConnectionHeightFrameRef = useRef<number | null>(null);
@@ -156,7 +163,7 @@ const UserAreaInner = observer(
 		const settingsLabel = privacySetupPending
 			? i18n._(USER_SETTINGS_PRIVACY_REVIEW_NEEDED_DESCRIPTOR)
 			: i18n._(USER_SETTINGS_LABEL_DESCRIPTOR);
-		const storeConnectedChannelId = MediaEngine.channelId;
+		const storeConnectedChannelId = VoiceRuntime.channelId;
 		const hasVoiceConnection = !MobileLayout.enabled && !!storeConnectedChannelId;
 		useEffect(() => {
 			const root = document.documentElement;
@@ -289,7 +296,12 @@ const UserAreaInner = observer(
 								tabIndex={0}
 								data-flx="app.user-area.user-area-inner.user-info"
 							>
-								<StatusAwareAvatar user={user} size={32} data-flx="app.user-area.user-area-inner.status-aware-avatar" />
+								<StatusAwareAvatar
+									user={user}
+									size={32}
+									status={NetworkReachability.online ? undefined : StatusTypes.OFFLINE}
+									data-flx="app.user-area.user-area-inner.status-aware-avatar"
+								/>
 								<div className={styles.userInfoText} data-flx="app.user-area.user-area-inner.user-info-text">
 									<div className={styles.userName} data-flx="app.user-area.user-area-inner.user-name">
 										<NameStyleText nameStyle={user.nameStyle} data-flx="app.user-area.user-area-inner.name-style-text">
@@ -477,8 +489,8 @@ const UserAreaInner = observer(
 	},
 );
 export const UserArea = observer(function UserArea({user}: {user: User}) {
-	const connectedGuildId = MediaEngine.guildId;
-	const voiceState = MediaEngine.getVoiceState(connectedGuildId);
+	const connectedGuildId = VoiceRuntime.guildId;
+	const voiceState = VoiceRuntime.getVoiceState(connectedGuildId);
 	const localSelfMute = LocalVoiceState.getSelfMute();
 	const localSelfDeaf = LocalVoiceState.getSelfDeaf();
 	const isMobile = MobileLayout.isMobileLayout();
@@ -487,7 +499,7 @@ export const UserArea = observer(function UserArea({user}: {user: User}) {
 	}
 	const isGuildMuted = voiceState?.mute ?? false;
 	const isGuildDeafened = voiceState?.deaf ?? false;
-	const muteReason = MediaEngine.getMuteReason(voiceState);
+	const muteReason = VoiceRuntime.getMuteReason(voiceState);
 	const isPermissionMuted = muteReason === 'permission';
 	const effectiveAudioState = getEffectiveAudioState({
 		selfMute: localSelfMute,

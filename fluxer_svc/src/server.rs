@@ -9,8 +9,8 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::{Extension, Router};
 use std::net::{IpAddr, SocketAddr};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, OnceLock};
 use tokio::net::TcpListener;
 
 pub const METRICS_ALLOWED_CIDRS_ENV: &str = "FLUXER_METRICS_ALLOWED_CIDRS";
@@ -95,12 +95,17 @@ pub async fn run_http(
     is_serving: Arc<AtomicBool>,
     metrics: Arc<ServiceMetrics>,
     service_name: String,
+    build_version: String,
 ) -> anyhow::Result<()> {
     let metrics_allowed = Arc::new(MetricsAllowList::from_env()?);
     let render = Arc::new(move || metrics.render_prometheus(&service_name));
+    let version = HeaderValue::from_str(&build_version).ok();
     let app = ops_router(is_serving, render)
         .layer(Extension(metrics_allowed))
-        .layer(middleware::from_fn(add_version_header));
+        .layer(middleware::from_fn(move |request, next| {
+            add_version_header(version.clone(), request, next)
+        }))
+        .layer(fluxer_common::svc_span::CurrentSpanLayer::new());
     let listener = TcpListener::bind(addr).await?;
     tracing::info!(addr = %addr, "health HTTP server listening");
     axum::serve(
@@ -154,18 +159,13 @@ async fn metrics_handler(
         .into_response()
 }
 
-fn build_version() -> &'static str {
-    static BUILD_VERSION: OnceLock<String> = OnceLock::new();
-    BUILD_VERSION
-        .get_or_init(|| {
-            crate::config::optional_env("BUILD_VERSION").unwrap_or_else(|| "dev".to_owned())
-        })
-        .as_str()
-}
-
-async fn add_version_header(request: Request<Body>, next: Next) -> Response {
+async fn add_version_header(
+    version: Option<HeaderValue>,
+    request: Request<Body>,
+    next: Next,
+) -> Response {
     let mut response = next.run(request).await;
-    if let Ok(value) = HeaderValue::from_str(build_version()) {
+    if let Some(value) = version {
         response.headers_mut().insert("x-fluxer-version", value);
     }
     response

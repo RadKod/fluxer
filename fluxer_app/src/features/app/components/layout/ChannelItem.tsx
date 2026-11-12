@@ -68,7 +68,7 @@ import {Tooltip} from '@app/features/ui/tooltip/Tooltip';
 import {CHANNEL_SETTINGS_LABEL_DESCRIPTOR} from '@app/features/user/components/settings_utils/ChannelSettingsConstants';
 import type {User} from '@app/features/user/models/User';
 import UserGuildSettings from '@app/features/user/state/UserGuildSettings';
-import MediaEngine from '@app/features/voice/engine/MediaEngineFacade';
+import VoiceRuntime from '@app/features/voice/engine/VoiceRuntime';
 import {usePendingVoiceConnection} from '@app/features/voice/hooks/usePendingVoiceConnection';
 import {computeChannelE2EEStatus} from '@app/features/voice/state/ChannelE2EEStatus';
 import CompactVoiceCallHeight, {getGuildVoiceCallExpansionKey} from '@app/features/voice/state/CompactVoiceCallHeight';
@@ -241,8 +241,8 @@ export const ChannelItem = observer(
 		const shouldDimForVoiceDrag = Boolean(isVoiceDragActive && channelIsText && channel.parentId !== null);
 		const unreadCount = ReadStates.getUnreadCount(channel.id);
 		const hasUnread = channel.isThreadOnly() ? hasForumUnread(channel) : ReadStates.hasUnread(channel.id);
-		const connectedVoiceGuildId = channelIsVoice ? MediaEngine.guildId : null;
-		const connectedVoiceChannelId = channelIsVoice ? MediaEngine.channelId : null;
+		const connectedVoiceGuildId = channelIsVoice ? VoiceRuntime.guildId : null;
+		const connectedVoiceChannelId = channelIsVoice ? VoiceRuntime.channelId : null;
 		const canManageChannels = Permission.can(Permissions.MANAGE_CHANNELS, channel);
 		const canUpdateRtcRegion = channelIsVoice && Permission.can(Permissions.UPDATE_RTC_REGION, channel);
 		const canEditChannel = canManageChannels || canUpdateRtcRegion;
@@ -252,7 +252,7 @@ export const ChannelItem = observer(
 		const isChannelDirectlyMuted = UserGuildSettings.isChannelDirectlyMuted(guild.id, channel.id);
 		const currentUserCount =
 			channelIsVoice && channel.userLimit != null && channel.userLimit > 0
-				? Object.keys(MediaEngine.getAllVoiceStatesInChannel(guild.id, channel.id)).length
+				? Object.keys(VoiceRuntime.getAllVoiceStatesInChannel(guild.id, channel.id)).length
 				: 0;
 		const isMobileLayout = mobileLayout.enabled;
 		const allowHoverAffordances = !isMobileLayout;

@@ -3,7 +3,7 @@
 import {Routes} from '@app/app/Routes';
 import {GuildChannelRouter} from '@app/app/router/components/GuildChannelRouter';
 import {requireAuthentication, whenAuthenticated} from '@app/app/router/policy/AuthRouteRedirectPolicy';
-import {rootRoute} from '@app/app/router/routes/RootRoutes';
+import {rootRoute} from '@app/app/router/routes/AppRootRoute';
 import {AppBadge} from '@app/features/app/components/AppNotificationBadge';
 import {AppLayout} from '@app/features/app/components/layout/AppLayout';
 import {DiscoveryLayout} from '@app/features/app/components/layout/DiscoveryLayout';
@@ -25,10 +25,7 @@ import GatewaySessions from '@app/features/gateway/transport/GatewaySessionPool'
 import SelectedChannel from '@app/features/navigation/state/SelectedChannel';
 import {getDefaultLandingPath} from '@app/features/navigation/utils/DefaultLandingUtils';
 import * as RouterUtils from '@app/features/navigation/utils/RouterUtils';
-import {
-	createDefaultLoadableComponent,
-	createNamedLoadableComponent,
-} from '@app/features/platform/components/loadable/LoadableComponent';
+import {createNamedLoadableComponent} from '@app/features/platform/components/loadable/LoadableComponent';
 import {createRoute} from '@app/features/platform/components/router/RouterBuilder';
 import {notFound} from '@app/features/platform/components/router/RouterErrors';
 import {useParams} from '@app/features/platform/components/router/RouterReact';
@@ -97,10 +94,6 @@ const BookmarksBottomSheet = createNamedLoadableComponent<AppRouteComponentProps
 	displayName: 'BookmarksBottomSheet',
 	load: async () => (await import('@app/features/channel/components/modals/BookmarksBottomSheet')).BookmarksBottomSheet,
 });
-const ConnectionCallbackPage = createDefaultLoadableComponent<AppRouteComponentProps>({
-	displayName: 'ConnectionCallbackPage',
-	load: () => import('@app/features/connection/components/pages/ConnectionCallbackPage'),
-});
 const NotificationsPage = createNamedLoadableComponent<AppRouteComponentProps>({
 	displayName: 'NotificationsPage',
 	load: async () => (await import('@app/features/notification/components/pages/NotificationsPage')).NotificationsPage,
@@ -109,10 +102,6 @@ const OperatorPassRoutePage = createNamedLoadableComponent<AppRouteComponentProp
 	displayName: 'OperatorPassRoutePage',
 	load: async () =>
 		(await import('@app/features/premium/components/operator_pass/OperatorPassRoutePage')).OperatorPassRoutePage,
-});
-const PremiumCallbackPage = createDefaultLoadableComponent<AppRouteComponentProps>({
-	displayName: 'PremiumCallbackPage',
-	load: () => import('@app/features/premium/components/pages/PremiumCallbackPage'),
 });
 const FeedPage = createNamedLoadableComponent<AppRouteComponentProps>({
 	displayName: 'FeedPage',
@@ -220,22 +209,6 @@ const youRoute = createRoute({
 			</>
 		);
 	},
-});
-export const premiumCallbackRoute = createRoute({
-	getParentRoute: () => rootRoute,
-	id: 'premiumCallback',
-	path: Routes.PREMIUM_CALLBACK,
-	onEnter: (context) =>
-		context.url.searchParams.get('product') === 'operator_pass' ? requireAuthentication(context) : undefined,
-	preload: PremiumCallbackPage.preload,
-	component: () => <PremiumCallbackPage data-flx="app.router.app-routes.premium-callback-page" />,
-});
-export const connectionCallbackRoute = createRoute({
-	getParentRoute: () => rootRoute,
-	id: 'connectionCallback',
-	path: Routes.CONNECTION_CALLBACK,
-	preload: ConnectionCallbackPage.preload,
-	component: () => <ConnectionCallbackPage data-flx="app.router.app-routes.connection-callback-page" />,
 });
 const bookmarksRoute = createRoute({
 	getParentRoute: () => guildsLayoutRoute,

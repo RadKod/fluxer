@@ -34,6 +34,11 @@ import type {Guild} from '@app/features/guild/models/Guild';
 import {OFFLINE_DESCRIPTOR, ONLINE_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
 import {resolveMemberListPresence} from '@app/features/member/hooks/useMemberListPresence';
 import {useMemberListSubscription} from '@app/features/member/hooks/useMemberListSubscription';
+import {
+	forgetMemberListScroll,
+	recallMemberListScroll,
+	rememberMemberListScroll,
+} from '@app/features/member/state/MemberListScrollMemory';
 import {resolveMemberListViewportModel} from '@app/features/member/state/MemberListViewportStateMachine';
 import MemberSidebar from '@app/features/member/state/MemberSidebar';
 import {
@@ -45,6 +50,7 @@ import {
 } from '@app/features/member/utils/MemberListLayout';
 import {
 	areNormalizedMemberListRangesEqual,
+	buildInitialMemberListRenderWindow,
 	buildMemberListRangeWindow,
 	buildMemberListRenderWindow,
 	type NormalizedMemberListRanges,
@@ -64,19 +70,22 @@ import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
 import {ChannelTypes, Permissions} from '@fluxer/constants/src/ChannelConstants';
 import {MEMBER_LIST_RANGE_MAX_SPAN} from '@fluxer/constants/src/GatewayConstants';
 import {GuildOperations} from '@fluxer/constants/src/GuildConstants';
-import {MEDIA_PROXY_AVATAR_SIZE_DEFAULT} from '@fluxer/constants/src/MediaProxyAssetSizes';
 import {isOfflineStatus} from '@fluxer/constants/src/StatusConstants';
 import {useLingui as useLinguiRuntime} from '@lingui/react';
 import {useLingui} from '@lingui/react/macro';
 import clsx from 'clsx';
 import {observer} from 'mobx-react-lite';
 import type {ReactNode, UIEvent} from 'react';
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 
 const INITIAL_SUBSCRIPTION_RANGE: [number, number] = [0, MEMBER_LIST_RANGE_MAX_SPAN];
-const INITIAL_RENDER_RANGE: [number, number] = [0, 64];
 const INITIAL_SUBSCRIPTION_RANGES = normalizeMemberListRanges([INITIAL_SUBSCRIPTION_RANGE]);
-const INITIAL_RENDER_RANGES = normalizeMemberListRanges([INITIAL_RENDER_RANGE]);
+function initialMemberListRenderRanges(): NormalizedMemberListRanges {
+	return buildInitialMemberListRenderWindow(
+		window.innerHeight,
+		Math.min(MEMBER_LIST_ITEM_HEIGHT_PX, MEMBER_LIST_GROUP_HEADER_HEIGHT_PX) * getAppRemScale(),
+	);
+}
 const EMPTY_MEMBER_LIST_RANGES = normalizeMemberListRanges([]);
 const SUBSCRIPTION_OVERSCAN_PAGES = 0;
 const MIN_SUBSCRIPTION_BUFFER_ROWS = 1;
@@ -185,15 +194,17 @@ interface LazyMemberListProps {
 
 const LazyMemberList = observer(function LazyMemberList({guild, channel}: LazyMemberListProps) {
 	const {i18n} = useLingui();
+	const [renderWindowRanges, setRenderWindowRanges] =
+		useState<NormalizedMemberListRanges>(initialMemberListRenderRanges);
 	const subscriptionRangesRef = useRef<NormalizedMemberListRanges>(INITIAL_SUBSCRIPTION_RANGES);
-	const renderRangesRef = useRef<NormalizedMemberListRanges>(INITIAL_RENDER_RANGES);
+	const renderRangesRef = useRef<NormalizedMemberListRanges>(renderWindowRanges);
 	const scrollFrameRef = useRef<number | null>(null);
 	const pendingScrollMetricsRef = useRef<{scrollTop: number; clientHeight: number} | null>(null);
 	const scrollerRef = useRef<ScrollerHandle | null>(null);
+	const restoredScrollKeyRef = useRef<string | null>(null);
 	const viewportHeightRef = useRef<number | null>(null);
 	const viewportRangesRef = useRef<NormalizedMemberListRanges>(EMPTY_MEMBER_LIST_RANGES);
 	const syncVisibleMembersRef = useRef<() => void>(() => {});
-	const [renderWindowRanges, setRenderWindowRanges] = useState<NormalizedMemberListRanges>(INITIAL_RENDER_RANGES);
 	const memberListIdentityKey = MemberSidebar.getListIdentityKey(guild.id, channel.id);
 	const memberListUpdatesDisabled = (guild.disabledOperations & GuildOperations.MEMBER_LIST_UPDATES) !== 0;
 	const currentUserId = Authentication.currentUserId;
@@ -390,21 +401,37 @@ const LazyMemberList = observer(function LazyMemberList({guild, channel}: LazyMe
 				viewportHeightRef.current = viewportHeight;
 			}
 			scheduleRangeUpdate(target.scrollTop, viewportHeight);
+			if (restoredScrollKeyRef.current === memberListIdentityKey) {
+				rememberMemberListScroll(memberListIdentityKey, target.scrollTop);
+			}
 		},
-		[scheduleRangeUpdate],
+		[scheduleRangeUpdate, memberListIdentityKey],
 	);
+	useLayoutEffect(() => {
+		if (restoredScrollKeyRef.current === memberListIdentityKey || isInitialLoading || totalRows <= 0) return;
+		const viewport = scrollerRef.current?.getViewportElement();
+		if (!viewport) return;
+		restoredScrollKeyRef.current = memberListIdentityKey;
+		const saved = recallMemberListScroll(memberListIdentityKey);
+		if (saved <= 0) return;
+		viewport.scrollTop = saved;
+		scheduleRangeUpdate(viewport.scrollTop, viewport.clientHeight);
+	}, [memberListIdentityKey, isInitialLoading, totalRows, scheduleRangeUpdate]);
+	useEffect(() => () => forgetMemberListScroll(memberListIdentityKey), [memberListIdentityKey]);
 	const handleResize = useCallback(() => {
 		viewportHeightRef.current = null;
 		scheduleRangeUpdateFromScroller();
 	}, [scheduleRangeUpdateFromScroller]);
 	useEffect(() => {
 		const initialSubscriptionRanges = INITIAL_SUBSCRIPTION_RANGES;
-		const initialRenderRanges = INITIAL_RENDER_RANGES;
+		const initialRenderRanges = initialMemberListRenderRanges();
 		subscriptionRangesRef.current = initialSubscriptionRanges;
 		renderRangesRef.current = initialRenderRanges;
 		viewportRangesRef.current = EMPTY_MEMBER_LIST_RANGES;
 		viewportHeightRef.current = null;
-		setRenderWindowRanges(initialRenderRanges);
+		setRenderWindowRanges((ranges) =>
+			areNormalizedMemberListRangesEqual(ranges, initialRenderRanges) ? ranges : initialRenderRanges,
+		);
 	}, [memberListIdentityKey, guild.id]);
 	useEffect(() => {
 		scheduleRangeUpdateFromScroller();
@@ -539,7 +566,6 @@ const LazyMemberList = observer(function LazyMemberList({guild, channel}: LazyMe
 						roleColor={roleColor}
 						displayName={displayName}
 						disableBackdrop={true}
-						avatarMediaSize={MEDIA_PROXY_AVATAR_SIZE_DEFAULT}
 						data-flx="channel.channel-members.lazy-member-list.virtual-row.member-list-item--2"
 					/>
 				</div>,

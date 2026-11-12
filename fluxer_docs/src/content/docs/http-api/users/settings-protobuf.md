@@ -110,7 +110,6 @@ Display, motion, message, media, voice and interaction preferences.
 | show_suppress_embeds_button? | bool | Whether messages show the suppress embeds button |
 | show_gif_indicator? | bool | Whether GIFs show a GIF indicator |
 | show_attachment_expiry_indicator? | bool | Whether attachments show their expiry indicator |
-| use_browser_locale_for_time_format? | bool | Whether times use the browser locale |
 | channel_typing_indicator_mode | int32 | [Channel typing indicator mode](#channel-typing-indicator-modes) |
 | show_selected_channel_typing_indicator? | bool | Whether the selected channel shows its typing indicator |
 | show_message_action_bar? | bool | Whether messages show the action bar |
@@ -143,6 +142,7 @@ Display, motion, message, media, voice and interaction preferences.
 | sequential_file_send? | bool | Whether multiple files are sent one message at a time |
 | mobile_splash_zoom_animation? | bool | Whether the mobile splash screen plays its zoom animation |
 | message_double_click_actions? | bool | Whether double-clicking a message edits your own message or replies to others |
+| announce_call_joins_and_leaves? | bool | Whether a screen reader announces people joining and leaving calls. Clients treat it as on when it's unset |
 
 ### Channel typing indicator modes
 

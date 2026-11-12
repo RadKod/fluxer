@@ -26,7 +26,7 @@ import Presence from '@app/features/presence/state/Presence';
 import QuickSwitcher from '@app/features/search/state/QuickSwitcher';
 import ThreadGuilds from '@app/features/threads/state/ThreadGuilds';
 import UserProfile from '@app/features/user/state/UserProfile';
-import MediaEngine from '@app/features/voice/engine/MediaEngineFacade';
+import VoiceRuntime from '@app/features/voice/engine/VoiceRuntime';
 import Webhooks from '@app/features/webhook/state/Webhooks';
 import type {Guild} from '@fluxer/schema/src/domains/guild/GuildResponseSchemas';
 
@@ -57,7 +57,7 @@ export function handleGuildDelete(data: GuildDeletePayload, _context: GatewayHan
 	Presence.handleGuildDelete(data.id);
 	GameActivityStore.clearGuild(data.id);
 	Webhooks.handleGuildDelete(data.id);
-	MediaEngine.handleGuildDelete(data.id);
+	VoiceRuntime.handleGuildDelete(data.id);
 	MemberSidebar.handleGuildDelete(data.id);
 	Messages.handleGuildUnavailable(data.id, data.unavailable ?? false);
 	Messages.handleCleanup();

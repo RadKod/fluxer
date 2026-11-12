@@ -44,6 +44,9 @@ export const THE_OTHER_PLATFORM_TEMPLATE_EXAMPLE_URL = `https://${THE_OTHER_PLAT
 // sanalyer: the download page lives on the landing site; the nagbar, the sidebar button, the screen-share CTA and
 // the updater modals all open it.
 export const DESKTOP_DOWNLOAD_URL = 'https://sanalyer.com/indir';
+// sanalyer: no Play Store listing yet; the Android nagbar is off (see AndroidAppNagbarSchedule), this only keeps links
+// pointed at our own download page.
+export const GOOGLE_PLAY_URL = 'https://sanalyer.com/indir';
 export const FLUXER_DOCS_DOMAIN = 'sanalyer.com/docs';
 export const FLUXER_DOCS_URL = `https://${FLUXER_DOCS_DOMAIN}`;
 export const FLUXER_BLUESKY_HANDLE = '@fluxer.app';

@@ -115,7 +115,7 @@ describe('isCosmeticLocked', () => {
 describe('Cosmetics', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		Users.handleGatewayReady('micup-test-account', me());
+		Users.handleGatewayReady('micup-test-account', me(), {keepRestoredUsers: false});
 	});
 
 	it('loads the whole catalog in one request and merges it with the owned items', async () => {
@@ -159,7 +159,7 @@ describe('Cosmetics', () => {
 	});
 
 	it('takes a nameplate off with null and sees it gone once USER_UPDATE arrives', async () => {
-		Users.handleGatewayReady('micup-test-account', me({nameplate_data: {asset: 'hash21', item_id: '21'}}));
+		Users.handleGatewayReady('micup-test-account', me({nameplate_data: {asset: 'hash21', item_id: '21'}}), {keepRestoredUsers: false});
 		vi.mocked(http.put).mockResolvedValue({
 			body: {avatar_decoration_id: null, profile_effect_id: null, nameplate_id: null},
 		} as never);

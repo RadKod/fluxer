@@ -83,7 +83,7 @@ Changes the account and returns the updated [user](/http-api/users/#user-object)
 | password? | string | Current password (8-256 characters) |
 | avatar?<sup>5</sup> | ?string | Base64-encoded avatar image, or null to clear |
 | banner?<sup>5</sup> <sup>6</sup> | ?string | Base64-encoded banner image, or null to clear |
-| bio?<sup>7</sup> | ?string | Biography (1-320 characters), or null to clear |
+| bio?<sup>7</sup> | ?string | Biography (1 character up to the `max_bio_length` limit, 320 by default), or null to clear |
 | pronouns? | ?string | Pronouns (1-40 characters), or null to clear |
 | accent_color? | ?integer | Packed 24-bit RGB color (0-16777215), or null to clear |
 | timezone?<sup>8</sup> | ?string | IANA timezone identifier (1-128 characters), or null to clear |
@@ -171,7 +171,7 @@ Sending `new_password` on a claimed account deletes every other session and issu
 | 400 | [error response](/http-api/#error-response) | The body, image, tag, password, entitlement, change limit or sudo proof is invalid |
 | 403 | [error response](/http-api/#error-response) | Email verification, sudo verification or `STAFF` is needed, or content is blocked |
 
-Fluxer sends [User Update](/gateway/events/#user-update) to the account.
+sanalyer sends [User Update](/gateway/events/#user-update) to the account.
 
 The rate limit is 20 requests per minute, on the `user:update` bucket.
 
@@ -201,7 +201,7 @@ The minimum age follows the region of the client IP address, as in [register an 
 | 404 | [error response](/http-api/#error-response) | The instance doesn't [collect date of birth](/http-api/instance/#public-registration-fields-object) |
 | 409 | [error response](/http-api/#error-response) | The account already has a date of birth |
 
-Fluxer sends [User Update](/gateway/events/#user-update), and [User Settings Update](/gateway/events/#user-settings-update) when settings still on their defaults change to match the age.
+sanalyer sends [User Update](/gateway/events/#user-update), and [User Settings Update](/gateway/events/#user-settings-update) when settings still on their defaults change to match the age.
 
 The rate limit is 5 requests per hour, on the `user:date_of_birth` bucket.
 
@@ -231,7 +231,7 @@ On an instance that sends email, the address waits for [confirm the email addres
 | 200 | [claim result](#claim-result-object) object | The account was claimed or the address waits for its code |
 | 400 | [error response](/http-api/#error-response) | The input is invalid, or `ACCOUNT_ALREADY_CLAIMED` |
 
-Fluxer sends [User Update](/gateway/events/#user-update), and emails the code when `next_step` is `confirm_email`.
+sanalyer sends [User Update](/gateway/events/#user-update), and emails the code when `next_step` is `confirm_email`.
 
 The rate limit is 5 requests per hour, on the `user:claim` bucket.
 
@@ -271,7 +271,7 @@ Confirms the address with the emailed code and returns the updated [user](/http-
 | 200 | [user](/http-api/users/#user-object) object | The address was confirmed |
 | 400 | [error response](/http-api/#error-response) | `INVALID_SIGN_IN_CODE` for a wrong code, `SIGN_IN_CODE_EXPIRED` after 5 wrong tries, 10 minutes or an address change |
 
-Fluxer sends [User Update](/gateway/events/#user-update).
+sanalyer sends [User Update](/gateway/events/#user-update).
 
 The rate limit is 10 requests per minute, on the `user:email_verification:confirm` bucket.
 
@@ -344,7 +344,7 @@ The deletion happens 14 days later by default, or within about a minute with `im
 | 400 | [error response](/http-api/#error-response) | The account owns a guild, `USER_OWNS_GUILDS` |
 | 409 | [error response](/http-api/#error-response) | `CONFLICT` when erasure has started |
 
-Fluxer emails the account when it has an address, once when the deletion is scheduled for later and once when the deletion is done.
+sanalyer emails the account when it has an address, once when the deletion is scheduled for later and once when the deletion is done.
 
 The rate limit is 5 requests per hour, on the `user:account:delete` bucket.
 
@@ -365,7 +365,7 @@ The body is an empty object.
 | 200 | [user](/http-api/users/#user-object) object | The acceptance was recorded |
 | 400 | [error response](/http-api/#error-response) | The body is not a JSON object |
 
-Fluxer sends [User Update](/gateway/events/#user-update).
+sanalyer sends [User Update](/gateway/events/#user-update).
 
 The rate limit is 20 requests per minute, on the `user:update` bucket.
 
@@ -435,6 +435,6 @@ Clears every premium field on the account. You need the [`STAFF`](/http-api/user
 | 204 | empty | The premium state was cleared |
 | 403 | [error response](/http-api/#error-response) | `MISSING_ACCESS` without the `STAFF` flag |
 
-Fluxer sends [User Update](/gateway/events/#user-update).
+sanalyer sends [User Update](/gateway/events/#user-update).
 
 The rate limit is 20 requests per minute, on the `user:update` bucket.

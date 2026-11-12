@@ -312,6 +312,8 @@ describe('voice pipeline v2 graph', () => {
 				thresholdRms: 0.01,
 				floorRms: 0.001,
 				nonFinite: false,
+				gated: true,
+				open: true,
 				frame: 4800,
 				contextTime: 1,
 				processingMs: 900,
@@ -560,6 +562,8 @@ describe('studio input graph', () => {
 			floorRms: 0.001,
 			thresholdRms: 0.008,
 			nonFinite: false,
+				gated: true,
+				open: true,
 			frame: 128,
 			contextTime: 1,
 		};

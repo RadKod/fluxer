@@ -72,7 +72,7 @@ describe('Guild channel limit scope', () => {
 		const channels = await repository.listGuildChannels(createGuildID(BigInt(targetGuildId)), 'complete');
 		const row = channels[0].toRow();
 		for (let index = channels.length; index < count; index++) {
-			await repository.upsert({
+			await repository.create({
 				...row,
 				channel_id: createChannelID(nextChannelId++),
 				name: `existing-${index}`,

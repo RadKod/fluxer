@@ -27,7 +27,7 @@ import * as UserProfileCommands from '@app/features/user/commands/UserProfileCom
 import {PremiumUserBadge} from '@app/features/user/components/PremiumUserBadge';
 import {UserProfileBadges} from '@app/features/user/components/popouts/UserProfileBadges';
 import profileCardStyles from '@app/features/user/components/profile/profile_card/ProfileCardUserInfo.module.css';
-import type {Profile} from '@app/features/user/models/Profile';
+import UserProfile from '@app/features/user/state/UserProfile';
 import Users from '@app/features/user/state/Users';
 import {accountGateReason} from '@app/features/user/utils/AccountGatePresentation';
 import {canPerform} from '@app/features/user/utils/AccountGates';
@@ -40,7 +40,7 @@ import {ph, plural} from '@lingui/core/macro';
 import {Trans, useLingui} from '@lingui/react/macro';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
-import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo} from 'react';
 
 const logger = new Logger('DMWelcomeSection');
 
@@ -54,7 +54,8 @@ export const DMWelcomeSection: React.FC<DMWelcomeSectionProps> = observer(functi
 	const user = Users.getUser(userId);
 	const relationship = Relationships.getRelationship(user?.id ?? '');
 	const relationshipType = relationship?.type;
-	const [profile, setProfile] = useState<Profile | null>(null);
+	const profile = UserProfile.getProfile(userId);
+	useEffect(() => UserProfile.retainProfile(userId), [userId]);
 	const mobileLayout = MobileLayout;
 	const profileMutualGuilds = useMemo(() => profile?.mutualGuilds ?? [], [profile?.mutualGuilds]);
 	const mutualGuildRecords = useMemo(() => {
@@ -64,13 +65,9 @@ export const DMWelcomeSection: React.FC<DMWelcomeSectionProps> = observer(functi
 	}, [profileMutualGuilds]);
 	useEffect(() => {
 		if (!user) return;
-		UserProfileCommands.fetch(user.id)
-			.then((fetchedProfile) => {
-				setProfile(fetchedProfile);
-			})
-			.catch((error) => {
-				logger.error('Failed to fetch user profile:', error);
-			});
+		UserProfileCommands.fetch(user.id).catch((error) => {
+			logger.error('Failed to fetch user profile:', error);
+		});
 	}, [user]);
 	const openFullProfile = useCallback(() => {
 		if (!user) return;

@@ -107,7 +107,7 @@ export async function assertNotBannedFromGuild(
 		generation,
 		userId,
 		email: user?.email,
-		ips: [ip, user?.lastActiveIp],
+		ips: [ip, user?.moderationIp],
 		ipInfoService,
 	});
 }

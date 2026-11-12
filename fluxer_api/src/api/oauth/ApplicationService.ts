@@ -5,6 +5,7 @@ import type {ApplicationID, UserID} from '@app/api/BrandedTypes';
 import {applicationIdToUserId} from '@app/api/BrandedTypes';
 import type {ApplicationRow} from '@app/api/database/types/OAuth2Types';
 import {EMPTY_USER_ROW, type UserRow} from '@app/api/database/types/UserTypes';
+import type {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
 import {contentModerationService} from '@app/api/infrastructure/ContentModerationService';
 import type {DiscriminatorService} from '@app/api/infrastructure/DiscriminatorService';
 import type {EntityAssetService, PreparedAssetUpload} from '@app/api/infrastructure/EntityAssetService';
@@ -20,8 +21,8 @@ import {enforceFluxerTagChangeRateLimit} from '@app/api/user/FluxerTagChangeRate
 import {assertBotUsernameAvailable} from '@app/api/user/UniqueUsernames';
 import {dispatchUserUpdate, hasPartialUserFieldsChanged} from '@app/api/user/UserMappers';
 import {runAllInOrder} from '@app/api/utils/ConcurrencyUtils';
-import {hashPassword} from '@app/api/utils/PasswordUtils';
 import {randomBase64Url} from '@app/api/utils/SecretHash';
+import {hashStoredSecret} from '@app/api/utils/StoredSecret';
 import {generateRandomUsername} from '@app/api/utils/UsernameGenerator';
 import {deriveUsernameFromDisplayName} from '@app/api/utils/UsernameSuggestionUtils';
 import {TierGatedActions} from '@fluxer/constants/src/AccountTierConstants';
@@ -47,6 +48,7 @@ interface ApplicationServiceDeps {
 	botAuthService: BotAuthService;
 	entityAssetService: EntityAssetService;
 	userCacheService: UserCacheService;
+	guildRepository: GuildRepository;
 }
 
 const BOT_IMAGE_FIELDS = [
@@ -164,10 +166,10 @@ export class ApplicationService {
 			token: botToken,
 			hash: botTokenHash,
 			preview: botTokenPreview,
-		} = await this.deps.botAuthService.generateBotToken(applicationId);
+		} = this.deps.botAuthService.generateBotToken(applicationId);
 		const botTokenCreatedAt = new Date();
 		const clientSecret = randomBase64Url(32);
-		const clientSecretHash = await hashPassword(clientSecret);
+		const clientSecretHash = hashStoredSecret(clientSecret);
 		const clientSecretCreatedAt = new Date();
 		const applicationRow: ApplicationRow = {
 			application_id: applicationId,
@@ -247,6 +249,8 @@ export class ApplicationService {
 			const guildIds = await this.apiContext.services.users.getUserGuildIds(botUserId);
 			await this.apiContext.services.users.deleteUserSecondaryIndices(botUserId);
 			await this.apiContext.services.users.removeFromAllGuilds(botUserId);
+			await this.apiContext.services.users.deleteAllRelationships(botUserId);
+			await this.deps.guildRepository.deleteAllBansForUser(botUserId);
 			for (const guildId of guildIds) {
 				try {
 					await this.apiContext.services.gateway.dispatchGuild({
@@ -326,7 +330,7 @@ export class ApplicationService {
 		if (application.botUserId === null) {
 			throw new BotUserNotFoundError();
 		}
-		const {token, hash, preview} = await this.deps.botAuthService.generateBotToken(applicationId);
+		const {token, hash, preview} = this.deps.botAuthService.generateBotToken(applicationId);
 		const botTokenCreatedAt = new Date();
 		const currentRow = application.toRow();
 		const updatedRow: ApplicationRow = {
@@ -354,7 +358,7 @@ export class ApplicationService {
 	}> {
 		const application = await this.verifyOwnership(userId, applicationId);
 		const clientSecret = randomBase64Url(32);
-		const clientSecretHash = await hashPassword(clientSecret);
+		const clientSecretHash = hashStoredSecret(clientSecret);
 		const clientSecretCreatedAt = new Date();
 		const currentRow = application.toRow();
 		const updatedRow: ApplicationRow = {

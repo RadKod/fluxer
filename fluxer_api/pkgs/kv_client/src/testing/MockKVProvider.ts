@@ -3,6 +3,14 @@
 import type {IKVPipeline, IKVProvider, IKVSubscription, KVRateLimitResult} from '@pkgs/kv_client/src/IKVProvider';
 import {parseRangeByScoreArguments, parseSetArguments} from '@pkgs/kv_client/src/KVCommandArguments';
 import {computeHashSlot} from '@pkgs/kv_client/src/KVHashSlots';
+import {
+	claimBulkDeletion,
+	emailOwnerTransition,
+	PURGE_BUCKET_TTL_SECONDS,
+	planPurgeBatch,
+	removeBulkDeletion,
+	settlePurgeBatch,
+} from '@pkgs/kv_client/src/KVScriptTransitions';
 import {vi} from 'vitest';
 
 type MessageCallback = (channel: string, message: string) => void;
@@ -779,28 +787,25 @@ export class MockKVProvider implements IKVProvider {
 	async claimBulkDeletion(queueKey: string, member: string, maxScore: number, leaseScore: number): Promise<boolean> {
 		this.claimBulkDeletionSpy(queueKey, member, maxScore, leaseScore);
 		this.evictIfExpired(queueKey);
-		const score = this.zsetStore.get(queueKey)?.get(member);
-		if (score === undefined || score > maxScore) {
-			return false;
+		const claim = claimBulkDeletion(this.zsetStore.get(queueKey)?.get(member) ?? null, maxScore, leaseScore);
+		if (claim.claimed && claim.score !== null) {
+			await this.zadd(queueKey, claim.score, member);
 		}
-		await this.zadd(queueKey, leaseScore, member);
-		return true;
+		return claim.claimed;
 	}
 
 	async removeBulkDeletion(queueKey: string, secondaryKey: string, member = ''): Promise<boolean> {
 		this.removeBulkDeletionSpy(queueKey, secondaryKey, member);
 		this.evictIfExpired(secondaryKey);
-		if (member !== '' && (await this.zrem(queueKey, member)) === 1) {
+		const memberRemoved = member !== '' && (await this.zrem(queueKey, member)) === 1;
+		const removal = removeBulkDeletion(memberRemoved, this.stringStore.get(secondaryKey) ?? null);
+		if (removal.member !== null) {
+			await this.zrem(queueKey, removal.member);
+		}
+		if (removal.deleteSecondary) {
 			this.deleteKey(secondaryKey);
-			return true;
 		}
-		const value = this.stringStore.get(secondaryKey);
-		if (value === undefined) {
-			return false;
-		}
-		await this.zrem(queueKey, value);
-		this.deleteKey(secondaryKey);
-		return true;
+		return removal.removed;
 	}
 
 	async dequeuePurgeBatch(
@@ -818,39 +823,26 @@ export class MockKVProvider implements IKVProvider {
 		if (this.clustered && computeHashSlot(queueKey) !== computeHashSlot(bucketKey)) {
 			throw new Error("CROSSSLOT Keys in request don't hash to the same slot");
 		}
+		this.evictIfExpired(queueKey);
+		this.evictIfExpired(bucketKey);
 		const now = Date.now();
-		let tokens = maxTokens;
-		let lastRefill = now;
-		const rawState = this.stringStore.get(bucketKey);
-		if (rawState !== undefined) {
-			try {
-				const parsed = JSON.parse(rawState) as {
-					tokens?: number;
-					lastRefill?: number;
-				};
-				tokens = parsed.tokens ?? maxTokens;
-				lastRefill = parsed.lastRefill ?? now;
-			} catch {}
+		const plan = planPurgeBatch(
+			this.stringStore.get(bucketKey) ?? null,
+			this.setStore.get(queueKey)?.size ?? 0,
+			maxItems,
+			maxTokens,
+			refillRate,
+			refillIntervalMs,
+			now,
+		);
+		const entries = plan.toPop > 0 ? await this.spop(queueKey, plan.toPop) : [];
+		const settled = settlePurgeBatch(plan, entries.length);
+		if (settled.bucketValue !== null) {
+			this.ensureType(bucketKey, 'string');
+			this.stringStore.set(bucketKey, settled.bucketValue);
+			this.expiries.set(bucketKey, now + PURGE_BUCKET_TTL_SECONDS * 1000);
 		}
-		const elapsed = now - lastRefill;
-		if (elapsed >= refillIntervalMs) {
-			const intervals = Math.floor(elapsed / refillIntervalMs);
-			tokens = Math.min(maxTokens, tokens + intervals * refillRate);
-			lastRefill = now;
-		}
-		const membersSet = this.setStore.get(queueKey);
-		const queueSize = membersSet?.size ?? 0;
-		const toPop = Math.min(maxItems, Math.floor(tokens), queueSize);
-		if (toPop <= 0) {
-			this.stringStore.set(bucketKey, JSON.stringify({tokens, lastRefill}));
-			this.expiries.set(bucketKey, now + 3600 * 1000);
-			return {entries: [], tokensConsumed: 0};
-		}
-		const entries = await this.spop(queueKey, toPop);
-		tokens -= entries.length;
-		this.stringStore.set(bucketKey, JSON.stringify({tokens, lastRefill}));
-		this.expiries.set(bucketKey, now + 3600 * 1000);
-		return {entries, tokensConsumed: entries.length};
+		return {entries, tokensConsumed: settled.tokensConsumed};
 	}
 
 	async evalScript(
@@ -864,15 +856,8 @@ export class MockKVProvider implements IKVProvider {
 			throw new Error(`Unsupported mock script key count: ${keyCount}`);
 		}
 		const key = String(args[0]);
-		if (command === 'emailOwnerClaim') {
-			return this.evalEmailOwnerClaim(key, String(args[1]), String(args[2]), Number(args[3]), Number(args[4]));
-		}
-		if (command === 'emailOwnerFinalize') {
-			return this.evalEmailOwnerFinalize(key, String(args[1]), String(args[2]), Number(args[3]));
-		}
-		if (command === 'emailOwnerRelease') {
-			return this.evalEmailOwnerRelease(key, String(args[1]), String(args[2] ?? ''));
-		}
+		this.evictIfExpired(key);
+		// sanalyer: scripts outside upstream's email owner set.
 		if (command === 'feedUnreadIncrement') {
 			return this.evalFeedUnreadIncrement(key, Number(args[1]), String(args[2]), String(args[3]), Number(args[4]));
 		}
@@ -893,7 +878,15 @@ export class MockKVProvider implements IKVProvider {
 		if (registered) {
 			return registered(this, key, args.slice(1).map(String));
 		}
-		throw new Error(`Unsupported mock script command: ${command}`);
+		const transition = emailOwnerTransition(command, this.stringStore.get(key) ?? null, args.slice(1));
+		if (transition.write.kind === 'set') {
+			this.ensureType(key, 'string');
+			this.stringStore.set(key, transition.write.value);
+			this.expiries.delete(key);
+		} else if (transition.write.kind === 'delete') {
+			this.deleteKey(key);
+		}
+		return transition.reply;
 	}
 
 	async scan(pattern: string, count: number): Promise<Array<string>> {
@@ -984,98 +977,6 @@ export class MockKVProvider implements IKVProvider {
 		return pipeline;
 	}
 
-	private evalEmailOwnerClaim(key: string, userId: string, token: string, nowMs: number, pendingUntil: number): string {
-		this.evictIfExpired(key);
-		const raw = this.stringStore.get(key);
-		const pendingState = (epoch: number) => ({
-			version: 1,
-			status: 'pending',
-			userId,
-			token,
-			epoch,
-			pendingUntil,
-			updatedAt: nowMs,
-		});
-		if (raw !== undefined) {
-			const state = parseJsonObject(raw);
-			if (state) {
-				const ownerUserId = String(state.userId ?? '');
-				const status = String(state.status ?? '');
-				if (status === 'claimed') {
-					if (ownerUserId === userId) {
-						return JSON.stringify({
-							status: 'already_owner',
-							token: String(state.token ?? ''),
-							epoch: Number(state.epoch ?? 0),
-						});
-					}
-					return JSON.stringify({status: 'conflict', ownerUserId});
-				}
-				if (status === 'pending') {
-					const currentPendingUntil = Number(state.pendingUntil ?? 0);
-					if (currentPendingUntil > nowMs && ownerUserId !== userId) {
-						return JSON.stringify({status: 'conflict', ownerUserId});
-					}
-					if (currentPendingUntil > nowMs && ownerUserId === userId) {
-						state.pendingUntil = pendingUntil;
-						state.updatedAt = nowMs;
-						this.ensureType(key, 'string');
-						this.stringStore.set(key, JSON.stringify(state));
-						this.expiries.delete(key);
-						return JSON.stringify({
-							status: 'pending',
-							token: String(state.token ?? ''),
-							epoch: Number(state.epoch ?? 0),
-						});
-					}
-					const epoch = Number(state.epoch ?? 0) + 1;
-					this.ensureType(key, 'string');
-					this.stringStore.set(key, JSON.stringify(pendingState(epoch)));
-					this.expiries.delete(key);
-					return JSON.stringify({status: 'pending', token, epoch});
-				}
-			}
-		}
-		this.ensureType(key, 'string');
-		this.stringStore.set(key, JSON.stringify(pendingState(1)));
-		this.expiries.delete(key);
-		return JSON.stringify({status: 'pending', token, epoch: 1});
-	}
-
-	private evalEmailOwnerFinalize(key: string, userId: string, expectedToken: string, nowMs: number): string {
-		this.evictIfExpired(key);
-		const raw = this.stringStore.get(key);
-		if (raw === undefined) {
-			return JSON.stringify({status: 'missing'});
-		}
-		const state = parseJsonObject(raw);
-		if (!state) {
-			return JSON.stringify({status: 'mismatch'});
-		}
-		const ownerUserId = String(state.userId ?? '');
-		if (ownerUserId !== userId) {
-			return JSON.stringify({status: 'mismatch', ownerUserId});
-		}
-		if (String(state.token ?? '') !== expectedToken) {
-			return JSON.stringify({status: 'mismatch', ownerUserId});
-		}
-		this.ensureType(key, 'string');
-		this.stringStore.set(
-			key,
-			JSON.stringify({
-				version: 1,
-				status: 'claimed',
-				userId,
-				token: expectedToken,
-				epoch: Number(state.epoch ?? 1),
-				claimedAt: nowMs,
-				updatedAt: nowMs,
-			}),
-		);
-		this.expiries.delete(key);
-		return JSON.stringify({status: 'finalized', ownerUserId});
-	}
-
 	// FeedNotificationService's UNREAD_INCREMENT_SCRIPT, step for step.
 	private evalFeedUnreadIncrement(
 		key: string,
@@ -1127,28 +1028,6 @@ export class MockKVProvider implements IKVProvider {
 		this.stringStore.set(key, value);
 		this.expiries.set(key, Date.now() + ttlSeconds * 1000);
 		return 1;
-	}
-
-	private evalEmailOwnerRelease(key: string, userId: string, expectedToken: string): string {
-		this.evictIfExpired(key);
-		const raw = this.stringStore.get(key);
-		if (raw === undefined) {
-			return JSON.stringify({status: 'missing'});
-		}
-		const state = parseJsonObject(raw);
-		if (!state) {
-			this.deleteKey(key);
-			return JSON.stringify({status: 'released'});
-		}
-		const ownerUserId = String(state.userId ?? '');
-		if (ownerUserId !== userId) {
-			return JSON.stringify({status: 'not_owner', ownerUserId});
-		}
-		if (expectedToken !== '' && String(state.token ?? '') !== expectedToken) {
-			return JSON.stringify({status: 'token_mismatch', ownerUserId});
-		}
-		this.deleteKey(key);
-		return JSON.stringify({status: 'released'});
 	}
 
 	private keyExists(key: string): boolean {
@@ -1359,15 +1238,6 @@ function parseLeakyBucketState(rawState: string | undefined, nowMs: number): Sto
 		return {level, updatedAtMs};
 	} catch {
 		return {level: 0, updatedAtMs: nowMs};
-	}
-}
-
-function parseJsonObject(raw: string): Record<string, unknown> | null {
-	try {
-		const parsed = JSON.parse(raw) as unknown;
-		return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : null;
-	} catch {
-		return null;
 	}
 }
 

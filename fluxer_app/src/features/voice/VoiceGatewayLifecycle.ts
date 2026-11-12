@@ -6,19 +6,19 @@ import SessionManager from '@app/features/platform/state/AuthSession';
 import UsernameSelection from '@app/features/user/state/UsernameSelection';
 import Users from '@app/features/user/state/Users';
 import {isUsernameSelectionRequired} from '@app/features/user/utils/UsernameSelectionGateUtils';
-import MediaEngine from '@app/features/voice/engine/MediaEngineFacade';
+import VoiceRuntime from '@app/features/voice/engine/VoiceRuntime';
 
 export function seedVoiceStatesFromReady(guilds: Array<GuildReadyData>): void {
-	MediaEngine.handleGatewayReady(guilds);
+	VoiceRuntime.handleGatewayReady(guilds);
 }
 
 export function reportGatewayErrorToVoice(error: GatewayErrorData): void {
 	if (isUsernameSelectionRequired(error)) {
 		UsernameSelection.requireSelection(SessionManager.currentAccountKey, Users.currentUser?.identityVersion);
 	}
-	MediaEngine.handleGatewayError(error);
+	VoiceRuntime.handleGatewayError(error);
 }
 
 export function teardownVoiceForFatalGatewayCrash(): void {
-	MediaEngine.cleanup();
+	VoiceRuntime.cleanup();
 }

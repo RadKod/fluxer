@@ -29,7 +29,7 @@ function wireUser(id: string) {
 
 describe('Users retention', () => {
 	beforeEach(() => {
-		Users.handleGatewayReady('micup-test-account', {...wireUser('me')} as never);
+		Users.handleGatewayReady('micup-test-account', {...wireUser('me')} as never, {keepRestoredUsers: false});
 		Users.cacheUsers(['a', 'b', 'c'].map(wireUser));
 	});
 

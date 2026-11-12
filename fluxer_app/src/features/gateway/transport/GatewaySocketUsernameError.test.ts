@@ -25,6 +25,7 @@ function createSocket(): GatewaySocket {
 			build_version: '1',
 		},
 		isMobileLayout: () => false,
+		showsRestoredView: () => false,
 		geo: () => ({latitude: null, longitude: null}),
 	});
 }

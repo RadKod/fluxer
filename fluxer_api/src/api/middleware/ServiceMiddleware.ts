@@ -19,6 +19,7 @@ import {StreamService} from '@app/api/channel/services/StreamService';
 import {ThreadService} from '@app/api/channel/services/thread/ThreadService';
 import {ConnectionRequestService} from '@app/api/connection/ConnectionRequestService';
 import {ConnectionService} from '@app/api/connection/ConnectionService';
+import {OAuthConnectionService} from '@app/api/connection/OAuthConnectionService';
 import {DonationService} from '@app/api/donation/DonationService';
 import {DonationCheckoutService} from '@app/api/donation/services/DonationCheckoutService';
 import {DonationMagicLinkService} from '@app/api/donation/services/DonationMagicLinkService';
@@ -129,6 +130,7 @@ import {
 	getShopOrderService,
 	getStorageService,
 	getStoreBillingRepository,
+	getStoredSecretVerifier,
 	getStreamPreviewService,
 	getSweegoWebhookService,
 	getTableGameService,
@@ -258,6 +260,7 @@ class RequestServices implements RequestScopedServices {
 	private cachedMessageRequestService: MessageRequestService | undefined;
 	private cachedConnectionService: ConnectionService | undefined;
 	private cachedConnectionRequestService: ConnectionRequestService | undefined;
+	private cachedOAuthConnectionService: OAuthConnectionService | undefined;
 	private cachedStreamService: StreamService | undefined;
 	private cachedFavoriteMemeService: FavoriteMemeService | undefined;
 	private cachedFavoriteMemeRequestService: FavoriteMemeRequestService | undefined;
@@ -676,6 +679,7 @@ class RequestServices implements RequestScopedServices {
 			entityAssetService: getEntityAssetService(),
 			discriminatorService: getDiscriminatorService(),
 			botAuthService: getBotAuthService(),
+			guildRepository: getGuildRepository(),
 		});
 		return this.cachedApplicationService;
 	}
@@ -808,6 +812,15 @@ class RequestServices implements RequestScopedServices {
 		return this.cachedConnectionRequestService;
 	}
 
+	get oauthConnectionService(): OAuthConnectionService {
+		this.cachedOAuthConnectionService ??= new OAuthConnectionService(
+			this.context,
+			getInstanceConfigRepository(),
+			this.connectionService,
+		);
+		return this.cachedOAuthConnectionService;
+	}
+
 	get streamService(): StreamService {
 		this.cachedStreamService ??= new StreamService(
 			getCacheService(),
@@ -867,6 +880,7 @@ class RequestServices implements RequestScopedServices {
 		this.cachedOAuth2Service ??= new OAuth2Service(this.context, {
 			applicationRepository: getApplicationRepository(),
 			oauth2TokenRepository: getOAuth2TokenRepository(),
+			storedSecrets: getStoredSecretVerifier(),
 		});
 		return this.cachedOAuth2Service;
 	}
@@ -949,6 +963,8 @@ class RequestServices implements RequestScopedServices {
 			userRepository: getUserRepository(),
 			guildRepository: getGuildRepository(),
 			guildService: this.guildService,
+			channelRepository: getChannelRepository(),
+			channelService: this.channelService,
 			get emailService() {
 				return getEmailService();
 			},

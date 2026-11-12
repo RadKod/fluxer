@@ -142,7 +142,7 @@ function signIn(fields: {verified?: boolean; email?: string | null} = {}): void 
 		verified: true,
 		email: 'me@micup.test',
 		...fields,
-	} as Parameters<typeof Users.handleGatewayReady>[1]);
+	} as Parameters<typeof Users.handleGatewayReady>[1], {keepRestoredUsers: false});
 }
 
 function wirePost(id: string, authorId: string, flags = 0, extra: Partial<FeedPostResponse> = {}): FeedPostResponse {

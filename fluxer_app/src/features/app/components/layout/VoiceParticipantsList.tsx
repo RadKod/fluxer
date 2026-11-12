@@ -14,7 +14,7 @@ import {
 	createVoiceParticipantSortSnapshot,
 	sortVoiceParticipantItemsWithSnapshot,
 } from '@app/features/voice/components/VoiceParticipantSortUtils';
-import MediaEngine, {useMediaEngineVersion} from '@app/features/voice/engine/MediaEngineFacade';
+import VoiceRuntime, {useVoiceRuntimeVersion} from '@app/features/voice/engine/VoiceRuntime';
 import LocalVoiceState from '@app/features/voice/state/LocalVoiceState';
 import {isParticipantVoicePermissionMuted} from '@app/features/voice/utils/VoicePermissionUtils';
 import {clsx} from 'clsx';
@@ -24,12 +24,12 @@ import type {ConnectableElement} from 'react-dnd';
 import {useDrop} from 'react-dnd';
 
 export const VoiceParticipantsList = observer(({guild, channel}: {guild: Guild; channel: Channel}) => {
-	useMediaEngineVersion();
-	const voiceStates = MediaEngine.getAllVoiceStatesInChannel(guild.id, channel.id);
+	useVoiceRuntimeVersion();
+	const voiceStates = VoiceRuntime.getAllVoiceStatesInChannel(guild.id, channel.id);
 	const currentUser = Users.currentUser;
 	const localSelfMute = LocalVoiceState.getSelfMute();
 	const localSelfStream = LocalVoiceState.getSelfStream();
-	const localConnectionId = MediaEngine.connectionId;
+	const localConnectionId = VoiceRuntime.connectionId;
 	let missingUserCount = 0;
 	for (const connectionKey in voiceStates) {
 		const userId = voiceStates[connectionKey]?.user_id;
@@ -105,7 +105,7 @@ export const VoiceParticipantsList = observer(({guild, channel}: {guild: Guild; 
 				const anySpeaking = states.some((voiceState) => {
 					const connectionId = voiceState.connection_id ?? '';
 					return resolveVoiceParticipantDisplayState({
-						participant: MediaEngine.getParticipantByUserIdAndConnectionId(userId, connectionId),
+						participant: VoiceRuntime.getParticipantByUserIdAndConnectionId(userId, connectionId),
 						voiceState,
 						isLocalConnection: isCurrentUser && connectionId === localConnectionId,
 						localSelfMute,

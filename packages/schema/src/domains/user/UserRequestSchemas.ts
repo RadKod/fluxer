@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {
+	MAX_BIO_LENGTH_CEILING,
 	MAX_CHANNEL_OVERRIDES,
 	MAX_GROUP_DM_OTHER_RECIPIENTS,
 	MAX_GUILDS_PREMIUM,
@@ -32,7 +33,7 @@ import {
 import {withBase64Binary} from '@fluxer/schema/src/primitives/Base64BinaryFields';
 import {isValidSingleUnicodeEmoji} from '@fluxer/schema/src/primitives/EmojiValidators';
 import {createBase64ImageType} from '@fluxer/schema/src/primitives/FileValidators';
-import {LocaleSchema} from '@fluxer/schema/src/primitives/LocaleSchema';
+import {LocaleSchema, RegionalFormatSchema} from '@fluxer/schema/src/primitives/LocaleSchema';
 import {createQueryIntegerType, DateTimeType, QueryBooleanType} from '@fluxer/schema/src/primitives/QueryValidators';
 import {
 	ColorType,
@@ -56,6 +57,7 @@ import {
 	SensitiveMediaGuildFilterLevelSchema,
 	StickerAnimationOptionsSchema,
 	TimeFormatTypesSchema,
+	TimestampFormatTypesSchema,
 	UserNotificationSettingsSchema,
 } from '@fluxer/schema/src/primitives/UserSettingsValidators';
 import {
@@ -78,7 +80,9 @@ export const UserUpdateRequest = z
 		password: PasswordType.describe('The current password for verification'),
 		avatar: createBase64ImageType().nullish().describe('Base64-encoded avatar image'),
 		banner: createBase64ImageType().nullish().describe('Base64-encoded profile banner image'),
-		bio: createStringType(1, 320).nullish().describe('User biography text (max 320 characters)'),
+		bio: createStringType(1, MAX_BIO_LENGTH_CEILING)
+			.nullish()
+			.describe('User biography text, up to the instance max_bio_length limit (320 by default)'),
 		pronouns: createStringType(1, 40).nullish().describe('User pronouns (max 40 characters)'),
 		accent_color: ColorType.nullish().describe('Profile accent color as integer'),
 		name_style: NameStyleSchema.nullish().describe('Premium name font and colour; null removes it'),
@@ -362,6 +366,7 @@ export const UserSettingsUpdateRequest = z
 		theme: UserThemeType,
 		guild_positions: UserSettingsGuildIds.describe('Ordered array of guild IDs for sidebar positioning'),
 		locale: LocaleSchema,
+		regional_format: RegionalFormatSchema,
 		restricted_guilds: UserSettingsGuildIds.describe('Guilds with DM restrictions'),
 		bot_restricted_guilds: UserSettingsGuildIds.describe('Guilds with bot DM restrictions'),
 		default_guilds_restricted: z.boolean().describe('Default DM restriction for new guilds'),
@@ -397,6 +402,7 @@ export const UserSettingsUpdateRequest = z
 		custom_status: CustomStatusPayload.nullish().describe('Custom status'),
 		afk_timeout: z.number().int().min(60).max(600).describe('AFK timeout in seconds (60-600)'),
 		time_format: withFieldDescription(TimeFormatTypesSchema, 'Time format preference'),
+		timestamp_format: withFieldDescription(TimestampFormatTypesSchema, 'Timestamp format preset'),
 		developer_mode: z.boolean().describe('Developer mode enabled'),
 		trusted_domains: z
 			.array(z.string().min(1).max(253))

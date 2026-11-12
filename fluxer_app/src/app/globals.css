@@ -363,6 +363,8 @@ html.platform-native.platform-macos {
 
 html {
 	--custom-zoom: 100;
+	--safe-area-inset-inline-start: env(safe-area-inset-left, 0px);
+	--safe-area-inset-inline-end: env(safe-area-inset-right, 0px);
 	background-color: var(--background-secondary);
 	color: var(--text-primary);
 	overflow: hidden;
@@ -373,6 +375,11 @@ html {
 	font-size: calc(var(--custom-zoom, 100) * 0.16px);
 	line-height: 1.5;
 	font-optical-sizing: auto;
+}
+
+html[dir='rtl'] {
+	--safe-area-inset-inline-start: env(safe-area-inset-right, 0px);
+	--safe-area-inset-inline-end: env(safe-area-inset-left, 0px);
 }
 
 html.allow-transparency,
@@ -768,7 +775,9 @@ html.reduced-motion *,
 html.reduced-motion *::before,
 html.reduced-motion *::after {
 	animation-duration: 0.01ms !important;
+	animation-delay: 0s !important;
 	animation-iteration-count: 1 !important;
-	transition-duration: 0.01ms !important;
+	transition-duration: 0s !important;
+	transition-delay: 0s !important;
 	scroll-behavior: auto !important;
 }

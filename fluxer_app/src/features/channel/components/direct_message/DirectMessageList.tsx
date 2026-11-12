@@ -32,6 +32,7 @@ import * as PremiumModalCommands from '@app/features/premium/commands/PremiumMod
 import {
 	getPremiumProductName,
 	isPremiumPageAvailable,
+	shouldShowFluxerPremiumIcon,
 	shouldShowPremiumFeatures,
 } from '@app/features/premium/utils/PremiumUtils';
 import {AddFriendSheet} from '@app/features/relationship/components/modals/AddFriendSheet';
@@ -64,6 +65,7 @@ import {msg} from '@lingui/core/macro';
 import {Trans, useLingui} from '@lingui/react/macro';
 import {
 	AtomIcon,
+	CrownIcon,
 	MagnifyingGlassIcon,
 	NotePencilIcon,
 	PaperPlaneIcon,
@@ -272,6 +274,7 @@ export const DMList = observer(() => {
 		}
 		return null;
 	})();
+	const showFluxerPremiumIcon = shouldShowFluxerPremiumIcon();
 	const shouldHighlightPersonalNotes =
 		currentUserId != null &&
 		(routeDmChannelId === currentUserId || (isMobileDmIndexRoute && lastSelectedDmChannelId === currentUserId));
@@ -324,6 +327,21 @@ export const DMList = observer(() => {
 		if (MobileLayout.isMobileLayout()) {
 			LayoutCommands.updateMobileLayoutState(false, true);
 		}
+	};
+	const renderPremiumIcon = () => {
+		return showFluxerPremiumIcon ? (
+			<AtomIcon
+				weight="fill"
+				className={styles.iconSize5}
+				data-flx="channel.direct-message.direct-message-list.render-premium-icon.icon-size5"
+			/>
+		) : (
+			<CrownIcon
+				weight="fill"
+				className={styles.iconSize5}
+				data-flx="channel.direct-message.direct-message-list.render-premium-icon.icon-size5--2"
+			/>
+		);
 	};
 	if (isMobile) {
 		return (
@@ -456,11 +474,7 @@ export const DMList = observer(() => {
 											className={clsx(styles.mobileSpecialButtonIcon, pageItemStyles.accentIcon)}
 											data-flx="channel.direct-message.dm-list.mobile-special-button-icon--2"
 										>
-											<AtomIcon
-												weight="fill"
-												className={styles.iconSize5}
-												data-flx="channel.direct-message.dm-list.icon-size5--3"
-											/>
+											{renderPremiumIcon()}
 										</div>
 										<div
 											className={styles.mobileSpecialButtonText}

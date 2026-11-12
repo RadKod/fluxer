@@ -23,7 +23,7 @@ const wire = (id: string, extra: Record<string, unknown> = {}) => ({
 describe('username identity updates', () => {
 	beforeEach(() => {
 		Users.resetAccountState();
-		Users.handleGatewayReady('account', wire('me', {email: 'me@example.test', username_state: 'selected'}) as never);
+		Users.handleGatewayReady('account', wire('me', {email: 'me@example.test', username_state: 'selected'}) as never, {keepRestoredUsers: false});
 		Users.cacheUsers([wire('other')]);
 	});
 	for (const viaCache of [false, true]) {

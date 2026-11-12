@@ -92,7 +92,7 @@ export function instanceDiscoveryFixture(
 			direct_messages_disabled: false,
 			guild_create_access: true,
 		},
-		services: {gif_enabled: true, youtube_enabled: false, bluesky_enabled: false},
+		services: {gif_enabled: true, youtube_enabled: false, bluesky_enabled: false, connection_providers: []},
 		limits: {version: 1, traitDefinitions: [], rules: []},
 		push: {public_vapid_key: null},
 		app_public: BOOTSTRAP_APP_PUBLIC,

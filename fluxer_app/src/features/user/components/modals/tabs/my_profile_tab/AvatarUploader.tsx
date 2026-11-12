@@ -24,7 +24,11 @@ import {
 	formatImageUploadRecommendedHintWithNote,
 } from '@app/features/expressions/utils/AssetUploadHintCopy';
 import {downloadGifAsImageFile} from '@app/features/expressions/utils/GifFileDownload';
-import {isSvgFile, readImageFileAsUploadDataUrl} from '@app/features/expressions/utils/ImageUploadFileUtils';
+import {
+	isAssetUploadFileAllowed,
+	isSvgFile,
+	readImageFileAsUploadDataUrl,
+} from '@app/features/expressions/utils/ImageUploadFileUtils';
 import {
 	CANCEL_DESCRIPTOR,
 	FAILED_TO_PROCESS_CROPPED_IMAGE_DESCRIPTOR,
@@ -43,6 +47,7 @@ import {modal} from '@app/features/ui/commands/ModalCommands';
 import {RadioGroup} from '@app/features/ui/radio_group/RadioGroup';
 import styles from '@app/features/user/components/modals/tabs/my_profile_tab/AvatarUploader.module.css';
 import type {ProfileAssetMode} from '@app/features/user/components/modals/tabs/my_profile_tab/ProfileAssetCustomizationStateMachine';
+import {getFormattingLocale} from '@app/features/user/utils/LocaleUtils';
 import {
 	DON_T_SHOW_DESCRIPTOR,
 	USE_CUSTOM_IMAGE_DESCRIPTOR,
@@ -138,14 +143,15 @@ export function useChangeAvatarAction({
 				showGenericErrorModal({
 					title: i18n._(COULDN_T_UPLOAD_AVATAR_DESCRIPTOR),
 					message: i18n._(AVATAR_FILE_IS_TOO_LARGE_PLEASE_CHOOSE_A_DESCRIPTOR, {
-						imageMaxSizeLabel: formatFileSize(i18n.locale, GlobalLimits.getAvatarMaxSize()),
+						imageMaxSizeLabel: formatFileSize(getFormattingLocale(), GlobalLimits.getAvatarMaxSize()),
 					}),
 					dataFlx: 'user.user-error-modal-utils.show-user-error-modal.generic-error-modal',
 				});
 				return;
 			}
 			const svg = isSvgFile(file);
-			if (!svg && !(await canCropFile(file))) {
+			const croppable = svg || (await canCropFile(file));
+			if (!croppable && !isAssetUploadFileAllowed('avatar', file)) {
 				showGenericErrorModal({
 					title: i18n._(COULDN_T_UPLOAD_AVATAR_DESCRIPTOR),
 					message: getAssetFormatErrorMessage(i18n, 'avatar', 'unsupported_mime'),
@@ -222,6 +228,10 @@ export function useChangeAvatarAction({
 				return;
 			}
 			const base64 = svg ? await readImageFileAsUploadDataUrl(file) : await readBlobAsDataUrl(file);
+			if (!croppable) {
+				onAvatarChange(base64);
+				return;
+			}
 			ModalCommands.push(
 				modal(() => (
 					<AssetCropModal
@@ -286,13 +296,13 @@ export function useChangeAvatarAction({
 		if (canUploadAnimatedAvatar) {
 			uploadHint = formatImageUploadRecommendedHint(i18n, {
 				formats: ANIMATED_IMAGE_FORMATS,
-				maxSize: formatFileSize(i18n.locale, GlobalLimits.getAvatarMaxSize()),
+				maxSize: formatFileSize(getFormattingLocale(), GlobalLimits.getAvatarMaxSize()),
 				recommendedSize: AVATAR_RECOMMENDED_SIZE_LABEL,
 			});
 		} else if (shouldShowPremiumFeatures()) {
 			uploadHint = formatImageUploadRecommendedHintWithNote(i18n, {
 				formats: STATIC_IMAGE_FORMATS,
-				maxSize: formatFileSize(i18n.locale, GlobalLimits.getAvatarMaxSize()),
+				maxSize: formatFileSize(getFormattingLocale(), GlobalLimits.getAvatarMaxSize()),
 				recommendedSize: AVATAR_RECOMMENDED_SIZE_LABEL,
 				note: i18n._(ANIMATED_AVATARS_REQUIRE_PREMIUM_NOTE_DESCRIPTOR, {
 					animatedAvatarFormats: ANIMATED_AVATAR_FORMATS,
@@ -302,7 +312,7 @@ export function useChangeAvatarAction({
 		} else {
 			uploadHint = formatImageUploadRecommendedHint(i18n, {
 				formats: STATIC_IMAGE_FORMATS,
-				maxSize: formatFileSize(i18n.locale, GlobalLimits.getAvatarMaxSize()),
+				maxSize: formatFileSize(getFormattingLocale(), GlobalLimits.getAvatarMaxSize()),
 				recommendedSize: AVATAR_RECOMMENDED_SIZE_LABEL,
 			});
 		}

@@ -31,7 +31,7 @@ import {
 	PERK_VIDEO_QUALITY_FREE_DESCRIPTOR,
 	PERK_VIDEO_QUALITY_PREMIUM_DESCRIPTOR,
 } from '@app/features/premium/components/plutonium_page/PlutoniumPageMessages';
-import {getPremiumProductName} from '@app/features/premium/utils/PremiumUtils';
+import {getPremiumProductName, shouldShowFluxerPremiumIcon} from '@app/features/premium/utils/PremiumUtils';
 import FocusRing from '@app/features/ui/focus_ring/FocusRing';
 import {ATTACHMENT_MAX_SIZE_NON_PREMIUM, ATTACHMENT_MAX_SIZE_PREMIUM} from '@fluxer/constants/src/LimitConstants';
 import {
@@ -42,6 +42,7 @@ import {
 } from '@fluxer/constants/src/LimitTierPerks';
 import type {MessageDescriptor} from '@lingui/core';
 import {useLingui} from '@lingui/react/macro';
+import {CrownIcon} from '@phosphor-icons/react';
 import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
@@ -204,6 +205,21 @@ export const PlutoniumPageComparison = observer(({actions}: PlutoniumPageCompari
 	const {i18n} = useLingui();
 	const rows = buildRows(i18n.locale, (descriptor) => i18n._(descriptor));
 	const premiumLabel = getPremiumProductName();
+	const showFluxerPremiumIcon = shouldShowFluxerPremiumIcon();
+	const renderPerkIcon = (row: PerkRow, className: string) =>
+		row.icon === 'atom' && !showFluxerPremiumIcon ? (
+			<CrownIcon
+				weight="fill"
+				className={className}
+				data-flx="premium.plutonium-page.plutonium-page-comparison.perk-icon.crown-icon"
+			/>
+		) : (
+			<PlutoniumPageIcon
+				name={row.icon}
+				className={className}
+				data-flx="premium.plutonium-page.plutonium-page-comparison.perk-icon"
+			/>
+		);
 	const renderLabel = (row: PerkRow) => (
 		<span data-flx="premium.plutonium-page.plutonium-page-comparison.render-label.span">{i18n._(row.label)}</span>
 	);
@@ -227,11 +243,7 @@ export const PlutoniumPageComparison = observer(({actions}: PlutoniumPageCompari
 							className={styles.perkCardHead}
 							data-flx="premium.plutonium-page.plutonium-page-comparison.perk-card-head"
 						>
-							<PlutoniumPageIcon
-								name={row.icon}
-								className={styles.perkCardIcon}
-								data-flx="premium.plutonium-page.plutonium-page-comparison.perk-card-icon"
-							/>
+							{renderPerkIcon(row, styles.perkCardIcon)}
 							<span
 								className={styles.perkCardLabel}
 								data-flx="premium.plutonium-page.plutonium-page-comparison.perk-card-label"
@@ -330,11 +342,7 @@ export const PlutoniumPageComparison = observer(({actions}: PlutoniumPageCompari
 											className={styles.tableRowLabel}
 											data-flx="premium.plutonium-page.plutonium-page-comparison.table-row-label"
 										>
-											<PlutoniumPageIcon
-												name={row.icon}
-												className={styles.tableRowIcon}
-												data-flx="premium.plutonium-page.plutonium-page-comparison.table-row-icon"
-											/>
+											{renderPerkIcon(row, styles.tableRowIcon)}
 											<span data-flx="premium.plutonium-page.plutonium-page-comparison.span">{renderLabel(row)}</span>
 										</span>
 									</th>

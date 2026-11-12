@@ -157,6 +157,7 @@ const CUMLE_KURALLARI = [
 		[d, /(?<!upstream )\bofficial (instance|web client)\b/g, 'upstream official $1', 'passkey-resmi-instance'],
 		[d, /\bThe official instance\b/g, 'The upstream official instance', 'passkey-resmi-instance'],
 	]),
+	['admin-api/instance.mdx', 'On fluxer.com it holds one rule', 'On the upstream official instance it holds one rule', 'upstream-instance'],
 	// Fluxer'ın kendisinin işlettiği şeyler: "sanalyer" demek yanlış olur.
 	['*', 'The deployment Fluxer hosts', 'The upstream project’s hosted deployment', 'upstream-hosted'],
 	['*', 'the instance Fluxer hosts', 'the upstream project’s hosted instance', 'upstream-hosted'],

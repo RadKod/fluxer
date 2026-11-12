@@ -182,6 +182,7 @@ const ChannelCreateCategoryRequest = ChannelCreateCommon.extend({
 const ChannelCreateLinkRequest = ChannelCreateCommon.extend({
 	type: createNamedLiteral(ChannelTypes.GUILD_LINK, 'GUILD_LINK', 'Channel type (link channel)'),
 	name: GeneralChannelNameType.describe('The name of the channel'),
+	url: URLType.describe('External URL for link channels'),
 });
 
 const EXPERIMENT = {experiment: 'channel_threads'} as const;
@@ -258,6 +259,7 @@ const ChannelUpdateCategoryRequest = ChannelUpdateCommon.extend({
 const ChannelUpdateLinkRequest = ChannelUpdateCommon.extend({
 	type: createNamedLiteral(ChannelTypes.GUILD_LINK, 'GUILD_LINK', 'Channel type (link channel)'),
 	name: GeneralChannelNameType.nullish().describe('The name of the channel'),
+	url: URLType.optional().describe('External URL for link channels'),
 });
 
 const ChannelUpdateGroupDmRequest = z.object({

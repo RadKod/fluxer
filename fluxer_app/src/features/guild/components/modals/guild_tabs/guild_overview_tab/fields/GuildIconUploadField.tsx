@@ -18,6 +18,7 @@ import type {FormInputs} from '@app/features/guild/utils/guild_tabs/GuildOvervie
 import {formatFileSize} from '@app/features/messaging/utils/FileUtils';
 import {Button} from '@app/features/ui/button/Button';
 import {parseAvatarHash} from '@app/features/user/utils/AvatarUtils';
+import {getFormattingLocale} from '@app/features/user/utils/LocaleUtils';
 import {getAcceptString} from '@fluxer/constants/src/AssetFormatPolicy';
 import {GuildFeatures} from '@fluxer/constants/src/GuildConstants';
 import {msg} from '@lingui/core/macro';
@@ -83,7 +84,7 @@ export const GuildIconUploadField: React.FC<{
 		sourceModalTitle: i18n._(CHANGE_ICON_DESCRIPTOR),
 		uploadHint: formatImageUploadRecommendedHint(i18n, {
 			formats: iconFormats,
-			maxSize: formatFileSize(i18n.locale, GlobalLimits.getAvatarMaxSize()),
+			maxSize: formatFileSize(getFormattingLocale(), GlobalLimits.getAvatarMaxSize()),
 			recommendedSize: AVATAR_RECOMMENDED_SIZE_LABEL,
 		}),
 	});

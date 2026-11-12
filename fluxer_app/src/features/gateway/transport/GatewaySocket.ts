@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {flushBootHydration} from '@app/features/boot_state/BootHydration';
+import {afterBootReveal, isBootRevealHeld} from '@app/features/boot_state/BootReveal';
 import {
 	type CompressionType,
 	GatewayCompression,
@@ -49,6 +51,7 @@ const GATEWAY_TIMEOUTS = {
 	MinReconnect: 1000,
 	MaxReconnect: 10000,
 	MaxReconnectWhileDispatchesFail: 60000,
+	MaxReconnectWhileShowingRestoredView: 3000,
 	ReconnectFloor: 500,
 	ReconnectSpread: 2000,
 	InvalidSessionIdentifySpread: 1000,
@@ -139,6 +142,7 @@ export interface GatewaySocketOptions {
 	initialGuildId?: string | null;
 	isMobileLayout: () => boolean;
 	geo: () => {latitude: string | null; longitude: string | null};
+	showsRestoredView: () => boolean;
 	logName?: string;
 }
 
@@ -244,11 +248,13 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 	private reconnectTimeoutId: number | null = null;
 	private invalidSessionTimeoutId: number | null = null;
 	private isUserInitiatedDisconnect = false;
+	private socketGeneration = 0;
 	private shouldReconnectImmediately = false;
 	private deferredEmitQueue: Array<() => void> = [];
 	private deferredEmitBytes = 0;
 	private deferredEmitTimeoutId: number | null = null;
 	private deferredEmitIdleId: number | null = null;
+	private cancelRevealFlush: (() => void) | null = null;
 	private criticalWorkScheduled = false;
 	private dispatchGeneration = 0;
 	private consecutiveDispatchFailures = 0;
@@ -282,6 +288,11 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 			this.log.warn(
 				`Deferred gateway emit queue reached its bound (${this.deferredEmitQueue.length} entries, ${this.deferredEmitBytes} bytes), flushing before enqueueing`,
 			);
+			if (this.cancelRevealFlush !== null) {
+				this.clearSession();
+				this.disconnect(4000, 'Gateway delivery bound exceeded before boot reveal', true);
+				return;
+			}
 			this.flushDeferredEmits();
 		}
 		this.deferredEmitQueue.push(run);
@@ -350,6 +361,18 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 
 	private flushDeferredEmits(): void {
 		this.clearDeferredFlushWork();
+		if (this.options.showsRestoredView() && isBootRevealHeld()) {
+			if (this.cancelRevealFlush === null) {
+				this.cancelRevealFlush = afterBootReveal(() => {
+					this.cancelRevealFlush = null;
+					this.flushDeferredEmits();
+				});
+			}
+			return;
+		}
+		this.cancelRevealFlush?.();
+		this.cancelRevealFlush = null;
+		if (this.options.showsRestoredView()) flushBootHydration();
 		this.criticalWorkScheduled = false;
 		const queue = this.deferredEmitQueue;
 		this.deferredEmitQueue = [];
@@ -364,6 +387,8 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 	}
 
 	private discardDeferredEmits(): void {
+		this.cancelRevealFlush?.();
+		this.cancelRevealFlush = null;
 		this.clearDeferredFlushWork();
 		this.criticalWorkScheduled = false;
 		this.deferredEmitQueue = [];
@@ -415,7 +440,7 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 			this.log.warn('Cannot simulate network disconnect: not connected');
 			return;
 		}
-		this.log.info('Simulating network disconnect with resumable close');
+		this.log.debug('Simulating network disconnect with resumable close');
 		this.disconnect(4000, 'Simulated network disconnect', true);
 	}
 
@@ -452,7 +477,7 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 	}
 
 	probeAfterResume(reason: string, options: GatewayResumeProbeOptions = {}): void {
-		this.log.info(`Probing gateway after resume: reason=${reason}, state=${this.connectionState}`);
+		this.log.debug(`Probing gateway after resume: reason=${reason}, state=${this.connectionState}`);
 		switch (this.connectionState) {
 			case GatewayState.Connected:
 				this.verifyConnectionFreshness(reason);
@@ -774,8 +799,10 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 
 	private openSocket(): void {
 		this.teardownSocket();
+		const generation = this.socketGeneration;
 		this.buildGatewayUrl()
 			.then((url) => {
+				if (generation !== this.socketGeneration) return;
 				this.log.debug(`Opening gateway connection to ${url}`);
 				try {
 					const compression: CompressionType = this.options.compression ?? 'zstd-stream';
@@ -804,12 +831,14 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 				}
 			})
 			.catch((error) => {
+				if (generation !== this.socketGeneration) return;
 				this.log.error('Failed to build gateway URL', error);
 				this.handleConnectionFailure();
 			});
 	}
 
 	private teardownSocket(): void {
+		this.socketGeneration++;
 		if (this.payloadDecompressor) {
 			this.payloadDecompressor.destroy();
 			this.payloadDecompressor = null;
@@ -935,7 +964,7 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 			event.code === GatewayCloseCodes.SESSION_TIMEOUT ||
 			resumeWasPending
 		) {
-			this.log.info(`Resume failed or session invalidated [${event.code}], clearing session to re-identify`);
+			this.log.warn(`Resume failed or session invalidated [${event.code}], clearing session to re-identify`);
 			this.clearSession();
 		}
 		if (!this.isUserInitiatedDisconnect) {
@@ -1078,7 +1107,7 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 
 	private handleInvalidSessionPayload(payload: GatewayPayload): void {
 		const isResumable = payload.d as boolean;
-		this.log.info(`Session invalidated (resumable=${isResumable})`);
+		this.log.warn(`Session invalidated (resumable=${isResumable})`);
 		if (this.invalidSessionTimeoutId != null) {
 			clearTimeout(this.invalidSessionTimeoutId);
 			this.invalidSessionTimeoutId = null;
@@ -1102,7 +1131,7 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 		this.clearResumeTimeout();
 		this.clearSession();
 		const delay = Math.floor(Math.random() * GATEWAY_TIMEOUTS.InvalidSessionIdentifySpread);
-		this.log.info(`Resume rejected, identifying on the same connection in ${delay}ms`);
+		this.log.warn(`Resume rejected, identifying on the same connection in ${delay}ms`);
 		this.invalidSessionTimeoutId = window.setTimeout(() => {
 			this.invalidSessionTimeoutId = null;
 			this.sendIdentify();
@@ -1293,7 +1322,7 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 		this.reconnectTimeoutId = window.setTimeout(() => {
 			this.reconnectTimeoutId = null;
 			if (!this.canResumeSession()) {
-				this.log.info('Session no longer resumable, clearing state');
+				this.log.warn('Session no longer resumable, clearing state');
 				this.clearSession();
 			}
 			this.connect();
@@ -1313,16 +1342,23 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 		}
 		this.lastReconnectAt = now;
 		this.reconnectAttempts += 1;
-		const cap =
-			this.consecutiveDispatchFailures > 0
-				? GATEWAY_TIMEOUTS.MaxReconnectWhileDispatchesFail
-				: GATEWAY_TIMEOUTS.MaxReconnect;
+		const cap = this.reconnectCeiling();
 		const ceiling = Math.min(GATEWAY_TIMEOUTS.MinReconnect * 2 ** (this.reconnectAttempts - 1), cap);
 		const delay = Math.floor(
 			GATEWAY_TIMEOUTS.ReconnectFloor + Math.random() * (ceiling - GATEWAY_TIMEOUTS.ReconnectFloor),
 		);
 		this.log.debug(`Reconnect backoff attempt=${this.reconnectAttempts} delay=${delay}ms`);
 		return delay;
+	}
+
+	private reconnectCeiling(): number {
+		if (this.consecutiveDispatchFailures > 0) {
+			return GATEWAY_TIMEOUTS.MaxReconnectWhileDispatchesFail;
+		}
+		if (this.options.showsRestoredView()) {
+			return GATEWAY_TIMEOUTS.MaxReconnectWhileShowingRestoredView;
+		}
+		return GATEWAY_TIMEOUTS.MaxReconnect;
 	}
 
 	private resetBackoffInternal(): void {
@@ -1363,6 +1399,7 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 	}
 
 	private clearSession(): void {
+		if (this.cancelRevealFlush !== null) this.discardDeferredEmits();
 		const hadSession = Boolean(this.activeSessionId);
 		this.activeSessionId = null;
 		this.subscriptionLedger.clear();
@@ -1371,7 +1408,7 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 		this.dispatchGeneration += 1;
 		this.resetHeartbeatHistory();
 		if (hadSession) {
-			this.log.info('Gateway session cleared');
+			this.log.debug('Gateway session cleared');
 		}
 	}
 
@@ -1455,7 +1492,7 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 		if (this.connectionState === nextState) return;
 		const previous = this.connectionState;
 		this.connectionState = nextState;
-		this.log.info(`Gateway state ${previous} -> ${nextState}`);
+		this.log.debug(`Gateway state ${previous} -> ${nextState}`);
 		this.emitDeferred('stateChange', nextState, previous);
 	}
 }

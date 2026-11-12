@@ -12,7 +12,11 @@ import {openAssetSourceModal} from '@app/features/expressions/components/modals/
 import {isAnimatedFile} from '@app/features/expressions/utils/AnimatedImageUtils';
 import {getAssetFormatErrorMessage} from '@app/features/expressions/utils/AssetFormatCopy';
 import {formatImageUploadRecommendedHint} from '@app/features/expressions/utils/AssetUploadHintCopy';
-import {isSvgFile, readImageFileAsUploadDataUrl} from '@app/features/expressions/utils/ImageUploadFileUtils';
+import {
+	isAssetUploadFileAllowed,
+	isSvgFile,
+	readImageFileAsUploadDataUrl,
+} from '@app/features/expressions/utils/ImageUploadFileUtils';
 import {
 	FAILED_TO_PROCESS_CROPPED_IMAGE_DESCRIPTOR,
 	INVALID_IMAGE_TRY_ANOTHER_DESCRIPTOR,
@@ -24,6 +28,7 @@ import * as ModalCommands from '@app/features/ui/commands/ModalCommands';
 import {modal} from '@app/features/ui/commands/ModalCommands';
 import * as ToastCommands from '@app/features/ui/commands/ToastCommands';
 import * as AvatarUtils from '@app/features/user/utils/AvatarUtils';
+import {getFormattingLocale} from '@app/features/user/utils/LocaleUtils';
 import {canCropFile} from '@app/features/voice/utils/MediaCapabilities';
 import {useRemoteFormReset} from '@app/lib/forms/RemoteFormReset';
 import {assignTransientUploadFieldMutation} from '@app/lib/forms/TransientUploadFields';
@@ -88,14 +93,15 @@ export function useEditGroupForm({
 					showChannelErrorModal({
 						title: i18n._(messages.iconFileTooLargeTitle),
 						message: i18n._(messages.iconFileTooLarge, {
-							imageMaxSizeLabel: formatFileSize(i18n.locale, GlobalLimits.getAvatarMaxSize()),
+							imageMaxSizeLabel: formatFileSize(getFormattingLocale(), GlobalLimits.getAvatarMaxSize()),
 						}),
 						dataFlx: `${dataFlx}.icon-file-too-large.generic-error-modal`,
 					});
 					return;
 				}
 				const svg = isSvgFile(file);
-				if (!svg && !(await canCropFile(file))) {
+				const croppable = svg || (await canCropFile(file));
+				if (!croppable && !isAssetUploadFileAllowed('guild_icon', file)) {
 					showChannelErrorModal({
 						title: i18n._(messages.unsupportedIconFormatTitle),
 						message: getAssetFormatErrorMessage(i18n, 'guild_icon', 'unsupported_mime'),
@@ -113,6 +119,13 @@ export function useEditGroupForm({
 					return;
 				}
 				const base64 = svg ? await readImageFileAsUploadDataUrl(file) : await readBlobAsDataUrl(file);
+				if (!croppable) {
+					form.setValue('icon', base64);
+					setPreviewIconUrl(base64);
+					setHasClearedIcon(false);
+					form.clearErrors('icon');
+					return;
+				}
 				ModalCommands.push(
 					modal(() => (
 						<AssetCropModal
@@ -164,7 +177,7 @@ export function useEditGroupForm({
 			title: i18n._(messages.changeIcon),
 			uploadHint: formatImageUploadRecommendedHint(i18n, {
 				formats: STATIC_IMAGE_FORMATS,
-				maxSize: formatFileSize(i18n.locale, GlobalLimits.getAvatarMaxSize()),
+				maxSize: formatFileSize(getFormattingLocale(), GlobalLimits.getAvatarMaxSize()),
 				recommendedSize: AVATAR_RECOMMENDED_SIZE_LABEL,
 			}),
 			onPickUpload: handleIconUploadClick,

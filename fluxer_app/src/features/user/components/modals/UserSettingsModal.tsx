@@ -5,6 +5,7 @@ import {DesktopSettingsView} from '@app/features/app/components/dialogs/componen
 import {MobileSettingsView} from '@app/features/app/components/dialogs/components/MobileSettingsView';
 import * as Modal from '@app/features/app/components/dialogs/Modal';
 import {SettingsModalContainer} from '@app/features/app/components/dialogs/shared/SettingsModalLayout';
+import settingsModalStyles from '@app/features/app/components/dialogs/shared/SettingsModalLayout.module.css';
 import * as RouterUtils from '@app/features/navigation/utils/RouterUtils';
 import {ComponentBus} from '@app/features/platform/utils/ComponentBus';
 import * as PlutoniumPageCommands from '@app/features/premium/commands/PlutoniumPageCommands';
@@ -205,7 +206,12 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = observer(
 		if (initialPageRoute) return null;
 		return (
 			<SettingsContentKeyProvider data-flx="user.user-settings-modal.settings-content-key-provider">
-				<Modal.Root size="fullscreen" onClose={handleModalClose} data-flx="user.user-settings-modal.modal-root">
+				<Modal.Root
+					size="fullscreen"
+					className={settingsModalStyles.modalRoot}
+					onClose={handleModalClose}
+					data-flx="user.user-settings-modal.modal-root"
+				>
 					<Modal.ScreenReaderLabel
 						text={i18n._(USER_SETTINGS_LABEL_DESCRIPTOR)}
 						data-flx="user.user-settings-modal.modal-screen-reader-label"

@@ -163,6 +163,7 @@ message NagbarDismissals {
   // sanalyer: field numbers from 1000 up, so an upstream field never collides.
   bool micup_profile_privacy_widened = 1000;
   bool micup_profile_public_offer = 1001;
+  bool android_app = 20;
 }
 
 message DismissedUpsells {

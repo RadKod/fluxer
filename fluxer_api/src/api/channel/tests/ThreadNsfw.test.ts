@@ -79,7 +79,7 @@ describe('thread nsfw scope', () => {
 			.execute();
 	}
 
-	it('requires age verification for posts and post data under an nsfw forum', async () => {
+	it('requires an adult account for posts and post data under an nsfw forum', async () => {
 		const s = await setup();
 		const minor = await createTestAccount(harness, {dateOfBirth: bornYearsAgo(15)});
 		const invite = await createChannelInvite(harness, s.owner.token, s.sfwChannelId);

@@ -131,25 +131,26 @@ export class FeedMediaService {
 					uploadMode: 'presigned_singlepart',
 					requestIp: clientIp,
 				});
-				const presignedUrl = await storageService.getPresignedUploadURL({
+				const upload_url = await applyUploadRelayDecision({
+					presign: () =>
+						storageService.getPresignedUploadURL({
+							bucket,
+							key: uploadKey,
+							contentType,
+							contentLength: attachment.file_size,
+						}),
 					bucket,
 					key: uploadKey,
+					relayDecision,
 					contentType,
-					contentLength: attachment.file_size,
+					maxBytes: attachment.file_size,
 				});
 				return {
 					upload_mode: 'singlepart' as const,
 					id: attachment.id,
 					filename: attachment.filename,
 					upload_filename: uploadKey,
-					upload_url: applyUploadRelayDecision({
-						presignedUrl,
-						bucket,
-						key: uploadKey,
-						relayDecision,
-						contentType,
-						maxBytes: attachment.file_size,
-					}),
+					upload_url,
 					file_size: attachment.file_size,
 					content_type: contentType,
 				};

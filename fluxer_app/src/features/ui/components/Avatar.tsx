@@ -9,6 +9,7 @@ import {type AvatarDecorationSurface, AvatarUltraLayer} from '@app/features/cosm
 import GuildMembers from '@app/features/member/state/GuildMembers';
 import * as ImageCacheUtils from '@app/features/messaging/utils/ImageCacheUtils';
 import {BaseAvatar} from '@app/features/ui/components/BaseAvatar';
+import {getAppRemScale} from '@app/features/ui/utils/AppZoomUtils';
 import type {User} from '@app/features/user/models/User';
 import Users from '@app/features/user/state/Users';
 import * as AvatarUtils from '@app/features/user/utils/AvatarUtils';
@@ -73,6 +74,7 @@ const AvatarComponent = React.forwardRef<HTMLDivElement, AvatarProps>(
 		const hasGuildMemberAvatarSource = Boolean(guildId) && guildMember != null;
 		const memberAvatar = guildMember?.avatar ?? null;
 		const memberAvatarUnset = guildMember?.isAvatarUnset() ?? false;
+		const requestSize = mediaSize ?? size * getAppRemScale();
 		const avatarUrl = useMemo(() => {
 			if (customAvatarUrl !== undefined) return customAvatarUrl;
 			if (systemAvatarUrl !== null) return systemAvatarUrl;
@@ -83,17 +85,17 @@ const AvatarComponent = React.forwardRef<HTMLDivElement, AvatarProps>(
 					memberAvatar,
 					avatarUnset: memberAvatarUnset,
 					animated: false,
-					size: mediaSize,
+					size: requestSize,
 				});
 			}
-			return AvatarUtils.getUserAvatarURL({id: userId, avatar: userAvatar}, false, mediaSize);
+			return AvatarUtils.getUserAvatarURL({id: userId, avatar: userAvatar}, false, requestSize);
 		}, [
 			customAvatarUrl,
 			guildId,
 			hasGuildMemberAvatarSource,
 			memberAvatar,
 			memberAvatarUnset,
-			mediaSize,
+			requestSize,
 			systemAvatarUrl,
 			userAvatar,
 			userId,
@@ -108,17 +110,17 @@ const AvatarComponent = React.forwardRef<HTMLDivElement, AvatarProps>(
 					memberAvatar,
 					avatarUnset: memberAvatarUnset,
 					animated: true,
-					size: mediaSize,
+					size: requestSize,
 				});
 			}
-			return AvatarUtils.getUserAvatarURL({id: userId, avatar: userAvatar}, true, mediaSize);
+			return AvatarUtils.getUserAvatarURL({id: userId, avatar: userAvatar}, true, requestSize);
 		}, [
 			customHoverAvatarUrl,
 			guildId,
 			hasGuildMemberAvatarSource,
 			memberAvatar,
 			memberAvatarUnset,
-			mediaSize,
+			requestSize,
 			systemAvatarUrl,
 			userAvatar,
 			userId,

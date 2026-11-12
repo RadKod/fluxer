@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {
+	buildTargetUrl,
 	classifyDomainMigrationInstallKind,
 	DOMAIN_MIGRATION_ENABLED,
 	type DomainMigrationDisplayMode,
@@ -11,7 +12,9 @@ import {
 	domainMovedBrowserMigrationUrl,
 	domainMovedInstallUrl,
 	domainMovedManifestId,
+	environmentMayForward,
 	isDomainMigrationOneShotRoute,
+	isForwardableOneShotRoute,
 	markDomainMigrationFailed,
 	readDomainMigrationMarker,
 	resolveDomainMigrationSide,
@@ -131,6 +134,20 @@ export function startDomainMigrationFromSource(side: DomainMigrationSide): true 
 	writeDomainMigrationIntent(getProtectedSessionStorage(), {at: Date.now()});
 	const next = `${window.location.pathname}${window.location.search}${window.location.hash}`;
 	window.location.replace(`${side.target}/migrate/begin?next=${encodeURIComponent(next)}`);
+	return true;
+}
+
+export function forwardOneShotRouteToTarget(): boolean {
+	const side = resolveDomainMigrationSide(window.location.origin);
+	const {pathname, search, hash} = window.location;
+	if (
+		side?.role !== 'source' ||
+		!isForwardableOneShotRoute(pathname) ||
+		!environmentMayForward(readDomainMigrationEnvironment(), readDomainMigrationDiscovery())
+	) {
+		return false;
+	}
+	window.location.assign(buildTargetUrl(side.target, pathname, search, hash));
 	return true;
 }
 

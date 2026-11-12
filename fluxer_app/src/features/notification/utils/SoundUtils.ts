@@ -91,7 +91,7 @@ const CALL_RELATED_SOUND_TYPES = new Set<SoundType>([
 	SoundType.ScreenShareStop,
 	...Object.values(TABLE_GAME_SOUND_TYPE),
 ]);
-const shouldRouteSoundToCaptureBus = (type: SoundType): boolean => !CALL_RELATED_SOUND_TYPES.has(type);
+const isCallRelatedSound = (type: SoundType): boolean => CALL_RELATED_SOUND_TYPES.has(type);
 
 interface AudioInstance {
 	audio: HTMLAudioElement;
@@ -123,6 +123,7 @@ const oneShotChannels: Map<SoundType, SoundElementChannel> = new Map();
 const loopChannels: Map<SoundType, SoundElementChannel> = new Map();
 
 let audioContext: AudioContext | null = null;
+let callAudioContext: AudioContext | null = null;
 let masterGainNode: GainNode | null = null;
 let soundOutputDeviceIdResolver: (() => string | null) | null = null;
 let lastAppliedContextSinkId: string | null = null;
@@ -226,6 +227,12 @@ const getAudioContext = (): AudioContext => {
 	}
 	return audioContext;
 };
+const getCallAudioContext = (): AudioContext => {
+	if (!callAudioContext) {
+		callAudioContext = new AudioContext();
+	}
+	return callAudioContext;
+};
 const getMasterGainNode = (): GainNode => {
 	const ctx = getAudioContext();
 	if (!masterGainNode || masterGainNode.context.state === 'closed') {
@@ -293,24 +300,30 @@ export function removeSoundCaptureDestination(node: AudioNode): void {
 	} catch {}
 }
 
-const resumeAudioContextIfNeeded = async (): Promise<AudioContext> => {
-	const ctx = getAudioContext();
+const resumeIfSuspended = async (ctx: AudioContext): Promise<AudioContext> => {
 	if (ctx.state === 'suspended') {
 		try {
 			await ctx.resume();
 		} catch {}
 	}
+	return ctx;
+};
+const resumeCallAudioContextIfNeeded = async (): Promise<AudioContext> => {
+	const ctx = await resumeIfSuspended(getCallAudioContext());
 	applyOutputDeviceToSoundContext(ctx);
 	return ctx;
 };
+const resumeAudioContextForSound = (type: SoundType): Promise<AudioContext> =>
+	isCallRelatedSound(type) ? resumeCallAudioContextIfNeeded() : resumeIfSuspended(getAudioContext());
+const soundOutputNode = (type: SoundType, ctx: AudioContext): AudioNode =>
+	isCallRelatedSound(type) ? ctx.destination : getMasterGainNode();
 
 export async function acquireOutputAudioContext(): Promise<AudioContext> {
-	return resumeAudioContextIfNeeded();
+	return resumeCallAudioContextIfNeeded();
 }
 
 const fadeIn = (gainNode: GainNode, targetVolume: number, duration = DEFAULT_FADE_DURATION): void => {
-	const ctx = getAudioContext();
-	const now = ctx.currentTime;
+	const now = gainNode.context.currentTime;
 	targetVolume = clamp(targetVolume, 0, MAX_EFFECTIVE_VOLUME);
 	gainNode.gain.cancelScheduledValues(now);
 	gainNode.gain.setValueAtTime(MIN_GAIN, now);
@@ -318,8 +331,7 @@ const fadeIn = (gainNode: GainNode, targetVolume: number, duration = DEFAULT_FAD
 };
 const fadeOut = (gainNode: GainNode, duration = DEFAULT_FADE_DURATION): Promise<void> => {
 	return new Promise((resolve) => {
-		const ctx = getAudioContext();
-		const now = ctx.currentTime;
+		const now = gainNode.context.currentTime;
 		const currentVolume = gainNode.gain.value;
 		if (currentVolume <= MIN_GAIN) {
 			gainNode.gain.setValueAtTime(MIN_GAIN, now);
@@ -395,11 +407,11 @@ const playOneShotSound = async (
 	const effectiveVolume = clamp(volume, 0, MAX_EFFECTIVE_VOLUME);
 	let channel: SoundElementChannel | undefined;
 	let gainNode: GainNode | undefined;
-	const routeToCaptureBus = shouldRouteSoundToCaptureBus(type);
 	try {
-		const ctx = await resumeAudioContextIfNeeded();
+		const ctx = await resumeAudioContextForSound(type);
 		if (signal?.aborted) return null;
 		if (ctx.state !== 'suspended') {
+			// sanalyer: one reusable element per sound type, so rapid sounds do not leak media element sources.
 			const reused = acquireSoundChannel(ctx, oneShotChannels, type, soundUrl);
 			for (const playing of activeOneShotSounds) {
 				if (playing.audio === reused.audio) stopOneShotInstance(playing);
@@ -407,7 +419,7 @@ const playOneShotSound = async (
 			const channelGain = ctx.createGain();
 			channelGain.gain.value = effectiveVolume;
 			reused.sourceNode.connect(channelGain);
-			channelGain.connect(routeToCaptureBus ? getMasterGainNode() : ctx.destination);
+			channelGain.connect(soundOutputNode(type, ctx));
 			channel = reused;
 			gainNode = channelGain;
 		}
@@ -422,7 +434,9 @@ const playOneShotSound = async (
 		audio.volume = 1;
 	} else {
 		audio.volume = effectiveVolume;
-		applyOutputDeviceToAudioElement(audio);
+		if (isCallRelatedSound(type)) {
+			applyOutputDeviceToAudioElement(audio);
+		}
 	}
 	let cleanedUp = false;
 	let abortPlayback: (() => void) | null = null;
@@ -495,7 +509,7 @@ export async function playSound(
 		if (!loop) {
 			return await playOneShotSound(type, volume, onAutoplayBlocked, signal);
 		}
-		const ctx = await resumeAudioContextIfNeeded();
+		const ctx = await resumeAudioContextForSound(type);
 		if (ctx.state === 'suspended') {
 			logger.debug('Audio context still suspended; skipping sound', {type});
 			onAutoplayBlocked?.();
@@ -508,7 +522,7 @@ export async function playSound(
 		audio.loop = loop;
 		const gainNode = ctx.createGain();
 		sourceNode.connect(gainNode);
-		gainNode.connect(shouldRouteSoundToCaptureBus(type) ? getMasterGainNode() : ctx.destination);
+		gainNode.connect(soundOutputNode(type, ctx));
 		const effectiveVolume = clamp(volume, 0, MAX_EFFECTIVE_VOLUME);
 		fadeIn(gainNode, effectiveVolume);
 		const instance: AudioInstance = {

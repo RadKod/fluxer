@@ -124,7 +124,7 @@ describe('CosmeticsSettingsTab', () => {
 		vi.clearAllMocks();
 		previews.length = 0;
 		(globalThis as {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
-		Users.handleGatewayReady('micup-test-account', me({avatar_decoration_data: {asset: 'hash11', item_id: '11'}}));
+		Users.handleGatewayReady('micup-test-account', me({avatar_decoration_data: {asset: 'hash11', item_id: '11'}}), {keepRestoredUsers: false});
 		vi.mocked(CosmeticCommands.fetchCatalog).mockResolvedValue(CATALOG);
 		vi.mocked(CosmeticCommands.fetchUserCosmetics).mockResolvedValue({
 			owned: [],

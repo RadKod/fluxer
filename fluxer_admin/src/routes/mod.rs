@@ -153,8 +153,8 @@ fn api_error_detail(message: &str) -> Option<String> {
 // 8 MiB of image is about 11.2 MiB of base64; leave room for the rest of the form.
 const ADMIN_MAX_BODY_BYTES: usize = 16 * 1024 * 1024;
 
-pub fn build_router(config: AdminConfig) -> Router {
-    let state = AppState::new(config);
+pub fn build_router(config: AdminConfig) -> anyhow::Result<Router> {
+    let state = AppState::try_new(config)?;
     let protected = Router::new()
         .merge(users::router())
         .merge(username_migration::router())
@@ -197,7 +197,7 @@ pub fn build_router(config: AdminConfig) -> Router {
             middleware::auth::require_auth,
         ));
 
-    Router::new()
+    Ok(Router::new()
         .route("/_health", get(health))
         .route("/robots.txt", get(robots_txt))
         .route("/static/app.css", get(app_css))
@@ -218,7 +218,7 @@ pub fn build_router(config: AdminConfig) -> Router {
                 .compress_when(DefaultPredicate::new().and(NotForContentType::const_new("font/"))),
         )
         .layer(TraceLayer::new_for_http())
-        .with_state(state)
+        .with_state(state))
 }
 
 async fn security_headers_middleware(

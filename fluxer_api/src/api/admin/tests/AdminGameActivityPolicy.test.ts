@@ -119,6 +119,7 @@ async function fixture(privacy: number = ProfilePrivacyLevels.FRIENDS_ONLY) {
 		apiContext,
 		auditService: auditService as never,
 		userRelationshipService: {
+			deleteFriendRequest: async () => {},
 			endFriendship: async (a, b) => {
 				await users.deleteRelationship(a, b, RelationshipTypes.FRIEND);
 				await users.deleteRelationship(b, a, RelationshipTypes.FRIEND);
@@ -127,7 +128,8 @@ async function fixture(privacy: number = ProfilePrivacyLevels.FRIENDS_ONLY) {
 	});
 	const grants = new GameActivityPolicyService({users, gateway});
 	const accountSettings = new UserAccountSettingsService({
-		userAccountRepository: users,
+				labsRoleService: null,
+userAccountRepository: users,
 		updatePropagator: {dispatchUserSettingsUpdate: async () => {}} as never,
 		gatewayService: gateway,
 		userCacheService: {} as never,

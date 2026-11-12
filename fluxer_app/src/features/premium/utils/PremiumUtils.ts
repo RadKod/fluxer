@@ -41,6 +41,13 @@ export function isPremiumPageAvailable(): boolean {
 	return RuntimeConfig.isSelfHosted() && shouldShowPremiumFeatures();
 }
 
+export function shouldShowFluxerPremiumIcon(): boolean {
+	if (DeveloperOptions.selfHostedModeOverride) {
+		return false;
+	}
+	return !RuntimeConfig.isSelfHosted();
+}
+
 export function arePremiumPurchasesAvailable(purchaseDisabled = false): boolean {
 	if (!shouldShowPremiumFeatures()) {
 		return false;

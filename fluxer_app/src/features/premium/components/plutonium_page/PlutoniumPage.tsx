@@ -203,7 +203,7 @@ export const PlutoniumPage = observer(function PlutoniumPage() {
 		giftPurchasesAvailable ? (
 			<PlutoniumPageButton
 				variant={variant}
-				onClick={PlutoniumPageCommands.openGiftPlutoniumModal}
+				onClick={() => PlutoniumPageCommands.openGiftPlutoniumModal()}
 				data-flx={`premium.plutonium-page.${flxSuffix}.gift`}
 			>
 				{i18n._(GIFT_PLUTONIUM_DESCRIPTOR, {premiumProductName: getPremiumProductName()})}
@@ -262,7 +262,7 @@ export const PlutoniumPage = observer(function PlutoniumPage() {
 					<button
 						type="button"
 						className={styles.textButton}
-						onClick={PlutoniumPageCommands.openGiftPlutoniumModal}
+						onClick={() => PlutoniumPageCommands.openGiftPlutoniumModal()}
 						data-flx="premium.plutonium-page.hero.gift-link"
 					>
 						<GiftIcon

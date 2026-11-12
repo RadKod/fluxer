@@ -35,6 +35,7 @@ import {
 	type InstanceAppPublic,
 	type InstanceBuiltInGuildBadgeImages,
 	type InstanceCommunity,
+	type InstanceConnectionProvider,
 	type InstanceDomainMigration,
 	type InstanceFeatures,
 	type InstanceGuildBadge,
@@ -91,7 +92,6 @@ export interface RuntimeConfigSnapshot extends RuntimeConfigIdentity {
 	readonly customBadgesVersion: string | null;
 	readonly builtInGuildBadgeImages: InstanceBuiltInGuildBadgeImages;
 	readonly hiddenBuiltInGuildBadges: InstanceHiddenBuiltInGuildBadges;
-	readonly hiddenRoleIds: ReadonlyArray<string>;
 }
 
 export class InvalidRuntimeConfigSnapshotError extends Error {
@@ -422,7 +422,23 @@ function readServices(value: unknown): InstanceServices {
 		gif_enabled: readBoolean(source, 'gif_enabled', 'services.gif_enabled'),
 		youtube_enabled: readBoolean(source, 'youtube_enabled', 'services.youtube_enabled'),
 		bluesky_enabled: readBoolean(source, 'bluesky_enabled', 'services.bluesky_enabled'),
+		connection_providers: readConnectionProviders(source['connection_providers']),
 	};
+}
+
+function readConnectionProviders(value: unknown): Array<InstanceConnectionProvider> {
+	if (!Array.isArray(value)) {
+		return [];
+	}
+	return value.map((entry, index) => {
+		const path = `services.connection_providers.${index}`;
+		const source = readRecord(entry, path);
+		return {
+			id: readNonEmptyString(source, 'id', `${path}.id`),
+			name: readNonEmptyString(source, 'name', `${path}.name`),
+			icon_url: readNullableAbsoluteHttpUrl(source, 'icon_url', `${path}.icon_url`),
+		};
+	});
 }
 
 function readLimitFilter(value: unknown, path: string): LimitFilter {
@@ -694,16 +710,6 @@ function readHiddenBuiltInGuildBadges(value: unknown): InstanceHiddenBuiltInGuil
 	return BUILT_IN_GUILD_BADGE_KINDS.filter((kind) => value.includes(kind));
 }
 
-function readHiddenRoleIds(value: unknown): ReadonlyArray<string> {
-	if (value === undefined) {
-		return [];
-	}
-	if (!Array.isArray(value) || !value.every((id) => typeof id === 'string')) {
-		invalid('hiddenRoleIds', 'must be an array of strings');
-	}
-	return [...value];
-}
-
 export function requireRuntimeConfigSnapshot(value: unknown): RuntimeConfigSnapshot {
 	const source = readRecord(value, 'root');
 	return {
@@ -744,6 +750,5 @@ export function requireRuntimeConfigSnapshot(value: unknown): RuntimeConfigSnaps
 				: readNonEmptyString(source, 'customBadgesVersion', 'customBadgesVersion'),
 		builtInGuildBadgeImages: readBuiltInGuildBadgeImages(source.builtInGuildBadgeImages),
 		hiddenBuiltInGuildBadges: readHiddenBuiltInGuildBadges(source.hiddenBuiltInGuildBadges),
-		hiddenRoleIds: readHiddenRoleIds(source.hiddenRoleIds),
 	};
 }

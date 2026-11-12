@@ -295,7 +295,7 @@ export async function redeem(
 	const item = Gifts.getGift(code, target)?.item?.item ?? null;
 	try {
 		await instanceRequest({method: 'POST', path: Endpoints.GIFT_REDEEM(code), target});
-		logger.info('Gift redeemed', {code});
+		logger.debug('Gift redeemed', {code});
 		Gifts.markAsRedeemed(code, target);
 		if (item) {
 			// The server added the item and wore it; the gift dialog says so, so no toast and it stays open.

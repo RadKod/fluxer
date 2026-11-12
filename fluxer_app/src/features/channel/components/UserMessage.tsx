@@ -39,6 +39,7 @@ import {
 } from '@app/features/messaging/utils/MessageEditContentUtils';
 import {retryFailedMessage} from '@app/features/messaging/utils/MessageRetryUtils';
 import {NodeType} from '@app/features/messaging/utils/markdown/parser/Enums';
+import {isMarkdownParserReady} from '@app/features/messaging/utils/markdown/parser/MarkdownParserWasm';
 import {SpoilerSyncProvider} from '@app/features/messaging/utils/SpoilerUtils';
 import {compactMarkdownProps} from '@app/features/theme/layout/MessageLayoutAttributes';
 import markupStyles from '@app/features/theme/styles/Markup.module.css';
@@ -141,13 +142,14 @@ export const UserMessage = observer(() => {
 	) : null;
 	const AuthorHeading = (onHeadingActivate ? 'div' : 'h3') as 'div' | 'h3';
 	const showUserAvatarsInCompactMode = Accessibility.showUserAvatarsInCompactMode;
+	const markdownParserReady = isMarkdownParserReady();
 	const {nodes: astNodes} = useMemo(
 		() =>
 			parse({
 				content: message.content,
 				context: MarkdownContext.STANDARD_WITH_JUMBO,
 			}),
-		[message.content],
+		[message.content, markdownParserReady],
 	);
 	const markdownOptions = useMemo(
 		() => ({

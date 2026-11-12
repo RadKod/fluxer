@@ -18,7 +18,7 @@ import {getInstanceProductName} from '@app/api/instance/ProductName';
 import {getKVClient} from '@app/api/middleware/ServiceRegistry';
 import {Application} from '@app/api/models/Application';
 import {Applications, ApplicationsByOwner} from '@app/api/Tables';
-import {hashPassword} from '@app/api/utils/PasswordUtils';
+import {hashStoredSecret} from '@app/api/utils/StoredSecret';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {ADMIN_OAUTH2_APPLICATION_ID} from '@fluxer/constants/src/Core';
 import {ConflictError} from '@fluxer/errors/src/domains/core/ConflictError';
@@ -45,13 +45,13 @@ export function resetAdminSecretHashForTesting(): void {
 	cachedAdminSecretHash = null;
 }
 
-async function getAdminSecretHash(): Promise<string | null> {
+function getAdminSecretHash(): string | null {
 	const secret = Config.admin.oauthClientSecret;
 	if (!secret) {
 		return null;
 	}
 	if (cachedAdminSecretHash === null) {
-		cachedAdminSecretHash = await hashPassword(secret);
+		cachedAdminSecretHash = hashStoredSecret(secret);
 	}
 	return cachedAdminSecretHash;
 }
@@ -129,7 +129,7 @@ export class ApplicationRepository {
 	}
 	async getApplication(applicationId: ApplicationID): Promise<Application | null> {
 		if (applicationId === createApplicationID(ADMIN_OAUTH2_APPLICATION_ID)) {
-			const secretHash = await getAdminSecretHash();
+			const secretHash = getAdminSecretHash();
 			if (secretHash === null) {
 				return null;
 			}

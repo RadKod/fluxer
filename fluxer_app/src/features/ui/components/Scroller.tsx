@@ -127,10 +127,14 @@ function getTrackWheelDelta(
 	viewportSize: number,
 ): number {
 	const raw = orientation === 'vertical' ? event.deltaY : event.deltaX || event.deltaY;
-	if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) {
+	return wheelDeltaInPixels(raw, event.deltaMode, viewportSize);
+}
+
+function wheelDeltaInPixels(raw: number, deltaMode: number, viewportSize: number): number {
+	if (deltaMode === WheelEvent.DOM_DELTA_LINE) {
 		return raw * LINE_DELTA_PX;
 	}
-	if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) {
+	if (deltaMode === WheelEvent.DOM_DELTA_PAGE) {
 		return raw * viewportSize;
 	}
 	return raw;
@@ -227,6 +231,7 @@ export const Scroller = forwardRef<ScrollerHandle, ScrollerProps>(function Scrol
 	const contentRef = useRef<HTMLDivElement>(null);
 	const rootRef = useRef<HTMLDivElement>(null);
 	const scrollTimeoutRef = useRef<number>(0);
+	const hasPaintedRef = useRef(false);
 	const thumbRefreshRafRef = useRef<number | null>(null);
 	const onResizeRef = useRef(onResize);
 	const [isHovered, setIsHovered] = useState(false);
@@ -456,6 +461,12 @@ export const Scroller = forwardRef<ScrollerHandle, ScrollerProps>(function Scrol
 		};
 	}, []);
 	useEffect(() => {
+		const frame = requestAnimationFrame(() => {
+			hasPaintedRef.current = true;
+		});
+		return () => cancelAnimationFrame(frame);
+	}, []);
+	useEffect(() => {
 		return cancelScheduledThumbRefresh;
 	}, [cancelScheduledThumbRefresh]);
 	useEffect(() => {
@@ -618,7 +629,8 @@ export const Scroller = forwardRef<ScrollerHandle, ScrollerProps>(function Scrol
 	);
 	const handleScroll = useCallback(
 		(event: UIEvent<HTMLDivElement>) => {
-			if (fade && showTrack) {
+			const isMountScroll = !hasPaintedRef.current;
+			if (fade && showTrack && !isMountScroll) {
 				setIsScrolling(true);
 				window.clearTimeout(scrollTimeoutRef.current);
 				scrollTimeoutRef.current = window.setTimeout(() => {
@@ -637,6 +649,27 @@ export const Scroller = forwardRef<ScrollerHandle, ScrollerProps>(function Scrol
 		},
 		[cancelProgrammaticScrollForUserIntent, onWheel],
 	);
+	useEffect(() => {
+		const scrollElement = scrollRef.current;
+		if (orientation !== 'horizontal' || scrollElement == null) {
+			return undefined;
+		}
+		const handleVerticalWheel = (event: WheelEvent) => {
+			if (event.ctrlKey || event.shiftKey || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) {
+				return;
+			}
+			const maxScrollLeft = scrollElement.scrollWidth - scrollElement.clientWidth;
+			const delta = wheelDeltaInPixels(event.deltaY, event.deltaMode, scrollElement.clientWidth);
+			const nextScrollLeft = Math.min(maxScrollLeft, Math.max(0, scrollElement.scrollLeft + delta));
+			if (maxScrollLeft <= 0 || nextScrollLeft === scrollElement.scrollLeft) {
+				return;
+			}
+			event.preventDefault();
+			scrollElement.scrollLeft = nextScrollLeft;
+		};
+		scrollElement.addEventListener('wheel', handleVerticalWheel, {passive: false});
+		return () => scrollElement.removeEventListener('wheel', handleVerticalWheel);
+	}, [orientation]);
 	const handleScrollerTouchStart = useCallback(
 		(event: ReactTouchEvent<HTMLDivElement>) => {
 			cancelProgrammaticScrollForUserIntent();
@@ -774,6 +807,7 @@ export const Scroller = forwardRef<ScrollerHandle, ScrollerProps>(function Scrol
 					scrollbar={scrollbar}
 					hasTrack={hasTrack}
 					isVisible={isTrackVisible}
+					animateVisibility={fade}
 					isDragging={isDragging}
 					trackRef={setTrackElement}
 					thumbRef={setThumbElement}

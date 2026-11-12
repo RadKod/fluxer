@@ -114,6 +114,7 @@ env_gateway_base_config() ->
         ),
         <<"identify_timeout_ms">> => env_int("FLUXER_GATEWAY_IDENTIFY_TIMEOUT_MS", 0),
         <<"count_ipv6_by_64">> => env_bool("FLUXER_GATEWAY_COUNT_IPV6_BY_64", false),
+        <<"bind_host">> => env_optional_binary("FLUXER_GATEWAY_BIND_HOST"),
         <<"gateway_role">> => env_optional_binary("FLUXER_GATEWAY_ROLE"),
         <<"rpc_auth_token">> => env_binary("FLUXER_GATEWAY_RPC_AUTH_TOKEN", <<>>),
         <<"metrics_allowed_cidrs">> => env_optional_binary("FLUXER_METRICS_ALLOWED_CIDRS"),
@@ -220,6 +221,7 @@ build_core_config(Service, Internal, Nats, Proxy) ->
         max_unidentified_connections => get_int(Service, <<"max_unidentified_connections">>, 0),
         identify_timeout_ms => get_int(Service, <<"identify_timeout_ms">>, 0),
         count_ipv6_by_64 => get_bool(Service, <<"count_ipv6_by_64">>, false),
+        bind_ip => parse_bind_ip(get_optional_binary(Service, <<"bind_host">>)),
         gateway_role => normalize_gateway_role(get_value(Service, <<"gateway_role">>)),
         client_ip_header => get_binary(Proxy, <<"client_ip_header">>, <<"x-forwarded-for">>),
         trust_client_ip_header => get_bool(Proxy, <<"trust_client_ip_header">>, false),
@@ -234,6 +236,15 @@ build_core_config(Service, Internal, Nats, Proxy) ->
         gateway_nats_rpc_max_handlers =>
             get_int(Service, <<"gateway_nats_rpc_max_handlers">>, 512)
     }.
+
+-spec parse_bind_ip(binary() | undefined) -> inet:ip_address() | undefined.
+parse_bind_ip(undefined) ->
+    undefined;
+parse_bind_ip(Host) ->
+    case inet:parse_address(string:trim(binary_to_list(Host))) of
+        {ok, Ip} -> Ip;
+        {error, einval} -> erlang:error({invalid_gateway_bind_host, Host})
+    end.
 
 -spec build_push_config(map(), map(), map()) -> config().
 build_push_config(Service, Public, Instance) ->

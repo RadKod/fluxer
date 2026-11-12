@@ -79,8 +79,8 @@ function normaliseGiftCodeRowForWrite(data: GiftCodeRow): GiftCodeRow {
 export class GiftCodeRepository {
 	async createGiftCode(data: GiftCodeRow): Promise<void> {
 		const normalisedData = normaliseGiftCodeRowForWrite(data);
-		await upsertOne(GiftCodes.insert(normalisedData));
 		const batch = new BatchBuilder();
+		batch.addPrepared(GiftCodes.insert(normalisedData));
 		// Micup: admin-issued keys are all created by the system user, so indexing them would pile every sold key into
 		// one partition. The index only serves a user listing, or exporting, the gifts they bought themselves.
 		if (normalisedData.created_by_user_id !== SYSTEM_USER_ID) {
@@ -176,12 +176,14 @@ export class GiftCodeRepository {
 		if (!applied) {
 			throw new GiftCodeAlreadyRedeemedError();
 		}
-		await upsertOne(
+		const batch = new BatchBuilder();
+		batch.addPrepared(
 			GiftCodesByRedeemer.upsertAll({
 				redeemed_by_user_id: userId,
 				code,
 			}),
 		);
+		await batch.execute();
 	}
 
 	async unredeemGiftCode(code: string, userId: UserID): Promise<void> {

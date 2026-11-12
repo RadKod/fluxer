@@ -62,7 +62,7 @@ describe('collapsed voice avatar stacks', () => {
 
 	beforeEach(() => {
 		(globalThis as {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
-		Users.handleGatewayReady('micup-test-account', wireUser('me', null) as never);
+		Users.handleGatewayReady('micup-test-account', wireUser('me', null) as never, {keepRestoredUsers: false});
 		Users.cacheUsers([wireUser('a', 'oldhash')]);
 		container = document.createElement('div');
 		document.body.append(container);

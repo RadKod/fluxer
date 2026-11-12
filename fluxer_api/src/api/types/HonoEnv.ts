@@ -20,6 +20,7 @@ import type {ThreadService} from '@app/api/channel/services/thread/ThreadService
 import type {ConnectionRequestService} from '@app/api/connection/ConnectionRequestService';
 import type {ConnectionService} from '@app/api/connection/ConnectionService';
 import type {CosmeticService} from '@app/api/cosmetics/CosmeticService';
+import type {OAuthConnectionService} from '@app/api/connection/OAuthConnectionService';
 import type {DonationService} from '@app/api/donation/DonationService';
 import type {NetworkBlock} from '@app/api/enforcement/NetworkBlockError';
 import type {FavoriteMemeRequestService} from '@app/api/favorite_meme/FavoriteMemeRequestService';
@@ -148,6 +149,7 @@ export interface HonoEnv {
 		channelRepository: ChannelRepository;
 		connectionService: ConnectionService;
 		connectionRequestService: ConnectionRequestService;
+		oauthConnectionService: OAuthConnectionService;
 		blueskyOAuthService: IBlueskyOAuthService | null;
 		donationService: DonationService;
 		operatorPassCheckoutService: OperatorPassCheckoutService;

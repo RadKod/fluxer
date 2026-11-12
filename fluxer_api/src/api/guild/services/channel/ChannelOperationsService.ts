@@ -230,7 +230,7 @@ export class ChannelOperationsService {
 			},
 		});
 		const channelId = createChannelID(await this.snowflakeService.generate());
-		const channel = await this.channelRepository.channelData.upsert({
+		const channel = await this.channelRepository.channelData.create({
 			channel_id: channelId,
 			guild_id: params.guildId,
 			type: params.data.type,

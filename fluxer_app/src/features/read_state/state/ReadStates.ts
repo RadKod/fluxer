@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {Endpoints} from '@app/features/app/constants/Endpoints';
+import Initialization from '@app/features/app/state/Initialization';
+import type {BootStateUnreadBoundary, BootStateUnreadView} from '@app/features/boot_state/BootStateCodec';
 import Channels from '@app/features/channel/state/Channels';
 import type {SnapshotReadStateRow} from '@app/features/gateway/snapshot/SnapshotEntities';
 import Guilds from '@app/features/guild/state/Guilds';
@@ -9,6 +11,10 @@ import AutoAck from '@app/features/notification/state/NotificationAutoAck';
 import {http} from '@app/features/platform/transport/RestTransport';
 import {HttpError} from '@app/features/platform/types/EndpointError';
 import {Logger} from '@app/features/platform/utils/AppLogger';
+import {
+	journaledAckNewerThan,
+	recordReadStateAck,
+} from '@app/features/read_state/state/read_states/ReadStateAckJournal';
 import {resolveReadStateAckDecision} from '@app/features/read_state/state/read_states/ReadStateAckMachine';
 import {ReadStateAckQueue} from '@app/features/read_state/state/read_states/ReadStateAckQueue';
 import {ReadStateEntry} from '@app/features/read_state/state/read_states/ReadStateEntry';
@@ -350,6 +356,19 @@ class ReadStates {
 		return state?.supportsUnreadTracking() ? state.oldestUnreadMessageId : null;
 	}
 
+	getOldestUnreadJumpTargetId(channelId: string): string | null {
+		const state = this.getIfExists(channelId);
+		if (!state?.supportsUnreadTracking() || !state.hasUnread()) return null;
+		const ackMessageId = state.ackMessageId;
+		if (ackMessageId == null) return state.oldestUnreadMessageId;
+		const messages = Messages.getMessages(channelId);
+		let boundaryLoaded = !messages.hasMoreBefore;
+		messages.forEachBuffered((message) => {
+			if (!isNewerMessageId(message.id, ackMessageId)) boundaryLoaded = true;
+		});
+		return boundaryLoaded ? (state.oldestUnreadMessageId ?? ackMessageId) : ackMessageId;
+	}
+
 	getVisualUnreadMessageId(channelId: string): string | null {
 		const state = this.getIfExists(channelId);
 		return state?.supportsUnreadTracking() ? state.visualUnreadMessageId : null;
@@ -405,6 +424,9 @@ class ReadStates {
 	}
 
 	ackPins(channelId: string): void {
+		if (Initialization.isStale) {
+			return;
+		}
 		const state = this.get(channelId);
 		if (!this.applyPinAck(state)) {
 			return;
@@ -418,6 +440,16 @@ class ReadStates {
 	handleGatewayReady(action: {readState: Array<GatewayReadState>; channels: Array<ChannelPayload>}): void {
 		this.suppressVersionBumps(() => {
 			const preservedAcks = this.ackQueue.capture();
+			const boundaries = new Map<string, BootStateUnreadBoundary>();
+			if (Initialization.isStale) {
+				for (const state of this.states.values()) {
+					const boundary = this.captureUnreadBoundary(state.channelId);
+					if (state.messagesLoaded && boundary !== undefined) boundaries.set(state.channelId, boundary);
+				}
+			}
+			const restoredChannelIds = Array.from(this.states.values())
+				.filter((state) => state.messagesLoaded)
+				.map((state) => state.channelId);
 			this.reset();
 			const readStates = action.readState;
 			const channelsWithReadState = new Set<ChannelId>();
@@ -440,6 +472,12 @@ class ReadStates {
 				}
 				this.clearUnreadStateIfRead(state);
 			}
+			if (Initialization.isStale) {
+				for (const channelId of restoredChannelIds) {
+					this.applyLoadedMessages(channelId, null);
+					this.restoreUnreadBoundary(channelId, boundaries.get(channelId));
+				}
+			}
 			this.ackQueue.restore(preservedAcks);
 			this.notifyChange(undefined, {global: true});
 		});
@@ -449,20 +487,25 @@ class ReadStates {
 		this.suppressVersionBumps(() => {
 			const preservedAcks = this.ackQueue.capture();
 			this.reset();
-			for (const [channelId, row] of readStates) {
-				const state = this.get(channelId);
-				this.setMentionCount(state, row.mentionCount);
-				state.ackMessageId = row.ackMessageId;
-				state.acknowledgedPinTimestamp = row.ackPinTimestamp;
-				state.serverVersion = row.serverVersion;
-				state.lastMessageId = row.lastMessageId;
-				state.storedGuildId = row.guildId;
-				state.lastPinTimestamp = Channels.getChannel(channelId)?.lastPinTimestamp?.getTime() ?? 0;
-				this.clearUnreadStateIfRead(state);
-			}
+			for (const [channelId, row] of readStates) this.hydrateSnapshotEntry(channelId, row);
 			this.ackQueue.restore(preservedAcks);
 			this.notifyChange(undefined, {global: true});
 		});
+	}
+
+	hydrateSnapshotEntry(channelId: string, row: SnapshotReadStateRow): void {
+		const state = this.get(channelId);
+		const journaled = journaledAckNewerThan(channelId, row.ackMessageId);
+		const coversLastMessage = journaled !== null && !isNewerMessageId(row.lastMessageId, journaled.ack);
+		this.setMentionCount(state, coversLastMessage ? 0 : row.mentionCount);
+		state.ackMessageId = journaled?.ack ?? row.ackMessageId;
+		state.acknowledgedPinTimestamp = row.ackPinTimestamp;
+		state.serverVersion = row.serverVersion;
+		state.lastMessageId = row.lastMessageId;
+		state.storedGuildId = row.guildId;
+		state.lastPinTimestamp = Channels.getChannel(channelId)?.lastPinTimestamp?.getTime() ?? 0;
+		this.clearUnreadStateIfRead(state);
+		this.notifyChange(channelId);
 	}
 
 	handleGuildCreate(action: {
@@ -500,9 +543,59 @@ class ReadStates {
 	}
 
 	handleLoadMessages(action: {channelId: string; isAfter?: boolean; messages: Array<WireMessage>}): void {
-		const state = this.get(action.channelId);
+		const boundary = Messages.isReconcilingSeededWindow(action.channelId)
+			? this.captureUnreadBoundary(action.channelId)
+			: undefined;
+		this.applyLoadedMessages(action.channelId, action.isAfter === true ? action.messages.length : null);
+		this.restoreUnreadBoundary(action.channelId, boundary);
+		this.notifyChange(action.channelId);
+	}
+
+	captureUnreadBoundary(channelId: string): BootStateUnreadBoundary | undefined {
+		const state = this.getIfExists(channelId);
+		if (state === undefined) return undefined;
+		return {
+			ackMessageId: state.ackMessageId,
+			oldestUnreadMessageId: state.oldestUnreadMessageId,
+			visualUnreadMessageId: state.visualUnreadMessageId,
+		};
+	}
+
+	restoreUnreadBoundary(channelId: string, boundary: BootStateUnreadBoundary | undefined): void {
+		const state = this.getIfExists(channelId);
+		if (boundary === undefined || state === undefined || state.ackMessageId !== boundary.ackMessageId) return;
+		if (boundary.oldestUnreadMessageId !== null) state.oldestUnreadMessageId = boundary.oldestUnreadMessageId;
+		if (boundary.visualUnreadMessageId !== null) state.stickyUnreadMessageId = boundary.visualUnreadMessageId;
+		this.notifyChange(channelId);
+	}
+
+	handleRestoredMessages(channelIds: ReadonlyArray<string>): void {
+		for (const channelId of channelIds) {
+			this.applyLoadedMessages(channelId, null);
+		}
+		this.notifyChange(undefined, {global: true});
+	}
+
+	restoreUnreadViews(views: ReadonlyMap<string, BootStateUnreadView>): void {
+		for (const [channelId, view] of views) {
+			const state = this.get(channelId);
+			if (state.ackMessageId !== view.ackMessageId) {
+				continue;
+			}
+			if (isNewerMessageId(view.lastMessageId, state.lastMessageId)) {
+				state.lastMessageId = view.lastMessageId;
+			}
+			state.unreadCount = view.unreadCount;
+			state.estimated = view.estimated;
+			state.oldestUnreadMessageId = view.oldestUnreadMessageId;
+		}
+		this.notifyChange(undefined, {global: true});
+	}
+
+	private applyLoadedMessages(channelId: string, appendedAfterCount: number | null): void {
+		const state = this.get(channelId);
 		state.messagesLoaded = true;
-		const messages = Messages.getMessages(action.channelId);
+		const messages = Messages.getMessages(channelId);
 		const newestMessage = messages.last();
 		if (newestMessage != null && isNewerMessageId(newestMessage.id, state.lastMessageId)) {
 			state.lastMessageId = newestMessage.id;
@@ -512,13 +605,12 @@ class ReadStates {
 		if (state.hasUnread() || landedOnNewestWindow || landedOnAck) {
 			state.rebuild();
 			this.clearUnreadStateIfRead(state);
-		} else if (action.isAfter && state.ackMessageId != null && messages.has(state.ackMessageId, true)) {
-			state.unreadCount += action.messages.length;
+		} else if (appendedAfterCount !== null && state.ackMessageId != null && messages.has(state.ackMessageId, true)) {
+			state.unreadCount += appendedAfterCount;
 			if (state.oldestUnreadMessageId == null) {
 				state.rebuild();
 			}
 		}
-		this.notifyChange(action.channelId);
 	}
 
 	handleIncomingMessage(action: {channelId: string; message: WireMessage}): void {
@@ -713,6 +805,9 @@ class ReadStates {
 	}
 
 	handleChannelAck(action: {channelId: string; messageId?: string; immediate?: boolean; force?: boolean}): void {
+		if (Initialization.isStale) {
+			return;
+		}
 		const state = this.get(action.channelId);
 		const result = this.applyAck(state, {
 			messageId: action.messageId,
@@ -734,7 +829,7 @@ class ReadStates {
 			messageId: string;
 		}>,
 	): void {
-		if (entries.length === 0) return;
+		if (entries.length === 0 || Initialization.isStale) return;
 		const changedChannels: Array<string> = [];
 		for (const entry of entries) {
 			const state = this.get(entry.channelId);
@@ -761,6 +856,9 @@ class ReadStates {
 	}
 
 	handleChannelAckWithStickyUnread(action: {channelId: string}): void {
+		if (Initialization.isStale) {
+			return;
+		}
 		const state = this.get(action.channelId);
 		const lastMessageId = state.lastMessageId;
 		if (lastMessageId == null) {
@@ -825,6 +923,7 @@ class ReadStates {
 				state.ackedManually = true;
 				state.rebuild(action.messageId, {recomputeMentions: true});
 				this.clearProcessedMessages(action.channelId, action.messageId);
+				recordReadStateAck(action.channelId, action.messageId, true);
 				state.serverVersion = action.version ?? state.serverVersion;
 				this.ackQueue.cancel(action.channelId);
 				AutoAck.disableForChannel(action.channelId);
@@ -929,6 +1028,7 @@ class ReadStates {
 		state.unreadCount = 0;
 		this.setMentionCount(state, 0);
 		state.ackMessageId = decision.messageId;
+		recordReadStateAck(state.channelId, decision.messageId, false);
 		state.oldestUnreadMessageId = null;
 		if (decision.shouldClearManualAck) {
 			state.ackedManually = false;

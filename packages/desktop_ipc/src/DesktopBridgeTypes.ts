@@ -188,7 +188,7 @@ export interface UpdaterDownloadOption {
 	sha256?: string | null;
 }
 
-export type MediaAccessType = 'microphone' | 'camera' | 'screen' | 'audio-capture';
+export type MediaAccessType = 'microphone' | 'camera' | 'screen';
 
 export type MediaAccessStatus = 'granted' | 'denied' | 'not-determined' | 'restricted' | 'unknown';
 
@@ -207,7 +207,7 @@ export interface VirtmicLinkOptions {
 	workaround?: boolean;
 }
 
-export type NativeAudioBackend = 'macos-sck' | 'macos-coreaudio' | 'windows-wasapi-loopback' | 'linux-pipewire';
+export type NativeAudioBackend = 'macos-sck' | 'windows-wasapi-loopback' | 'linux-pipewire';
 
 export interface NativeAudioAvailability {
 	available: boolean;
@@ -243,7 +243,6 @@ export interface NativeAudioApplication {
 export interface NativeAudioStartOptions {
 	targetPid?: number;
 	includeProcessTree?: boolean;
-	macBackend?: 'sck' | 'coreaudio' | 'auto';
 	macCaptureScope?: 'process' | 'system';
 	winCaptureScope?: 'process' | 'system' | 'session-mixer';
 	winEndpoints?: Array<string>;

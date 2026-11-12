@@ -16,6 +16,7 @@ import {IP_BAN_REFRESH_CHANNEL} from '@app/api/constants/IpBan';
 import {EMPTY_USER_ROW} from '@app/api/database/types/UserTypes';
 import type {FavoriteMemeRepository} from '@app/api/favorite_meme/FavoriteMemeRepository';
 import type {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
+import {GuildMemberSearchIndexService} from '@app/api/guild/services/member/GuildMemberSearchIndexService';
 import {guildVisitRepository} from '@app/api/guild/visits/GuildVisitorAccess';
 import {emitActivity} from '@app/api/infrastructure/activity/ActivityEvents';
 import type {IPurgeQueue} from '@app/api/infrastructure/CachePurgeQueue';
@@ -42,7 +43,10 @@ import type {ApplicationRepository} from '@app/api/oauth/repositories/Applicatio
 import type {OAuth2TokenRepository} from '@app/api/oauth/repositories/OAuth2TokenRepository';
 import {endOperatorPassesForDeletion} from '@app/api/operator_pass/OperatorPassHoldingService';
 import type {StoreEntitlementService} from '@app/api/store_billing/StoreEntitlementService';
-import {deleteAllAppAttestKeys} from '@app/api/user/AgeAssurance';
+import {isMissingOrCancelledSubscriptionError} from '@app/api/stripe/StripeUtils';
+import {deleteAllAppAttestKeys} from '@app/api/user/AgeRange';
+import {EntranceSoundRepository} from '@app/api/user/entrance_sound/EntranceSoundRepository';
+import {entranceSoundStorageKey} from '@app/api/user/entrance_sound/EntranceSoundService';
 import {scheduleUserDeletionHooks} from '@app/api/user/lifecycle/UserLifecycleHooks';
 import {UserDataRepository} from '@app/api/user/repositories/account/crud/UserDataRepository';
 import {UserIndexRepository} from '@app/api/user/repositories/account/crud/UserIndexRepository';
@@ -67,6 +71,7 @@ import type Stripe from 'stripe';
 
 const CHUNK_SIZE = 100;
 const ssoIdentityRepository = new SsoIdentityRepository();
+const entranceSoundRepository = new EntranceSoundRepository();
 
 interface UserDeletionDependencies {
 	operatorPassServices: Pick<OperatorPassServices, 'repository' | 'wallService' | 'holdingService'>;
@@ -89,6 +94,15 @@ interface UserDeletionDependencies {
 	adminRepository: AdminRepository;
 	cacheService: ICacheService;
 	emailService: IEmailService;
+}
+
+async function hasSubscriptionEnded(stripe: Stripe, subscriptionId: string): Promise<boolean> {
+	try {
+		const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+		return subscription.status === 'canceled' || subscription.status === 'incomplete_expired';
+	} catch (error) {
+		return isMissingOrCancelledSubscriptionError(error);
+	}
 }
 
 async function releaseSsoIdentitiesOf(user: User, deletionReasonCode: number): Promise<void> {
@@ -197,6 +211,14 @@ export async function processUserDeletion(
 				lastError = null;
 				break;
 			} catch (error) {
+				if (await hasSubscriptionEnded(stripe, scheduledUser.stripeSubscriptionId)) {
+					Logger.info(
+						{userId, subscriptionId: scheduledUser.stripeSubscriptionId},
+						'Stripe subscription already ended, continuing account deletion',
+					);
+					lastError = null;
+					break;
+				}
 				lastError = error;
 				const isLastAttempt = attempt === MAX_RETRIES - 1;
 				Logger.error(
@@ -273,6 +295,7 @@ export async function processUserDeletion(
 					}
 				}
 				await removeGuildMemberCounted(guildRepository, guildId, userId);
+				await new GuildMemberSearchIndexService().deleteMember(guildId, userId);
 				await gatewayService.dispatchGuild({
 					guildId,
 					event: 'GUILD_MEMBER_REMOVE',
@@ -461,6 +484,19 @@ export async function processUserDeletion(
 		}
 	}
 	await favoriteMemeRepository.deleteAllByUserId(userId);
+	const entranceSoundKeys = new Set(
+		(await entranceSoundRepository.listSounds(userId)).map((sound) =>
+			entranceSoundStorageKey(userId, sound.hash, sound.extension),
+		),
+	);
+	for (const key of entranceSoundKeys) {
+		try {
+			await storageService.deleteObject(Config.s3.buckets.cdn, key);
+		} catch (error) {
+			Logger.error({error, userId}, 'Failed to delete entrance sound');
+		}
+	}
+	await entranceSoundRepository.deleteAllForUser(userId);
 	Logger.debug({userId}, 'Deleting OAuth tokens');
 	await Promise.all([
 		oauth2TokenRepository.deleteAllAccessTokensForUser(userId),

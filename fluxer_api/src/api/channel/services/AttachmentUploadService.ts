@@ -9,7 +9,7 @@ import type {
 	AttachmentUploadMode,
 	AttachmentUploadTraceRepository,
 } from '@app/api/channel/repositories/message/AttachmentUploadTraceRepository';
-import {acquireFormUploadSlot} from '@app/api/channel/services/FormUploadSlots';
+import {acquireFormUploadSlot, type FormUploadHolder} from '@app/api/channel/services/FormUploadSlots';
 import type {MessageInteractionService} from '@app/api/channel/services/MessageInteractionService';
 import type {MessageService} from '@app/api/channel/services/MessageService';
 import {dispatchMessageUpdateBroadcast} from '@app/api/channel/services/message/MessageGatewayDispatch';
@@ -138,11 +138,19 @@ export class AttachmentUploadService {
 		private gatewayService: IGatewayService,
 	) {}
 
-	async storeFormDataFile({body, filename}: {body: Readable; filename: string}): Promise<string> {
+	async storeFormDataFile({
+		body,
+		filename,
+		holder,
+	}: {
+		body: Readable;
+		filename: string;
+		holder: FormUploadHolder;
+	}): Promise<string> {
 		const uploadKey = crypto.randomUUID();
 		const bucket = Config.s3.buckets.uploads;
 		const contentType = getContentTypeFromFilename(filename);
-		const releaseSlot = await acquireFormUploadSlot();
+		const releaseSlot = await acquireFormUploadSlot(holder);
 		try {
 			await runAttachmentStorageOperation(() =>
 				this.storageService.uploadObject({
@@ -213,7 +221,7 @@ export class AttachmentUploadService {
 		clientIp,
 		attachments,
 	}: RequestPresignedAttachmentUploadUrlsParams): Promise<Array<PresignedAttachmentUploadResponseItem>> {
-		if (!Config.presignedAttachmentUploadsEnabled) {
+		if (!Config.presignedAttachmentUploadsEnabled || Config.storage.readOnly) {
 			throw new FeatureTemporarilyDisabledError();
 		}
 		const {maxFileSize, assertCanAttachFiles} = await this.prepareFormDataUpload({userId, viewer, channelId});
@@ -240,14 +248,14 @@ export class AttachmentUploadService {
 					requestIp: clientIp,
 				});
 				if (attachment.file_size <= ATTACHMENT_UPLOAD_CHUNK_THRESHOLD) {
-					const presigned_upload_url = await this.storageService.getPresignedUploadURL({
-						bucket,
-						key: uploadKey,
-						contentType: derivedContentType,
-						contentLength: attachment.file_size,
-					});
-					const upload_url = applyUploadRelayDecision({
-						presignedUrl: presigned_upload_url,
+					const upload_url = await applyUploadRelayDecision({
+						presign: () =>
+							this.storageService.getPresignedUploadURL({
+								bucket,
+								key: uploadKey,
+								contentType: derivedContentType,
+								contentLength: attachment.file_size,
+							}),
 						bucket,
 						key: uploadKey,
 						relayDecision: uploadRelayDecision,
@@ -281,15 +289,15 @@ export class AttachmentUploadService {
 						const partNumber = index + 1;
 						const partContentLength =
 							partNumber < partCount ? partSize : attachment.file_size - partSize * (partCount - 1);
-						const presigned_upload_url = await this.storageService.getPresignedUploadPartURL({
-							bucket,
-							key: uploadKey,
-							uploadId,
-							partNumber,
-							contentLength: partContentLength,
-						});
-						const upload_url = applyUploadRelayDecision({
-							presignedUrl: presigned_upload_url,
+						const upload_url = await applyUploadRelayDecision({
+							presign: () =>
+								this.storageService.getPresignedUploadPartURL({
+									bucket,
+									key: uploadKey,
+									uploadId,
+									partNumber,
+									contentLength: partContentLength,
+								}),
 							bucket,
 							key: uploadKey,
 							relayDecision: uploadRelayDecision,

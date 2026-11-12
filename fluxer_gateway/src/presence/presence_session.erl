@@ -35,8 +35,9 @@
 -spec handle_session_connect(connect_request(), pid(), state()) ->
     {reply, {ok, [map()]}, state()}.
 handle_session_connect(Request, Pid, State0) ->
-    State = bootstrap_game_activity(Request, State0),
+    State1 = bootstrap_game_activity(Request, State0),
     #{session_id := SessionId0} = Request,
+    State = merge_guild_ids(maps:get(guild_ids, Request, []), State1),
     SessionId = normalize_session_id(SessionId0),
     Status = normalize_status(maps:get(status, Request, offline)),
     Afk = normalize_boolean(maps:get(afk, Request, false)),
@@ -60,6 +61,9 @@ handle_session_connect(Request, Pid, State0) ->
             SessionsData = presence_status:collect_sessions_for_replace(
                 presence_status:effective_sessions(NewState)
             ),
+            dispatch_sessions_replace_to(
+                [P || #{pid := P} <- maps:values(Sessions), P =/= Pid], SessionsData
+            ),
             {reply, {ok, SessionsData}, NewState};
         Existing ->
             {UpdatedSession, NewState0} = refresh_existing_session(
@@ -79,6 +83,12 @@ bootstrap_game_activity(
 ) when is_binary(Nonce), byte_size(Nonce) > 0, is_map(Policy) ->
     presence_game_activity:bootstrap({session, Nonce}, Policy, State);
 bootstrap_game_activity(_Request, State) ->
+    State.
+
+-spec merge_guild_ids(term(), state()) -> state().
+merge_guild_ids([_ | _] = GuildIds, #{guild_ids := Known} = State) ->
+    State#{guild_ids := maps:merge(Known, presence_targets:map_from_ids(GuildIds))};
+merge_guild_ids(_GuildIds, State) ->
     State.
 
 -spec refresh_existing_session(
@@ -160,7 +170,12 @@ dispatch_sessions_replace(State) ->
     SessionsData = presence_status:collect_sessions_for_replace(
         presence_status:effective_sessions(State)
     ),
-    SessionPids = [maps:get(pid, S) || S <- maps:values(Sessions)],
+    dispatch_sessions_replace_to(
+        [maps:get(pid, S) || S <- maps:values(Sessions)], SessionsData
+    ).
+
+-spec dispatch_sessions_replace_to([term()], [map()]) -> ok.
+dispatch_sessions_replace_to(SessionPids, SessionsData) ->
     gateway_dispatch_relay:dispatch_many(
         [Pid || Pid <- SessionPids, is_pid(Pid)], sessions_replace, SessionsData, 0
     ),

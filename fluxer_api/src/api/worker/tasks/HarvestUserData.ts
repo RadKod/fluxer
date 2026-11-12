@@ -44,6 +44,7 @@ import type {ThreadMember} from '@app/api/models/ThreadMember';
 import type {User} from '@app/api/models/User';
 import {getOperatorPassVisionaryPassId} from '@app/api/operator_pass/OperatorPassVisionaryService';
 import {collectUserHarvestExtensions} from '@app/api/user/lifecycle/UserLifecycleHooks';
+import {listAppAttestKeysForExport} from '@app/api/user/AgeRange';
 import {buildHarvestDownloadUrl} from '@app/api/user/services/HarvestDownloadUrl';
 import {mapWithConcurrency} from '@app/api/utils/ConcurrencyUtils';
 import {writeZipArchive} from '@app/api/worker/utils/ArchiveFile';
@@ -591,6 +592,7 @@ const harvestUserData: ArchiveTaskHandler = async (payload, helpers, attempt) =>
 			webAuthnCredentials,
 			mfaBackupCodes,
 			recoveryKitCreatedAt,
+			appAttestKeys,
 			createdGiftCodes,
 			payments,
 			storePurchases,
@@ -617,6 +619,7 @@ const harvestUserData: ArchiveTaskHandler = async (payload, helpers, attempt) =>
 			userRepository.listWebAuthnCredentials(userId),
 			userRepository.listMfaBackupCodes(userId),
 			findRecoveryKitCreatedAt(userId),
+			listAppAttestKeysForExport(userId),
 			userRepository.findGiftCodesByCreator(userId),
 			paymentRepository.findPaymentsByUserId(userId),
 			storeEntitlementService.listStorePurchases(userId),
@@ -688,6 +691,7 @@ const harvestUserData: ArchiveTaskHandler = async (payload, helpers, attempt) =>
 			webAuthnCredentials,
 			mfaBackupCodes,
 			recoveryKitCreatedAt,
+			appAttestKeys,
 			createdGiftCodes,
 			payments,
 			storePurchases,

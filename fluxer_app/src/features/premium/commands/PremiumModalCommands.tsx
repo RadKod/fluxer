@@ -15,6 +15,7 @@ import {i18n} from '@lingui/core';
 
 interface OpenOptions {
 	defaultGiftMode?: boolean;
+	giftChannelId?: string;
 }
 
 export function open(optionsOrDefaultGiftMode: OpenOptions | boolean = {}): void {
@@ -40,9 +41,9 @@ export function open(optionsOrDefaultGiftMode: OpenOptions | boolean = {}): void
 		typeof optionsOrDefaultGiftMode === 'boolean'
 			? {defaultGiftMode: optionsOrDefaultGiftMode}
 			: optionsOrDefaultGiftMode;
-	const {defaultGiftMode = false} = options;
+	const {defaultGiftMode = false, giftChannelId} = options;
 	if (defaultGiftMode) {
-		PlutoniumPageCommands.openGiftPlutoniumModal();
+		PlutoniumPageCommands.openGiftPlutoniumModal(giftChannelId);
 	} else {
 		PlutoniumPageCommands.openPlutoniumPage();
 	}

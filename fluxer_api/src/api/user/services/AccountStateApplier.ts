@@ -22,6 +22,7 @@ import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {KVBulkMessageDeletionQueueService} from '@app/api/infrastructure/KVBulkMessageDeletionQueueService';
 import type {UserCacheService} from '@app/api/infrastructure/UserCacheService';
 import type {User} from '@app/api/models/User';
+import type {OperatorPassLabsRoleService} from '@app/api/operator_pass/OperatorPassLabsRole';
 import {isAccountLimitExempt} from '@app/api/user/AccountLimit';
 import {clearNewConversationLimit, setNewConversationLimit} from '@app/api/user/NewConversationLimit';
 import type {UserRepository} from '@app/api/user/repositories/UserRepository';
@@ -53,6 +54,7 @@ export interface AccountStateDeps {
 	messageDeletionQueue: Pick<KVBulkMessageDeletionQueueService, 'scheduleDeletion' | 'removeFromQueue'>;
 	messageDeletionDelayMs: number;
 	authored: Pick<MessageRepository, 'listMessagesByAuthor'>;
+	labsRoles: Pick<OperatorPassLabsRoleService, 'resyncLabsRoles'>;
 	now?: () => number;
 }
 
@@ -102,6 +104,7 @@ export function accountStateDepsFromContext(
 	profile: ProfilePropagation,
 	messageDeletion: Pick<AccountStateDeps, 'archives' | 'messageDeletionQueue' | 'messageDeletionDelayMs'>,
 	channels: Pick<ChannelRepository, 'channelData' | 'messages'>,
+	labsRoles: AccountStateDeps['labsRoles'],
 ): AccountStateDeps {
 	return {
 		users: ctx.services.users,
@@ -110,6 +113,7 @@ export function accountStateDepsFromContext(
 		cache: ctx.services.cache,
 		...messageDeletion,
 		authored: channels.messages,
+		labsRoles,
 	};
 }
 
@@ -179,6 +183,7 @@ export async function applyHideProfile(deps: AccountStateDeps, env: ActionOf<'hi
 			if (hidden === env.on) {
 				await deps.dispatch.userUpdated(user);
 				await deps.dispatch.profileChanged(user);
+				await deps.labsRoles.resyncLabsRoles(user.id);
 				return outcomeOf(env, 'noop', user);
 			}
 			const target = env.on ? user.flags | UserFlags.PROFILE_HIDDEN : user.flags & ~UserFlags.PROFILE_HIDDEN;
@@ -186,6 +191,7 @@ export async function applyHideProfile(deps: AccountStateDeps, env: ActionOf<'hi
 			if (updated) {
 				await deps.dispatch.userUpdated(updated);
 				await deps.dispatch.profileChanged(updated);
+				await deps.labsRoles.resyncLabsRoles(updated.id);
 				return outcomeOf(env, 'applied', updated);
 			}
 			user = await deps.users.findUnique(userId);

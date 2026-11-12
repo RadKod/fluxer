@@ -8,9 +8,10 @@ import GatewaySessions from '@app/features/gateway/transport/GatewaySessionPool'
 import {StoreAutostartPromptManager} from '@app/features/platform/components/StoreAutostartPromptManager';
 import {RecoveryKitReminderGate} from '@app/features/user/components/RecoveryKitReminderGate';
 import Users from '@app/features/user/state/Users';
+import {LazyVoiceReconnectionManager} from '@app/features/voice/components/LazyVoiceComponents';
 import {MediaDeviceStartupPreloadManager} from '@app/features/voice/components/MediaDeviceStartupPreloadManager';
 import {NewDeviceMonitoringManager} from '@app/features/voice/components/NewDeviceMonitoringManager';
-import {VoiceReconnectionManager} from '@app/features/voice/components/VoiceReconnectionManager';
+import VoiceRuntime from '@app/features/voice/engine/VoiceRuntime';
 import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
@@ -23,7 +24,9 @@ export const AppLayout = observer(({children}: {children: React.ReactNode}) => {
 	const managersEnabled = isAuthenticated && !dateOfBirthRequired;
 	return (
 		<>
-			{managersEnabled && socket && <VoiceReconnectionManager data-flx="app.app-layout.voice-reconnection-manager" />}
+			{managersEnabled && socket && VoiceRuntime.module !== null && (
+				<LazyVoiceReconnectionManager data-flx="app.app-layout.voice-reconnection-manager" />
+			)}
 			{managersEnabled && (
 				<MediaDeviceStartupPreloadManager data-flx="app.app-layout.media-device-startup-preload-manager" />
 			)}

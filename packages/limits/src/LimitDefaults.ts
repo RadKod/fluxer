@@ -11,6 +11,7 @@ import {
 	MAX_BIO_LENGTH,
 	MAX_BOOKMARKS_NON_PREMIUM,
 	MAX_BOOKMARKS_PREMIUM,
+	MAX_CAMERA_RESOLUTION,
 	MAX_CHANNELS_PER_CATEGORY,
 	MAX_EMBEDS_PER_MESSAGE,
 	MAX_FAVORITE_MEME_TAGS,
@@ -35,6 +36,8 @@ import {
 	MAX_REACTIONS_PER_MESSAGE,
 	MAX_RELATIONSHIPS,
 	MAX_SCREEN_SHARE_BITRATE,
+	MAX_SCREEN_SHARE_FRAME_RATE,
+	MAX_SCREEN_SHARE_RESOLUTION,
 	MAX_USERS_PER_MESSAGE_REACTION,
 	MAX_VOICE_MESSAGE_DURATION,
 	MAX_WEBHOOKS_PER_CHANNEL,
@@ -84,6 +87,7 @@ export const DEFAULT_RESTRICTED_LIMITS: Record<LimitKey, number> = {
 	max_bookmarks: MAX_BOOKMARKS_NON_PREMIUM,
 	max_boost_slots: 0,
 	max_bot_attachment_file_size: ATTACHMENT_MAX_SIZE_BOT,
+	max_camera_resolution: MAX_CAMERA_RESOLUTION,
 	max_channels_per_category: MAX_CHANNELS_PER_CATEGORY,
 	// TEMPORARY: a post's comments of one ten day bucket share a partition (feed_comments), and a viral post gets most of
 	// them in one bucket; 10,000 comments of up to 1000 characters stay under ~40 MB. Trigger: posts reaching the cap
@@ -117,6 +121,8 @@ export const DEFAULT_RESTRICTED_LIMITS: Record<LimitKey, number> = {
 	max_reactions_per_message: MAX_REACTIONS_PER_MESSAGE,
 	max_relationships: MAX_RELATIONSHIPS,
 	max_screen_share_bitrate: MAX_SCREEN_SHARE_BITRATE,
+	max_screen_share_frame_rate: MAX_SCREEN_SHARE_FRAME_RATE,
+	max_screen_share_resolution: MAX_SCREEN_SHARE_RESOLUTION,
 	max_users_per_message_reaction: MAX_USERS_PER_MESSAGE_REACTION,
 	max_voice_message_duration: MAX_VOICE_MESSAGE_DURATION,
 	max_webhooks_per_channel: MAX_WEBHOOKS_PER_CHANNEL,

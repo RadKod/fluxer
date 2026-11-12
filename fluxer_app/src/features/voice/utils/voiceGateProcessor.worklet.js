@@ -36,6 +36,7 @@ class VoiceGateProcessor extends AudioWorkletProcessor {
 		this.attackStep = 1 / (ATTACK_SECONDS * sampleRate);
 		this.releaseFactor = Math.exp(-1 / (RELEASE_SECONDS * sampleRate));
 		this.speaking = false;
+		this.open = true;
 		this.nonFinite = false;
 		this.disposed = false;
 		this.processingMs = 0;
@@ -223,12 +224,16 @@ class VoiceGateProcessor extends AudioWorkletProcessor {
 			this.processingMs += Date.now() - started;
 			this.processedFrames += length;
 		}
-		if (this.frame >= this.reportFrame) {
+		const openChanged = open !== this.open;
+		this.open = open;
+		if (openChanged || this.frame >= this.reportFrame) {
 			this.port.postMessage({
 				type: 'level',
 				rms,
 				floorRms,
 				thresholdRms,
+				gated: this.apply,
+				open,
 				nonFinite: this.nonFinite,
 				frame: this.frame,
 				contextTime: currentTime,

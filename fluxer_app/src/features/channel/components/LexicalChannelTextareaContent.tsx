@@ -7,6 +7,7 @@ import {useContextMenuHoverState} from '@app/features/app/hooks/useContextMenuHo
 import {useSkeletonLayoutReport} from '@app/features/app/hooks/useSkeletonLayoutMemoryCapture';
 import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import {Limits} from '@app/features/app/utils/UserLimits';
+import {registerBootFrameComposer} from '@app/features/boot_state/BootDomFrame';
 import {fetchSlowmodeState} from '@app/features/channel/commands/ChannelCommands';
 import {ChannelAttachmentArea} from '@app/features/channel/components/ChannelAttachmentArea';
 import {
@@ -49,7 +50,6 @@ import ChannelSearch from '@app/features/channel/state/ChannelSearch';
 import ChannelSticker from '@app/features/channel/state/ChannelSticker';
 import Channels from '@app/features/channel/state/Channels';
 import * as ChannelDisplayUtils from '@app/features/channel/utils/ChannelUtils';
-import * as CommandUtils from '@app/features/devtools/utils/CommandUtils';
 import ExpressionPicker from '@app/features/emoji/state/ExpressionPicker';
 import type {FlatEmoji} from '@app/features/emoji/types/EmojiTypes';
 import {ExpressionPickerSheet} from '@app/features/expressions/components/modals/ExpressionPickerSheet';
@@ -78,7 +78,7 @@ import {useTextareaEditing} from '@app/features/messaging/hooks/useTextareaEditi
 import {useTextareaExpressionHandlers} from '@app/features/messaging/hooks/useTextareaExpressionHandlers';
 import {useTextareaExpressionPicker} from '@app/features/messaging/hooks/useTextareaExpressionPicker';
 import {useTextareaSegments} from '@app/features/messaging/hooks/useTextareaSegments';
-import {useTextareaSubmit} from '@app/features/messaging/hooks/useTextareaSubmit';
+import {shouldBlockSubmissionForSlowmode, useTextareaSubmit} from '@app/features/messaging/hooks/useTextareaSubmit';
 import {
 	createMentionConfirmationSnapshot,
 	type MentionConfirmationEvent,
@@ -99,12 +99,15 @@ import {
 	getComposerMessageContent,
 	hasVisibleMessageContent,
 } from '@app/features/messaging/utils/MessageRequestUtils';
+import * as ReplaceCommandUtils from '@app/features/messaging/utils/ReplaceCommandUtils';
 import type {MentionSegment} from '@app/features/messaging/utils/TextareaSegmentManager';
 import {
 	resolveTypedEmojiShortcodes,
 	resolveTypedEmojiToken,
 } from '@app/features/messaging/utils/TypedEmojiShortcodeUtils';
+import {AppStorageKey} from '@app/features/platform/state/AppStorageKeys';
 import {ComponentBus} from '@app/features/platform/utils/ComponentBus';
+import {awaitHydration} from '@app/features/platform/utils/MobXPersistence';
 import {useSlowmode} from '@app/features/slowmode/hooks/useSlowmode';
 import {openCreateThread} from '@app/features/threads/commands/ThreadNavigation';
 import ActiveComposer from '@app/features/threads/state/ActiveComposer';
@@ -238,6 +241,29 @@ export const LexicalChannelTextareaContent = observer(
 				? containerRef.current.querySelector<HTMLDivElement>('[data-channel-textarea]')
 				: null;
 		}, []);
+		const bootFrameDraftRef = useRef(false);
+		useLayoutEffect(() => {
+			let active = true;
+			bootFrameDraftRef.current = false;
+			const unregister = registerBootFrameComposer(
+				() => handleRef.current,
+				(text) => {
+					bootFrameDraftRef.current = true;
+					DraftCommands.createDraft(accountKey, composerKey, text);
+					void awaitHydration(AppStorageKey.MESSAGING_DRAFTS).then(() => {
+						const handle = handleRef.current;
+						if (active && handle !== null) {
+							DraftCommands.createDraft(accountKey, composerKey, handle.getDisplayValue(), handle.getSegments());
+							bootFrameDraftRef.current = false;
+						}
+					});
+				},
+			);
+			return () => {
+				active = false;
+				unregister();
+			};
+		}, [accountKey, composerKey]);
 		useChannelComposerDraftFocusRestore({
 			handleRef,
 			editableRef,
@@ -579,22 +605,17 @@ export const LexicalChannelTextareaContent = observer(
 			[isEditingMessageOnMobile, trimmedMessageContent],
 		);
 		const hasMessageContent = useMemo(() => hasVisibleMessageContent(composerMessageContent), [composerMessageContent]);
-		const isSubmissionBlockedBySlowmode = useMemo(() => {
-			if (!isSlowmodeActive || isEditingMessageInComposer) {
-				return false;
-			}
-			if (!enableSlashCommands) {
-				return true;
-			}
-			const resolution = LexicalMessageCommandResolver.resolve(handleRef.current);
-			if (resolution.status === LexicalMessageCommandResolutionStatus.NO_COMMAND) {
-				return true;
-			}
-			if (resolution.status === LexicalMessageCommandResolutionStatus.INVALID_COMMAND) {
-				return false;
-			}
-			return CommandUtils.doesCommandSendCurrentChannelMessage(resolution.command);
-		}, [enableSlashCommands, handleRef, isEditingMessageInComposer, isSlowmodeActive, value]);
+		const isSubmissionBlockedBySlowmode = useMemo(
+			() =>
+				shouldBlockSubmissionForSlowmode(
+					isSlowmodeActive,
+					isEditingMessageInComposer,
+					null,
+					enableSlashCommands ? LexicalMessageCommandResolver.resolve(handleRef.current) : null,
+					enableSlashCommands && ReplaceCommandUtils.isReplaceCommand(wireValue),
+				),
+			[enableSlashCommands, handleRef, isEditingMessageInComposer, isSlowmodeActive, value, wireValue],
+		);
 		useChannelComposerPaste({
 			channel,
 			attachmentKey: composerKey,
@@ -965,6 +986,7 @@ export const LexicalChannelTextareaContent = observer(
 			return true;
 		}, [channel.id, enableEditLast]);
 		useTextareaDraftAndTyping({
+			bootFrameDraftRef,
 			draftOwner: accountKey,
 			channelId: draftChannelId ?? channel.id,
 			value,
@@ -1123,6 +1145,7 @@ export const LexicalChannelTextareaContent = observer(
 					plusButton,
 					() => (
 						<TextareaPlusMenu
+							giftChannelId={draftChannelId == null ? channel.id : undefined}
 							onUploadFile={handleFileButtonClick}
 							canAttachFiles={canAttachFilesInChannel(channel)}
 							canSendMessages={!textareaInputDisabled}
@@ -1484,6 +1507,7 @@ export const LexicalChannelTextareaContent = observer(
 							data-flx="channel.lexical-channel-textarea-content.expression-picker-sheet"
 						/>
 						<MobileTextareaPlusBottomSheet
+							giftChannelId={draftChannelId == null ? channel.id : undefined}
 							isOpen={mobilePlusSheetOpen}
 							onClose={handleCloseMobilePlusSheet}
 							onUploadFile={handleFileButtonClick}

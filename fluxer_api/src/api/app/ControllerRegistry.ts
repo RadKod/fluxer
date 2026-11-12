@@ -16,6 +16,7 @@ import type {APIConfig} from '@app/api/config/APIConfig';
 import {ConnectionController} from '@app/api/connection/ConnectionController';
 import {CosmeticController} from '@app/api/cosmetics/CosmeticController';
 import {registerCosmeticProfileExtension} from '@app/api/cosmetics/CosmeticProfileProvider';
+import {OAuthConnectionController} from '@app/api/connection/OAuthConnectionController';
 import {DonationController} from '@app/api/donation/DonationController';
 import {DownloadController} from '@app/api/download/DownloadController';
 import {ExperimentController} from '@app/api/experiment/ExperimentController';
@@ -85,6 +86,7 @@ export function registerControllers(routes: HonoApp, config: APIConfig): void {
 	registerChannelControllers(routes);
 	ConnectionController(routes);
 	BlueskyOAuthController(routes);
+	OAuthConnectionController(routes);
 	InstanceController(routes);
 	ActivityPubController(routes);
 	OpenAPIController(routes);

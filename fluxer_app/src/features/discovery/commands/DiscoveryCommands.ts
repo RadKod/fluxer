@@ -131,5 +131,5 @@ export async function getChannelPreview(guildId: string, channelId: string): Pro
 export async function joinGuild(guildId: string): Promise<void> {
 	await http.post(Endpoints.DISCOVERY_JOIN(guildId));
 	AnalyticsCommands.track('guild_join');
-	logger.info('Joined guild via discovery', {guildId});
+	logger.debug('Joined guild via discovery', {guildId});
 }
