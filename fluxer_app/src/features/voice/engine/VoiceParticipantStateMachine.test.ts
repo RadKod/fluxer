@@ -12,7 +12,6 @@ import {describe, expect, it} from 'vitest';
 
 const IDENTITY = 'user_1_conn';
 const TICK_MS = 20;
-const THRESHOLD = 0.001;
 
 function run(
 	snapshot: VoiceRemoteSpeakingSnapshot,
@@ -33,7 +32,6 @@ function ticks(fromMs: number, count: number, rms: number): Array<VoiceRemoteSpe
 		type: 'remote.tick' as const,
 		identity: IDENTITY,
 		rms,
-		threshold: THRESHOLD,
 		nowMs: fromMs + i * TICK_MS,
 	}));
 }
@@ -48,11 +46,11 @@ function attachedSnapshot(): VoiceRemoteSpeakingSnapshot {
 
 describe('voiceRemoteSpeakingStateMachine playback boost', () => {
 	it('clears an existing boost in v2 while preserving speaking analysis', () => {
-		const legacy = run(attachedSnapshot(), ticks(0, 100, 0.003));
+		const legacy = run(attachedSnapshot(), ticks(0, 100, 0.01));
 		expect(legacy.snapshot.context.analysers.get(IDENTITY)!.appliedBoost).toBeGreaterThan(1);
 		const v2 = run(
 			legacy.snapshot,
-			ticks(2000, 100, 0.003).map((event) => ({...event, pipelineV2Enabled: true})),
+			ticks(2000, 100, 0.01).map((event) => ({...event, pipelineV2Enabled: true})),
 		);
 		expect(boosts(v2.commands)).toEqual([]);
 		expect(v2.commands).toContainEqual({type: 'clearPlaybackBoost', identity: IDENTITY});
@@ -63,7 +61,7 @@ describe('voiceRemoteSpeakingStateMachine playback boost', () => {
 		});
 	});
 	it('clears boost on the first silent tick after v2 activation without waiting for silence release', () => {
-		const legacy = run(attachedSnapshot(), ticks(0, 100, 0.003));
+		const legacy = run(attachedSnapshot(), ticks(0, 100, 0.01));
 		const v2 = run(
 			legacy.snapshot,
 			ticks(2000, 1, 0).map((event) => ({...event, pipelineV2Enabled: true})),
@@ -79,14 +77,14 @@ describe('voiceRemoteSpeakingStateMachine playback boost', () => {
 	});
 
 	it('remote playback boost never exceeds 1.5', () => {
-		const {commands} = run(attachedSnapshot(), ticks(0, 2000, 0.003));
+		const {commands} = run(attachedSnapshot(), ticks(0, 2000, 0.01));
 		const applied = boosts(commands);
 		expect(applied.length).toBeGreaterThan(1);
 		expect(Math.max(...applied)).toBeLessThanOrEqual(1.5);
 	});
 
 	it('boost resets to 1 when silent tail ends', () => {
-		const speaking = run(attachedSnapshot(), ticks(0, 2000, 0.003));
+		const speaking = run(attachedSnapshot(), ticks(0, 2000, 0.01));
 		expect(speaking.snapshot.context.analysers.get(IDENTITY)!.playbackBoost).toBeGreaterThan(1);
 		const silent = run(speaking.snapshot, ticks(2000 * TICK_MS, 2000, 0));
 		const entry = silent.snapshot.context.analysers.get(IDENTITY)!;
@@ -96,11 +94,11 @@ describe('voiceRemoteSpeakingStateMachine playback boost', () => {
 	});
 
 	it('puts a boosted singer straight back to unity and builds no boost while they are exempt', () => {
-		const boosted = run(attachedSnapshot(), ticks(0, 100, 0.003));
+		const boosted = run(attachedSnapshot(), ticks(0, 100, 0.01));
 		expect(boosted.snapshot.context.analysers.get(IDENTITY)!.appliedBoost).toBeGreaterThan(1);
 		const singing = run(
 			boosted.snapshot,
-			ticks(2000, 200, 0.003).map((event) => ({...event, boostExempt: true})),
+			ticks(2000, 200, 0.01).map((event) => ({...event, boostExempt: true})),
 		);
 		expect(singing.commands.filter((command) => command.type !== 'setAudioLevelSpeaking')).toEqual([
 			{type: 'clearPlaybackBoost', identity: IDENTITY},
@@ -115,10 +113,10 @@ describe('voiceRemoteSpeakingStateMachine playback boost', () => {
 	it('levels the voice again once the exemption ends', () => {
 		const singing = run(
 			attachedSnapshot(),
-			ticks(0, 100, 0.003).map((event) => ({...event, boostExempt: true})),
+			ticks(0, 100, 0.01).map((event) => ({...event, boostExempt: true})),
 		);
 		expect(boosts(singing.commands)).toEqual([]);
-		const talking = run(singing.snapshot, ticks(100 * TICK_MS, 100, 0.003));
+		const talking = run(singing.snapshot, ticks(100 * TICK_MS, 100, 0.01));
 		expect(Math.max(...boosts(talking.commands))).toBeGreaterThan(1);
 	});
 });

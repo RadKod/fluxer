@@ -188,7 +188,7 @@ describe('remote playback boost for an exempt voice', () => {
 	it('drops a built-up boost back to unity as soon as the voice is exempt, and keeps it there', () => {
 		const adapter = new VoiceEngineV2AppRemoteSpeakingAdapter({autoSchedule: false});
 		attach(adapter, fakePublication(fakeTrack()));
-		signalLevel = 0.003;
+		signalLevel = 0.01;
 		const nowMs = tickFor(adapter, 100, 5_000);
 		expect(Math.max(...boost.set.mock.calls.map(([, value]) => value as number))).toBeGreaterThan(1);
 		boost.clear.mockClear();
