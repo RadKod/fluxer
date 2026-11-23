@@ -12,6 +12,7 @@ import {
 import {errorMessage} from '@electron/common/ErrorMessage';
 import {configureUserDataPath} from '@electron/common/UserDataPath';
 import {startAccountEngine, stopAccountEngine} from '@electron/main/AccountEngineIpc';
+import {registerApiAttachmentAuthorizationIpc} from '@electron/main/ApiAttachmentAuthorizationIpc';
 import {
 	APP_STORE_ADDON_PACKAGE,
 	createAppStoreBoundary,
@@ -79,6 +80,7 @@ import {cleanupLegacyHarvestHandlers, registerLegacyHarvestHandlers} from '@elec
 import {initializeLegacyOriginHarvest} from '@electron/main/LegacyOriginHarvest';
 import {cleanupVirtmic, registerVirtmicHandlers} from '@electron/main/LinuxAudioCapture';
 import {ensureLinuxDesktopEntry} from '@electron/main/LinuxDesktopEntry';
+import {startLinuxLauncherBadge} from '@electron/main/LinuxLauncherBadge';
 import {cleanupDesktopLocalAppProtocol, getDesktopLocalAppProtocol} from '@electron/main/LocalAppProtocol';
 import {initializeMainI18n, t} from '@electron/main/MainI18n';
 import {createApplicationMenu} from '@electron/main/Menu';
@@ -123,7 +125,7 @@ import {
 	DesktopLegacyImportPhase,
 	readDesktopLegacyImportPhase,
 } from '@fluxer/desktop_ipc/src/StorageContract';
-import {app, dialog, ipcMain, netLog, shell} from 'electron';
+import {app, autoUpdater, dialog, ipcMain, netLog, shell} from 'electron';
 import log from 'electron-log';
 
 log.transports.file.level = 'info';
@@ -426,6 +428,11 @@ if (launchConfigurationError) {
 					log.error('[Init] Failed to ensure the Linux desktop entry:', error);
 				}
 				try {
+					runStartupPhase('linux-launcher-badge', startLinuxLauncherBadge);
+				} catch (error) {
+					log.error('[Init] Failed to start the Linux launcher badge:', error);
+				}
+				try {
 					runStartupPhase('deep-links', initializeDeepLinks);
 				} catch (error) {
 					log.error('[Init] Failed to initialize deep links:', error);
@@ -517,6 +524,11 @@ if (launchConfigurationError) {
 					runStartupPhase('ipc-handlers', registerIpcHandlers);
 				} catch (error) {
 					log.error('[Init] Failed to register IPC handlers:', error);
+				}
+				try {
+					runStartupPhase('api-attachment-authorization', registerApiAttachmentAuthorizationIpc);
+				} catch (error) {
+					log.error('[Init] Failed to register the attachment authorization handler:', error);
 				}
 				try {
 					runStartupPhase('autostart-handlers', registerAutostartHandlers);
@@ -655,6 +667,10 @@ if (launchConfigurationError) {
 			} else if (process.platform !== 'darwin') {
 				log.info('[Shutdown] All windows closed; keeping app alive because close-to-tray is enabled');
 			}
+		});
+		autoUpdater.on('before-quit-for-update', () => {
+			log.info('[Shutdown] before-quit-for-update received');
+			setQuitting(true);
 		});
 		const QUIT_WATCHDOG_MS = 15000;
 		const QUIT_CLEANUP_DEADLINE_MS = 5000;

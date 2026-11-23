@@ -7,6 +7,8 @@ export const ACCOUNT_ENGINE_CHANNELS = Object.freeze({
 	accounts: 'account-engine:accounts',
 } as const);
 
+export const ACCOUNT_ENGINE_AVAILABLE_RENDERER_ARG = '--fluxer-account-engine=1';
+
 export const ACCOUNT_ENGINE_LIMITS = Object.freeze({
 	accountKeyMaxChars: 4096,
 	endpointMaxChars: 2048,

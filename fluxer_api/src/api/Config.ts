@@ -28,6 +28,7 @@ import {smtpTlsModeFromSecure} from '@fluxer/constants/src/SmtpConstants';
 import {parseIpAddress} from '@fluxer/ip_utils/src/IpAddress';
 import type {GeoEntry} from '@fluxer/schema/src/domains/geolocation/GeolocationSchemas';
 import {normalizeString} from '@fluxer/schema/src/primitives/SchemaPrimitives';
+import {parseCassandraConsistency, parseCassandraSerialConsistency} from '@pkgs/cassandra/src/Client';
 import {parseGeoipSourceConfig, resolveGeoipRuntimeSourceConfig} from '@pkgs/geoip/src/GeoipStartup';
 
 function extractHostname(url: string): string {
@@ -380,6 +381,7 @@ export function buildAPIConfigFromMaster(master: MasterConfig): APIConfig {
 		nodeEnv: master.env === 'test' ? 'development' : master.env,
 		port: master.services.api.port,
 		host: master.services.api.host,
+		metricsPort: master.services.api.metrics_port,
 		headersTimeoutMs: master.services.api.headers_timeout_ms,
 		requestTimeoutMs: master.services.api.request_timeout_ms,
 		maxInflightRequests: master.services.api.max_inflight_requests,
@@ -391,9 +393,10 @@ export function buildAPIConfigFromMaster(master: MasterConfig): APIConfig {
 			port: cassandraSource?.port ?? 9042,
 			keyspace: cassandraSource?.keyspace ?? '',
 			localDc: cassandraSource?.local_dc ?? '',
+			consistency: parseCassandraConsistency(cassandraSource?.consistency),
+			serialConsistency: parseCassandraSerialConsistency(cassandraSource?.serial_consistency),
 			username: cassandraSource?.username ?? '',
 			password: cassandraSource?.password ?? '',
-			consistency: cassandraSource?.consistency,
 		},
 		postgres: {
 			url: postgresSource?.url ?? '',
@@ -430,6 +433,12 @@ export function buildAPIConfigFromMaster(master: MasterConfig): APIConfig {
 			enabled: master.services.api.storage_change_feed?.enabled ?? false,
 			stream: master.services.api.storage_change_feed?.stream ?? 'STORAGE_CHANGES',
 			skipBuckets: master.services.api.storage_change_feed?.skip_buckets ?? [s3Buckets.uploads],
+		},
+		cassandraWriteCapture: {
+			mode: master.services.api.cassandra_write_capture?.mode ?? 'off',
+			natsUrl: master.services.api.cassandra_write_capture?.nats_url ?? '',
+			authToken: master.services.api.cassandra_write_capture?.auth_token ?? '',
+			stream: master.services.api.cassandra_write_capture?.stream ?? 'CASSANDRA_CDC',
 		},
 		search: {
 			engine: master.integrations.search?.engine ?? 'elasticsearch',
@@ -492,6 +501,21 @@ export function buildAPIConfigFromMaster(master: MasterConfig): APIConfig {
 			accessKeyId: s3Config.access_key_id,
 			secretAccessKey: s3Config.secret_access_key,
 			buckets: s3Buckets,
+			storeId: s3Config.store_id ?? 'primary',
+			dualStoreEnabled: s3Config.dual_store_enabled ?? false,
+			fallbackReadsEnabled: s3Config.fallback_reads_enabled ?? false,
+			fallback: s3Config.fallback
+				? {
+						storeId: s3Config.fallback.store_id,
+						endpoint: s3Config.fallback.endpoint,
+						presignedUrlBase: s3Config.fallback.presigned_url_base,
+						forcePathStyle: s3Config.fallback.force_path_style ?? true,
+						region: s3Config.fallback.region,
+						accessKeyId: s3Config.fallback.access_key_id,
+						secretAccessKey: s3Config.fallback.secret_access_key,
+						bucketMap: s3Config.fallback.bucket_map,
+					}
+				: undefined,
 		},
 		email: {
 			...resolveEnvEmailSwitch(master.integrations.email),

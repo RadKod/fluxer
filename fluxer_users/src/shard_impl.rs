@@ -11,6 +11,7 @@ use chrono::{DateTime, Utc};
 use fluxer_common::time::unix_millis;
 use fluxer_common::user_flags::{AccountStanding, USER_FLAG_STAFF};
 use fluxer_common::user_partial::{FLUXER_SYSTEM_DISCRIMINATOR, FLUXER_SYSTEM_USER_ID};
+use fluxer_svc::cassandra_capture::{CaptureMode, CassandraCapture};
 use fluxer_svc::shard::ShardService;
 use fluxer_svc::{postgres, postgres::KeyPart};
 use futures::stream::{self, StreamExt};
@@ -56,6 +57,7 @@ pub struct UsersShard {
     caches: UserCaches,
     app_attest: AppAttestService,
     play_integrity: PlayIntegrityService,
+    capture: Arc<CassandraCapture>,
 }
 
 struct UserCaches {
@@ -283,6 +285,7 @@ impl UsersShard {
         ttl: Duration,
         app_attest: AppAttestConfig,
         play_integrity: PlayIntegrityConfig,
+        capture: Arc<CassandraCapture>,
     ) -> anyhow::Result<Self> {
         let store = AppAttestStore::Postgres(kv.clone());
         Ok(Self {
@@ -290,6 +293,7 @@ impl UsersShard {
             app_attest: AppAttestService::new(app_attest, store),
             storage: UsersStorage::Postgres(PostgresUsersStorage { kv }),
             caches: UserCaches::new(max_entries, ttl),
+            capture,
         })
     }
 
@@ -300,6 +304,7 @@ impl UsersShard {
         ttl: Duration,
         app_attest: AppAttestConfig,
         play_integrity: PlayIntegrityConfig,
+        capture: Arc<CassandraCapture>,
     ) -> anyhow::Result<Self> {
         let stmt_partial = db
             .prepare(format!(
@@ -313,7 +318,7 @@ impl UsersShard {
             .await?;
 
         let app_attest_store = AppAttestStore::Scylla(Arc::new(
-            crate::app_attest::store::ScyllaAppAttestStore::new(db.clone()),
+            crate::app_attest::store::ScyllaAppAttestStore::new(db.clone(), capture.clone()),
         ));
         Ok(Self {
             play_integrity: PlayIntegrityService::new(play_integrity, app_attest_store.clone())?,
@@ -324,6 +329,7 @@ impl UsersShard {
                 stmt_partial_batch,
             })),
             caches: UserCaches::new(max_entries, ttl),
+            capture,
         })
     }
 
@@ -560,6 +566,9 @@ impl ShardService for UsersShard {
     }
 
     fn render_prometheus_metrics(&self, output: &mut String) {
+        if self.capture.mode() != CaptureMode::Off {
+            self.capture.render_metrics(output);
+        }
         let _ = writeln!(
             output,
             "# TYPE fluxer_users_shard_cache_generation_bumps_total counter"

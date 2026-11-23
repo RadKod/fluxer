@@ -18,9 +18,17 @@ import {
 	onAccountEngineSummaries,
 } from '@electron/main/AccountEngineHost';
 import {buildAccountMenuEntries, buildAccountMenuItems, createRefreshThrottle} from '@electron/main/AccountMenu';
+import {getAppResourcesPath} from '@electron/main/DesktopDistributionPath';
+import {readKdePanelDark, readKdePanelDarkSync, watchKdePanelTheme} from '@electron/main/KdePanelTheme';
 import {relaunchStableLaunchPath} from '@electron/main/LinuxLaunchPath';
+import {getLinuxDesktop} from '@electron/main/LinuxSession';
 import {onLocaleChange, t} from '@electron/main/MainI18n';
-import {renderTrayIcon, resolveTrayIconAppearance, type TrayIconAppearance} from '@electron/main/TrayIconImage';
+import {
+	renderTrayIcon,
+	resolveTrayIconAppearance,
+	type TrayIconAppearance,
+	trayIconFollowsSystemTheme,
+} from '@electron/main/TrayIconImage';
 import {describeUnreadBadge} from '@electron/main/UnreadBadge';
 import {app, type BrowserWindow, clipboard, Menu, nativeImage, nativeTheme, Tray} from 'electron';
 
@@ -98,8 +106,11 @@ export function updateTrayRuntimeState(update: Partial<TrayRuntimeStatePayload>,
 	const privacyChanged =
 		typeof update.hidePersonalInformation === 'boolean' &&
 		update.hidePersonalInformation !== trayState.hidePersonalInformation;
+	const changed = (Object.keys(update) as Array<keyof TrayRuntimeStatePayload>).some(
+		(key) => update[key] !== trayState[key],
+	);
 	Object.assign(trayState, update);
-	refreshDesktopTrayMenu();
+	if (changed) refreshDesktopTrayMenu();
 	if (privacyChanged) {
 		for (const listener of Array.from(privacyListeners)) listener();
 	}
@@ -220,9 +231,9 @@ export function hasActiveDesktopTray(): boolean {
 
 function getCandidateIconDirs(): Array<string> {
 	const candidates = [
-		path.join(process.resourcesPath, 'icons'),
-		path.join(process.resourcesPath, ICON_DIR_NAME),
-		process.resourcesPath,
+		path.join(getAppResourcesPath(), 'icons'),
+		path.join(getAppResourcesPath(), ICON_DIR_NAME),
+		getAppResourcesPath(),
 		path.join(app.getAppPath(), 'build_resources', ICON_DIR_NAME),
 		path.resolve(process.cwd(), 'build_resources', ICON_DIR_NAME),
 		path.resolve(process.cwd(), 'fluxer_desktop', 'build_resources', ICON_DIR_NAME),
@@ -303,11 +314,41 @@ function createTrayIcon(base: TrayIconBase): Electron.NativeImage | null {
 	return createTrayImage(['256x256.png', '512x512.png', '128x128.png', '64x64.png', '48x48.png', 'icon.png']);
 }
 
+let darkKdePanel: boolean | null | undefined;
+let kdePanelReadGeneration = 0;
+
+function isKdeSession(): boolean {
+	return process.platform === 'linux' && getLinuxDesktop() === 'kde';
+}
+
+function getDarkKdePanel(): boolean | null {
+	if (!isKdeSession()) return null;
+	if (darkKdePanel === undefined) darkKdePanel = readKdePanelDarkSync();
+	return darkKdePanel;
+}
+
+function refreshKdePanelTheme(): void {
+	if (!isKdeSession()) return;
+	const generation = ++kdePanelReadGeneration;
+	void readKdePanelDark()
+		.then((dark) => {
+			if (generation !== kdePanelReadGeneration) return;
+			darkKdePanel = dark;
+			syncTrayIcon(false);
+		})
+		.catch((error: unknown) => logger.warn('Could not read the KDE panel colours', {error}));
+}
+
 function resolveTrayIcon(): {key: string; image: Electron.NativeImage} | null {
+	const settings = getDesktopWindowBehaviorSettings();
+	const linuxDesktop = getLinuxDesktop();
 	const appearance = resolveTrayIconAppearance({
 		platform: process.platform,
-		coloredTrayIcon: getDesktopWindowBehaviorSettings().coloredTrayIcon,
-		darkSystemUI: nativeTheme.shouldUseDarkColorsForSystemIntegratedUI,
+		linuxDesktop,
+		coloredTrayIcon: settings.coloredTrayIcon,
+		monochromeTone: settings.monochromeTrayIconTone,
+		darkWindowsTaskbar: nativeTheme.shouldUseDarkColorsForSystemIntegratedUI,
+		darkKdePanel: getDarkKdePanel(),
 	});
 	const baseKind = trayIconBaseFor(appearance);
 	let trayBaseIcon = trayBaseIcons.get(baseKind) ?? null;
@@ -320,7 +361,7 @@ function resolveTrayIcon(): {key: string; image: Electron.NativeImage} | null {
 	const key = `${appearance}:${indicator}`;
 	let image = trayIconCache.get(key);
 	if (!image) {
-		image = renderTrayIcon(trayBaseIcon, appearance, indicator, process.platform);
+		image = renderTrayIcon(trayBaseIcon, appearance, indicator, process.platform, linuxDesktop);
 		trayIconCache.set(key, image);
 	}
 	return {key, image};
@@ -651,8 +692,15 @@ export function initializeDesktopTray(nextController: DesktopTrayController): vo
 			}
 			refreshDesktopTrayMenu();
 		});
-		if (process.platform === 'win32') {
-			nativeTheme.on('updated', () => syncTrayIcon(false));
+		if (trayIconFollowsSystemTheme(process.platform, getLinuxDesktop())) {
+			nativeTheme.on('updated', () => {
+				syncTrayIcon(false);
+				refreshKdePanelTheme();
+			});
+		}
+		if (isKdeSession()) {
+			watchKdePanelTheme(refreshKdePanelTheme);
+			refreshKdePanelTheme();
 		}
 		onAccountEngineSummaries(accountMenuRefresh.schedule);
 	}

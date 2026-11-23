@@ -23,7 +23,9 @@ import voiceDisconnectSound from '@app/media/sounds/voice-disconnect.mp3';
 import type {ValueOf} from '@fluxer/constants/src/ValueOf';
 
 const logger = new Logger('SoundUtils');
+export const BASE_SOUND_VOLUME = 0.4;
 const MAX_EFFECTIVE_VOLUME = 0.8;
+const MAX_CUSTOM_SOUND_GAIN = 2;
 const MASTER_HEADROOM = 0.8;
 const MIN_GAIN = 0.0001;
 const DEFAULT_FADE_DURATION = 0.08;
@@ -317,6 +319,11 @@ const resumeAudioContextForSound = (type: SoundType): Promise<AudioContext> =>
 	isCallRelatedSound(type) ? resumeCallAudioContextIfNeeded() : resumeIfSuspended(getAudioContext());
 const soundOutputNode = (type: SoundType, ctx: AudioContext): AudioNode =>
 	isCallRelatedSound(type) ? ctx.destination : getMasterGainNode();
+const resolveSoundGain = (type: SoundType, volume: number, isCustom: boolean): number => {
+	if (!isCustom) return clamp(volume, 0, MAX_EFFECTIVE_VOLUME);
+	const gain = clamp(volume / BASE_SOUND_VOLUME, 0, MAX_CUSTOM_SOUND_GAIN);
+	return isCallRelatedSound(type) ? gain : gain / MASTER_HEADROOM;
+};
 
 export async function acquireOutputAudioContext(): Promise<AudioContext> {
 	return resumeCallAudioContextIfNeeded();
@@ -324,7 +331,6 @@ export async function acquireOutputAudioContext(): Promise<AudioContext> {
 
 const fadeIn = (gainNode: GainNode, targetVolume: number, duration = DEFAULT_FADE_DURATION): void => {
 	const now = gainNode.context.currentTime;
-	targetVolume = clamp(targetVolume, 0, MAX_EFFECTIVE_VOLUME);
 	gainNode.gain.cancelScheduledValues(now);
 	gainNode.gain.setValueAtTime(MIN_GAIN, now);
 	gainNode.gain.linearRampToValueAtTime(targetVolume, now + duration);
@@ -344,18 +350,18 @@ const fadeOut = (gainNode: GainNode, duration = DEFAULT_FADE_DURATION): Promise<
 		setTimeout(resolve, duration * 1000);
 	});
 };
-const getSoundUrl = async (type: SoundType): Promise<string> => {
+const getSoundSource = async (type: SoundType): Promise<{url: string; isCustom: boolean}> => {
 	const cachedUrl = customSoundCache.get(type);
 	if (cachedUrl) {
-		return cachedUrl;
+		return {url: cachedUrl, isCustom: true};
 	}
 	const customSound = await CustomSoundDB.getCustomSound(type);
 	if (!customSound) {
-		return SOUND_FILES[type];
+		return {url: SOUND_FILES[type], isCustom: false};
 	}
 	const url = URL.createObjectURL(customSound.blob);
 	customSoundCache.set(type, url);
-	return url;
+	return {url, isCustom: true};
 };
 const createAudioElement = (src: string): HTMLAudioElement => {
 	const audio = new Audio();
@@ -402,9 +408,9 @@ const playOneShotSound = async (
 	signal?: AbortSignal,
 ): Promise<HTMLAudioElement | null> => {
 	if (signal?.aborted) return null;
-	const soundUrl = await getSoundUrl(type);
+	const soundSource = await getSoundSource(type);
 	if (signal?.aborted) return null;
-	const effectiveVolume = clamp(volume, 0, MAX_EFFECTIVE_VOLUME);
+	const effectiveVolume = resolveSoundGain(type, volume, soundSource.isCustom);
 	let channel: SoundElementChannel | undefined;
 	let gainNode: GainNode | undefined;
 	try {
@@ -412,7 +418,7 @@ const playOneShotSound = async (
 		if (signal?.aborted) return null;
 		if (ctx.state !== 'suspended') {
 			// sanalyer: one reusable element per sound type, so rapid sounds do not leak media element sources.
-			const reused = acquireSoundChannel(ctx, oneShotChannels, type, soundUrl);
+			const reused = acquireSoundChannel(ctx, oneShotChannels, type, soundSource.url);
 			for (const playing of activeOneShotSounds) {
 				if (playing.audio === reused.audio) stopOneShotInstance(playing);
 			}
@@ -427,13 +433,13 @@ const playOneShotSound = async (
 		logger.debug('Falling back to direct element playback for one-shot sound', {type, error});
 	}
 	const sourceNode = channel?.sourceNode;
-	const audio = channel?.audio ?? createAudioElement(soundUrl);
+	const audio = channel?.audio ?? createAudioElement(soundSource.url);
 	audio.currentTime = 0;
 	audio.loop = false;
 	if (channel) {
 		audio.volume = 1;
 	} else {
-		audio.volume = effectiveVolume;
+		audio.volume = clamp(effectiveVolume);
 		if (isCallRelatedSound(type)) {
 			applyOutputDeviceToAudioElement(audio);
 		}
@@ -497,7 +503,7 @@ const playOneShotSound = async (
 export async function playSound(
 	type: SoundType,
 	loop = false,
-	volume = 0.4,
+	volume = BASE_SOUND_VOLUME,
 	onAutoplayBlocked?: () => void,
 	signal?: AbortSignal,
 ): Promise<HTMLAudioElement | null> {
@@ -515,16 +521,15 @@ export async function playSound(
 			onAutoplayBlocked?.();
 			return null;
 		}
-		const soundUrl = await getSoundUrl(type);
-		const channel = acquireSoundChannel(ctx, loopChannels, type, soundUrl);
+		const soundSource = await getSoundSource(type);
+		const channel = acquireSoundChannel(ctx, loopChannels, type, soundSource.url);
 		const {audio, sourceNode} = channel;
 		audio.currentTime = 0;
 		audio.loop = loop;
 		const gainNode = ctx.createGain();
 		sourceNode.connect(gainNode);
 		gainNode.connect(soundOutputNode(type, ctx));
-		const effectiveVolume = clamp(volume, 0, MAX_EFFECTIVE_VOLUME);
-		fadeIn(gainNode, effectiveVolume);
+		fadeIn(gainNode, resolveSoundGain(type, volume, soundSource.isCustom));
 		const instance: AudioInstance = {
 			audio,
 			gainNode,

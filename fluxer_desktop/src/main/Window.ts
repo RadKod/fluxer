@@ -13,6 +13,7 @@ import {getDesktopWindowBehaviorSettings, getLaunchProductName, getPrebootTheme}
 import {DESKTOP_APP_NAME} from '@electron/common/DesktopIdentity';
 import {createChildLogger} from '@electron/common/Logger';
 import type {DesktopWindowBehaviorSettings} from '@electron/common/Types';
+import {getApiAttachmentAuthorization} from '@electron/main/ApiAttachmentAuthorization';
 import {isAccountEngineAvailable} from '@electron/main/AccountEngineHost';
 import {createAppLoadRetry} from '@electron/main/AppLoadRetry';
 import {
@@ -20,7 +21,7 @@ import {
 	shouldIgnoreWindowStateForLaunch,
 	shouldOpenDevToolsOnLaunch,
 } from '@electron/main/DesktopDebugInfo';
-import {getDesktopDistributionPath} from '@electron/main/DesktopDistributionPath';
+import {getAppResourcesPath, getDesktopDistributionPath} from '@electron/main/DesktopDistributionPath';
 import {resolveDesktopLandingUrl} from '@electron/main/DesktopLastRoute';
 import {DesktopRuntimeSecurity} from '@electron/main/DesktopRuntimeSecurity';
 import {hasActiveDesktopTray, refreshDesktopTrayMenu} from '@electron/main/DesktopTray';
@@ -31,10 +32,13 @@ import {
 	getGameOverlayWindowOptions,
 } from '@electron/main/GameOverlay';
 import {isNativeGatewayAvailable} from '@electron/main/GatewaySocketNativeBoundary';
+import {armHiddenWindowMemoryRelease} from '@electron/main/HiddenWindowMemory';
 import {shouldDisableV8CodeCache} from '@electron/main/LaunchOptions';
+import {reemitLinuxLauncherBadge} from '@electron/main/LinuxLauncherBadge';
 import {getDesktopLocalAppAuthorization} from '@electron/main/LocalAppProtocolAuthorization';
 import {isLocalAppRendererDocumentURL, isLocalAppURL} from '@electron/main/LocalAppURL';
 import {t} from '@electron/main/MainI18n';
+import {getMainWindowCloseAction} from '@electron/main/MainWindowClose';
 import {MainWindowRevealGate, MainWindowRevealReason} from '@electron/main/MainWindowReveal';
 import {signalMainWindowCreated, signalMainWindowReady} from '@electron/main/ModuleBootHandoff';
 import {openExternalDeduped} from '@electron/main/OpenExternal';
@@ -51,6 +55,7 @@ const logger = createChildLogger('Window');
 const runtimeSecurity = new DesktopRuntimeSecurity({
 	logger: createChildLogger('DesktopRuntimeSecurity'),
 	localAppAuthorization: getDesktopLocalAppAuthorization(),
+	attachmentAuthorization: getApiAttachmentAuthorization(),
 });
 const LIVE_RESIZE_IDLE_MS = 400;
 const VISIBILITY_MARGIN = 32;
@@ -316,12 +321,13 @@ export function clearSavedWindowBounds(): void {
 	}
 }
 
-function shouldHideMainWindowOnClose(): boolean {
-	if (process.platform === 'darwin') {
-		return true;
-	}
+function shouldKeepMainWindowInTrayOnClose(): boolean {
 	const settings = getDesktopWindowBehaviorSettings();
 	return hasActiveDesktopTray() && settings.showTrayIcon && settings.closeToTray;
+}
+
+function shouldHideMainWindowOnClose(): boolean {
+	return process.platform === 'darwin' || shouldKeepMainWindowInTrayOnClose();
 }
 
 function shouldHideMainWindowOnMinimize(): boolean {
@@ -615,8 +621,8 @@ export function desktopTransparencyPendingRestart(): boolean {
 function getLinuxWindowIconPath(): string | null {
 	const baseIconName = '512x512.png';
 	const candidatePaths = [
-		path.join(process.resourcesPath, 'icons', baseIconName),
-		path.join(process.resourcesPath, baseIconName),
+		path.join(getAppResourcesPath(), 'icons', baseIconName),
+		path.join(getAppResourcesPath(), baseIconName),
 		path.join(path.dirname(app.getPath('exe')), baseIconName),
 	];
 	for (const candidatePath of candidatePaths) {
@@ -731,6 +737,7 @@ export function createWindow(options: CreateWindowOptions = {}): BrowserWindow {
 		windowOptions.center = true;
 	}
 	mainWindow = new BrowserWindow(windowOptions);
+	armHiddenWindowMemoryRelease(mainWindow);
 	signalMainWindowCreated(mainWindow);
 	mainWindowRendererGone = false;
 	installHtmlFullscreenChromeGuard(mainWindow);
@@ -870,6 +877,10 @@ export function createWindow(options: CreateWindowOptions = {}): BrowserWindow {
 		mainWindow.on('show', () => {
 			refreshWindowsBadgeOverlay(mainWindow);
 		});
+	}
+	if (process.platform === 'linux') {
+		mainWindow.on('show', reemitLinuxLauncherBadge);
+		mainWindow.on('focus', reemitLinuxLauncherBadge);
 	}
 	const webContents = mainWindow.webContents;
 	const session = webContents.session;

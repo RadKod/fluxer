@@ -53,6 +53,7 @@ export class Guild {
 	readonly invitesPausedUntil: Date | null;
 	readonly premiumTier: number | null;
 	readonly premiumSubscriptionCount: number | null;
+	readonly plannedJoinWavesUntil: Date | null;
 	readonly version: number;
 
 	constructor(row: GuildRow) {
@@ -97,6 +98,7 @@ export class Guild {
 		this.invitesPausedUntil = row.invites_paused_until ?? null;
 		this.premiumTier = row.premium_tier ?? null;
 		this.premiumSubscriptionCount = row.premium_subscription_count ?? null;
+		this.plannedJoinWavesUntil = row.planned_join_waves_until ?? null;
 		this.version = row.version;
 	}
 
@@ -140,6 +142,7 @@ export class Guild {
 			invites_paused_until: this.invitesPausedUntil,
 			premium_tier: this.premiumTier,
 			premium_subscription_count: this.premiumSubscriptionCount,
+			planned_join_waves_until: this.plannedJoinWavesUntil,
 			version: this.version,
 		};
 	}

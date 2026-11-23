@@ -40,7 +40,7 @@ function generateManifest(staticCdnEndpoint) {
 		id: '/',
 		display: 'standalone',
 		orientation: 'portrait-primary',
-		theme_color: '#0B0B0C',
+		theme_color: '#1a181e',
 		background_color: '#2b2d31',
 		categories: ['social', 'communication'],
 		lang: 'tr',

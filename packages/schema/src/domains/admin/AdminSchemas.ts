@@ -385,7 +385,9 @@ const IpOrCidrType = z.union([z.ipv4(), z.ipv6(), z.cidrv4(), z.cidrv6()]);
 export const BanIpRequest = z.object({
 	ip: createStringType(1, 45)
 		.refine((value) => IpOrCidrType.safeParse(value).success, 'Must be a valid IPv4/IPv6 address or CIDR range')
-		.describe('IPv4/IPv6 address or CIDR range to ban'),
+		.describe(
+			'IPv4/IPv6 address or CIDR range to ban. Email addresses whose mail servers run on it are refused at sign-up and email change',
+		),
 	duration_hours: z
 		.number()
 		.int()
@@ -399,7 +401,7 @@ export type BanIpRequest = z.infer<typeof BanIpRequest>;
 
 export const BanEmailRequest = z.object({
 	email: EmailBlocklistEntryType.describe(
-		'Email address to ban, or a domain written as @example.com to ban every address at it and its subdomains',
+		'Email address to ban, or a domain written as @example.com to ban every address at it and its subdomains, and every address whose mail servers are on it',
 	),
 });
 
@@ -862,6 +864,7 @@ const InstanceMediaResponse = z.object({
 		renew_window_days: z.number().int().positive().nullable(),
 		effective: AttachmentDecayEffectiveResponse,
 	}),
+	proxy_attachments_through_api: z.boolean(),
 });
 
 const ConnectionProviderKindSchema = createNamedStringLiteralUnion(
@@ -1196,6 +1199,12 @@ export const InstanceConfigUpdateRequest = z.object({
 				})
 				.register(schemaMetadata, {preserveNullFields: true})
 				.nullish(),
+			proxy_attachments_through_api: z
+				.boolean()
+				.optional()
+				.describe(
+					'Whether attachment links point at the API, which checks that the viewer can read the message before it hands over the file',
+				),
 		})
 		.nullish(),
 	policy: InstancePolicyUpdateSchema.nullish(),
@@ -1795,6 +1804,10 @@ const AdminLookupGuildSchema = z.object({
 	rules_channel_id: SnowflakeStringType.nullable(),
 	disabled_operations: Int32Type,
 	member_count: Int32Type,
+	planned_join_waves_until: z.iso
+		.datetime()
+		.nullable()
+		.describe('When PLANNED_JOIN_WAVES ends, or null when it has no end or is off'),
 	channels: z.array(AdminGuildChannelSummarySchema),
 	roles: z.array(AdminGuildRoleSummarySchema),
 });
@@ -1862,7 +1875,7 @@ export const AdminMessageSchema = z.object({
 	author_avatar: z.string().nullable(),
 	author_bot: z.boolean().optional(),
 	webhook_id: SnowflakeStringType.nullable().optional(),
-	content: createStringType(0, 4000),
+	content: z.string(),
 	timestamp: z.string(),
 	attachments: z.array(AdminMessageAttachmentSchema).max(10),
 	embeds: z.array(MessageEmbedResponse).optional(),

@@ -7,6 +7,7 @@ import {
 	deleteOneOrMany,
 	executeGroupedBatches,
 	fetchMany,
+	fetchManyInChunks,
 	fetchOne,
 	upsertOne,
 } from '@app/api/database/CassandraQueryExecution';
@@ -213,7 +214,9 @@ export class GuildRepository {
 		if (guildIds.length === 0) {
 			return [];
 		}
-		const guilds = await fetchMany<GuildRow>(FETCH_GUILDS_BY_IDS_QUERY, {guild_ids: guildIds});
+		const guilds = await fetchManyInChunks<GuildRow, GuildID>(FETCH_GUILDS_BY_IDS_QUERY, guildIds, (chunk) => ({
+			guild_ids: chunk,
+		}));
 		return guilds.map((guild) => new Guild(guild));
 	}
 
@@ -243,7 +246,9 @@ export class GuildRepository {
 			return [];
 		}
 		const guildIds = guildMemberships.map((m) => m.guild_id);
-		const guilds = await fetchMany<GuildRow>(FETCH_GUILDS_BY_IDS_QUERY, {guild_ids: guildIds});
+		const guilds = await fetchManyInChunks<GuildRow, GuildID>(FETCH_GUILDS_BY_IDS_QUERY, guildIds, (chunk) => ({
+			guild_ids: chunk,
+		}));
 		return guilds.map((guild) => new Guild(guild));
 	}
 

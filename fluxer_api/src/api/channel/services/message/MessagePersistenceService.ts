@@ -56,7 +56,6 @@ import {
 	SENDABLE_MESSAGE_FLAGS,
 } from '@fluxer/constants/src/ChannelConstants';
 import {GuildNSFWLevel} from '@fluxer/constants/src/GuildConstants';
-import {UserFlags} from '@fluxer/constants/src/UserConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
 import type {GuildMemberResponse} from '@fluxer/schema/src/domains/guild/GuildMemberSchemas';
@@ -343,7 +342,6 @@ export class MessagePersistenceService {
 				mentionEveryone: false,
 			} as const);
 		const isBot = params.user?.isBot ?? false;
-		const isBugHunterBot = isBot && ((params.user?.flags ?? 0n) & UserFlags.BUG_HUNTER) !== 0n;
 		const attachmentNsfwMode = this.contentService.attachmentNsfwMode({
 			...(params.channel
 				? await this.nsfwScope(
@@ -401,7 +399,6 @@ export class MessagePersistenceService {
 				content: messageContent,
 				customEmbeds: resolvedEmbeds,
 				nsfwMode: isNSFWAllowed ? 'allow' : 'block',
-				isBugHunterBot,
 			});
 			initialEmbeds = embedResult.embeds;
 			hasUncachedUrls = embedResult.hasUncachedUrls;
@@ -585,7 +582,6 @@ export class MessagePersistenceService {
 		allowEmbeds?: boolean;
 		attachmentUploadUserId?: UserID;
 		isBot?: boolean;
-		isBugHunterBot?: boolean;
 		locale?: string | null;
 		components?: ReadonlyArray<MessageActionRowData>;
 		dmNsfwContext?: DmNsfwContext;
@@ -723,7 +719,6 @@ export class MessagePersistenceService {
 				content: updatedRowData.content ?? null,
 				customEmbeds: resolvedEmbeds,
 				nsfwMode: isNSFWAllowed ? 'allow' : 'block',
-				isBugHunterBot: params.isBugHunterBot,
 			});
 			if (embedsExplicitlyProvided) {
 				keepOwnedEmbedAttachments(message, initialEmbeds);

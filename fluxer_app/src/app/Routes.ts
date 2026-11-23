@@ -101,6 +101,11 @@ export const Routes = {
 		pathname === Routes.BOTS,
 	isDMRoute: (pathname: string) => pathname.startsWith('/channels/@me'),
 	isFeedRoute: (pathname: string) => pathname === Routes.FEED || pathname.startsWith(`${Routes.FEED}/`),
+	isHomeRoute: (pathname: string) =>
+		Routes.isDMRoute(pathname) ||
+		pathname === Routes.PLUTONIUM ||
+		pathname === Routes.OPERATOR_PASS ||
+		Routes.isSpecialPage(pathname),
 	isFavoritesRoute: (pathname: string) => pathname.startsWith('/channels/@favorites'),
 	isDiscoverRoute: (pathname: string) =>
 		pathname.startsWith(Routes.DISCOVER) || pathname.startsWith(Routes.LEGACY_DISCOVER),

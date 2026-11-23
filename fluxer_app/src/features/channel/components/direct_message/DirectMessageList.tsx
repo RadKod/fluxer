@@ -29,6 +29,7 @@ import * as RouterUtils from '@app/features/navigation/utils/RouterUtils';
 import {useLocation} from '@app/features/platform/components/router/RouterReact';
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import * as PremiumModalCommands from '@app/features/premium/commands/PremiumModalCommands';
+import HiddenPlutoniumButton from '@app/features/premium/state/HiddenPlutoniumButton';
 import {
 	getPremiumProductName,
 	isPremiumPageAvailable,
@@ -278,7 +279,7 @@ export const DMList = observer(() => {
 	const shouldHighlightPersonalNotes =
 		currentUserId != null &&
 		(routeDmChannelId === currentUserId || (isMobileDmIndexRoute && lastSelectedDmChannelId === currentUserId));
-	const showPremiumFeatures = shouldShowPremiumFeatures();
+	const showPremiumFeatures = shouldShowPremiumFeatures() && !HiddenPlutoniumButton.hidden;
 	// Micup: on a self-hosted instance premium and the shop are pages and have no settings tab, so mobile lists them too.
 	const showMobilePlutoniumButton = showPremiumFeatures && (!isMobile || isPremiumPageAvailable());
 	const showShop = isShopPageAvailable();

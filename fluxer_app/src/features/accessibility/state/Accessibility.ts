@@ -651,6 +651,7 @@ export interface AccessibilitySettings {
 	showMediaDeleteButton: boolean;
 	showSuppressEmbedsButton: boolean;
 	showGifIndicator: boolean;
+	animateGifPicker: boolean;
 	showAttachmentExpiryIndicator: boolean;
 	channelTypingIndicatorMode: ChannelTypingIndicatorMode;
 	showMessageActionBar: boolean;
@@ -756,6 +757,7 @@ class Accessibility {
 	showMediaDeleteButton = true;
 	showSuppressEmbedsButton = true;
 	showGifIndicator = true;
+	animateGifPicker = true;
 	showAttachmentExpiryIndicator = true;
 	channelTypingIndicatorMode: ChannelTypingIndicatorMode = ChannelTypingIndicatorMode.AVATARS;
 	showMessageActionBar = true;
@@ -869,6 +871,7 @@ class Accessibility {
 				'showMediaDeleteButton',
 				'showSuppressEmbedsButton',
 				'showGifIndicator',
+				'animateGifPicker',
 				'showAttachmentExpiryIndicator',
 				'channelTypingIndicatorMode',
 				'showMessageActionBar',
@@ -927,6 +930,7 @@ class Accessibility {
 				showMediaDeleteButton: s.showMediaDeleteButton,
 				showSuppressEmbedsButton: s.showSuppressEmbedsButton,
 				showGifIndicator: s.showGifIndicator,
+				animateGifPicker: s.animateGifPicker,
 				showAttachmentExpiryIndicator: s.showAttachmentExpiryIndicator,
 				channelTypingIndicatorMode: CHANNEL_TYPING_INDICATOR_TO_PROTO[s.channelTypingIndicatorMode],
 				showMessageActionBar: s.showMessageActionBar,
@@ -1003,6 +1007,7 @@ class Accessibility {
 				if (m.showMediaDeleteButton !== undefined) s.showMediaDeleteButton = m.showMediaDeleteButton;
 				if (m.showSuppressEmbedsButton !== undefined) s.showSuppressEmbedsButton = m.showSuppressEmbedsButton;
 				if (m.showGifIndicator !== undefined) s.showGifIndicator = m.showGifIndicator;
+				if (m.animateGifPicker !== undefined) s.animateGifPicker = m.animateGifPicker;
 				if (m.showAttachmentExpiryIndicator !== undefined)
 					s.showAttachmentExpiryIndicator = m.showAttachmentExpiryIndicator;
 				s.channelTypingIndicatorMode = CHANNEL_TYPING_INDICATOR_FROM_PROTO[m.channelTypingIndicatorMode];
@@ -1350,6 +1355,7 @@ class Accessibility {
 		if (validated.showSuppressEmbedsButton !== undefined)
 			this.showSuppressEmbedsButton = validated.showSuppressEmbedsButton;
 		if (validated.showGifIndicator !== undefined) this.showGifIndicator = validated.showGifIndicator;
+		if (validated.animateGifPicker !== undefined) this.animateGifPicker = validated.animateGifPicker;
 		if (validated.showAttachmentExpiryIndicator !== undefined)
 			this.showAttachmentExpiryIndicator = validated.showAttachmentExpiryIndicator;
 		if (validated.channelTypingIndicatorMode !== undefined)
@@ -1469,6 +1475,7 @@ class Accessibility {
 			showMediaDeleteButton: data.showMediaDeleteButton ?? this.showMediaDeleteButton,
 			showSuppressEmbedsButton: data.showSuppressEmbedsButton ?? this.showSuppressEmbedsButton,
 			showGifIndicator: data.showGifIndicator ?? this.showGifIndicator,
+			animateGifPicker: data.animateGifPicker ?? this.animateGifPicker,
 			showAttachmentExpiryIndicator:
 				typeof data.showAttachmentExpiryIndicator === 'boolean'
 					? data.showAttachmentExpiryIndicator

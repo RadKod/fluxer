@@ -5,6 +5,7 @@ import {
 	type DesktopTroubleshootingSettings,
 	type DesktopWindowBehaviorSettings,
 	getDesktopWindowBehaviorSettings,
+	isMonochromeTrayIconTone,
 	rememberInstanceProductName,
 	setDesktopWindowBehaviorSettings,
 	setPrebootTheme,
@@ -29,7 +30,7 @@ import {
 	setDesktopTrayUnreadBadge,
 	updateTrayRuntimeState,
 } from '@electron/main/DesktopTray';
-import {DownloadChecksumError, downloadFile} from '@electron/main/FileDownloads';
+import {DownloadChecksumError} from '@electron/main/FileDownloads';
 import {cleanupGameActivityIpc, registerGameActivityIpcHandlers} from '@electron/main/GameActivityIpc';
 import {registerGameOverlayIpcHandlers} from '@electron/main/GameOverlay';
 import {getGatewayOriginRegistry} from '@electron/main/GatewayOriginRegistry';
@@ -41,6 +42,7 @@ import {
 	readLinuxAppearance,
 	subscribeLinuxAppearance,
 } from '@electron/main/LinuxAppearance';
+import {setLinuxLauncherBadge} from '@electron/main/LinuxLauncherBadge';
 import {refreshTccStatus, registerMacTccIpcHandlers} from '@electron/main/MacTcc';
 import {setNativeStrings} from '@electron/main/MainI18n';
 import {copyRemoteFileToClipboard, parseClipboardWriteFileOptions} from '@electron/main/MediaClipboard';
@@ -64,6 +66,7 @@ import {
 	isPrivilegedRendererDocumentSender,
 	requirePrivilegedRendererDocumentSender,
 } from '@electron/main/PrivilegedRendererDocuments';
+import {saveDialogFilters, withDefaultExtension} from '@electron/main/SaveDialogFileType';
 import {getDesktopSelectedInstanceClient} from '@electron/main/SelectedInstanceFetch';
 import {getStreamerModeCaptureAppStatus} from '@electron/main/StreamerModeProcessDetection';
 import {
@@ -75,6 +78,7 @@ import {
 import {registerTaskbarPinIpcHandlers} from '@electron/main/TaskbarPin';
 import {setTaskbarProgress, type TaskbarProgressMode} from '@electron/main/TaskbarProgress';
 import {registerThemeLocalFileHandlers} from '@electron/main/ThemeLocalFiles';
+import {downloadTrackedFile, registerTrackedDownloadsIpcHandlers} from '@electron/main/TrackedDownloads';
 import {
 	popupHelpMenu,
 	relaunchAndExit,
@@ -139,6 +143,12 @@ function normalizeDesktopWindowBehaviorUpdate(value: unknown): Partial<DesktopWi
 	if (typeof value.coloredTrayIcon === 'boolean') {
 		update.coloredTrayIcon = value.coloredTrayIcon;
 	}
+	if (isMonochromeTrayIconTone(value.monochromeTrayIconTone)) {
+		update.monochromeTrayIconTone = value.monochromeTrayIconTone;
+	}
+	if (typeof value.unreadLauncherBadge === 'boolean') {
+		update.unreadLauncherBadge = value.unreadLauncherBadge;
+	}
 	if (typeof value.minimizeToTray === 'boolean') {
 		update.minimizeToTray = value.minimizeToTray;
 	}
@@ -174,13 +184,23 @@ function getActiveMiddleClickAutoscroll(): boolean {
 	return process.platform === 'linux' && hasEnabledBlinkFeature(MIDDLE_CLICK_AUTOSCROLL_BLINK_FEATURE);
 }
 
+let lastUnreadBadge = 0;
+
+function launcherBadgeCount(badge: number): number {
+	if (badge !== UNREAD_BADGE_DOT) return badge;
+	return getDesktopWindowBehaviorSettings().unreadLauncherBadge ? 1 : 0;
+}
+
 function applyUnreadBadge(badge: number): void {
+	lastUnreadBadge = badge;
 	if (process.platform === 'win32') {
 		setWindowsBadgeOverlay(getMainWindow(), badge);
 	} else if (process.platform === 'darwin' && badge === UNREAD_BADGE_DOT) {
 		app.dock?.setBadge('•');
+	} else if (process.platform === 'linux') {
+		setLinuxLauncherBadge(launcherBadgeCount(badge));
 	} else {
-		app.setBadgeCount(Math.max(badge, 0));
+		app.setBadgeCount(launcherBadgeCount(badge));
 	}
 	setDesktopTrayUnreadBadge(badge);
 }
@@ -355,6 +375,7 @@ export function registerIpcHandlers(): void {
 	ipcMain.handle('desktop-window-behavior-set', (_event, settings: unknown): DesktopWindowBehaviorSettings => {
 		const nextSettings = setDesktopWindowBehaviorSettings(normalizeDesktopWindowBehaviorUpdate(settings));
 		applyDesktopWindowBehaviorSettings();
+		if (process.platform === 'linux') setLinuxLauncherBadge(launcherBadgeCount(lastUnreadBadge));
 		if (!nextSettings.showTrayIcon) {
 			const mainWindow = getMainWindow();
 			if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
@@ -485,12 +506,17 @@ export function registerIpcHandlers(): void {
 			try {
 				const result = await dialog.showSaveDialog(win, {
 					defaultPath: options.defaultPath,
+					filters: saveDialogFilters(options.defaultPath),
 				});
 				if (result.canceled || !result.filePath) {
 					return {success: false, canceled: true};
 				}
-				await downloadFile(options.url, result.filePath, {sha256: options.sha256});
-				return {success: true, path: result.filePath};
+				const filePath = withDefaultExtension(result.filePath, options.defaultPath);
+				const outcome = await downloadTrackedFile(event.sender, options.url, filePath, options.sha256);
+				if (outcome === 'canceled') {
+					return {success: false, canceled: true};
+				}
+				return {success: true, path: filePath};
 			} catch (error) {
 				if (error instanceof DownloadChecksumError) {
 					return {success: false, checksumMismatch: true, error: error.message};
@@ -505,6 +531,7 @@ export function registerIpcHandlers(): void {
 			toggleWindowDevTools(win);
 		}
 	});
+	registerTrackedDownloadsIpcHandlers();
 	ipcMain.handle('check-media-access', async (_event, type: MediaAccessType): Promise<string> => {
 		if (process.platform !== 'darwin') {
 			return 'granted';
@@ -591,6 +618,7 @@ export function registerIpcHandlers(): void {
 		return win?.webContents.getZoomFactor() ?? 1;
 	});
 	ipcMain.handle('get-accessibility-support-enabled', (): boolean => app.accessibilitySupportEnabled);
+	ipcMain.handle('system-locale-get', (): string => app.getSystemLocale());
 	app.on('accessibility-support-changed', (_event, accessibilitySupportEnabled) => {
 		const mainWindow = getMainWindow();
 		if (!mainWindow || mainWindow.isDestroyed()) return;

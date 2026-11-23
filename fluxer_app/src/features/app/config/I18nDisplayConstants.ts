@@ -49,7 +49,6 @@ export const DESKTOP_DOWNLOAD_URL = 'https://sanalyer.com/indir';
 export const GOOGLE_PLAY_URL = 'https://sanalyer.com/indir';
 export const FLUXER_DOCS_DOMAIN = 'sanalyer.com/docs';
 export const FLUXER_DOCS_URL = `https://${FLUXER_DOCS_DOMAIN}`;
-export const FLUXER_BLUESKY_HANDLE = '@fluxer.app';
 export const YOUTUBE_PROVIDER_NAME = 'YouTube';
 export const EVERYONE_MENTION = '@everyone';
 export const HERE_MENTION = '@here';

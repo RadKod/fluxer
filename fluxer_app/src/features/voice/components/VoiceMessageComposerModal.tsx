@@ -19,9 +19,11 @@ import {AudioWaveform, computePeaks} from '@app/features/voice/components/AudioW
 import {LiveRecordingWaveform} from '@app/features/voice/components/LiveRecordingWaveform';
 import styles from '@app/features/voice/components/VoiceMessageComposerModal.module.css';
 import {resolveAudioContextConstructor} from '@app/features/voice/engine/VoiceSharedAudioContext';
+import VoiceSettings from '@app/features/voice/state/VoiceSettings';
 import {encodeAudioBufferSliceToWav} from '@app/features/voice/utils/AudioWavEncode';
 import {computeVoiceWaveformFromAudioBuffer} from '@app/features/voice/utils/VoiceMessageRecordingUtils';
 import {sendVoiceMessage} from '@app/features/voice/utils/VoiceMessageSendUtils';
+import {buildRecordingAudioConstraints} from '@app/features/voice/utils/VoiceProcessingProfile';
 import {VOICE_MESSAGE_MIN_SEND_DURATION_MS} from '@fluxer/constants/src/VoiceMessageConstants';
 import type {MessageDescriptor} from '@lingui/core';
 import {msg} from '@lingui/core/macro';
@@ -292,7 +294,7 @@ export const VoiceMessageComposerModal: React.FC<VoiceMessageComposerModalProps>
 			return;
 		}
 		try {
-			const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+			const stream = await navigator.mediaDevices.getUserMedia({audio: buildRecordingAudioConstraints(VoiceSettings)});
 			if (generation !== recordingGenerationRef.current) {
 				for (const track of stream.getTracks()) track.stop();
 				return;

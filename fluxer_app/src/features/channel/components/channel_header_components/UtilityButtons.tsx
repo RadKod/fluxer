@@ -2,7 +2,6 @@
 
 import {ChannelHeaderIcon} from '@app/features/channel/components/channel_header_components/ChannelHeaderIcon';
 import styles from '@app/features/channel/components/channel_header_components/UtilityButtons.module.css';
-import DeveloperMode from '@app/features/devtools/state/DeveloperMode';
 import {INBOX_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
 import {getInboxBadge} from '@app/features/inbox/utils/InboxBadge';
 import {createNamedLoadableComponent} from '@app/features/platform/components/loadable/LoadableComponent';
@@ -26,12 +25,14 @@ const InboxPopout = createNamedLoadableComponent<
 	displayName: 'InboxPopout',
 	load: async () => (await import('@app/features/messaging/components/popouts/InboxPopout')).InboxPopout,
 });
-const DeveloperToolsContextMenu = createNamedLoadableComponent<{onClose: () => void}>({
-	displayName: 'DeveloperToolsContextMenu',
-	load: async () =>
-		(await import('@app/features/channel/components/channel_header_components/DeveloperToolsContextMenu'))
-			.DeveloperToolsContextMenu,
-});
+const DeveloperToolsContextMenu = import.meta.env.DEV
+	? createNamedLoadableComponent<{onClose: () => void}>({
+			displayName: 'DeveloperToolsContextMenu',
+			load: async () =>
+				(await import('@app/features/channel/components/channel_header_components/DeveloperToolsContextMenu'))
+					.DeveloperToolsContextMenu,
+		})
+	: null;
 
 const DEVELOPER_TOOLS_DESCRIPTOR = msg({
 	message: 'Developer tools',
@@ -50,7 +51,7 @@ const UNREAD_DESCRIPTOR = msg({
 });
 
 export function isStaffToolsButtonVisible(): boolean {
-	return DeveloperMode.isDeveloper;
+	return import.meta.env.DEV;
 }
 
 interface HeaderUtilityButtonProps {
@@ -63,10 +64,14 @@ export const StaffToolsButton = observer(({className, ...rest}: HeaderUtilityBut
 	const {isOpen, withTracking} = useContextMenuTrigger();
 	const handleOpenTools = useCallback(
 		(event: React.MouseEvent<HTMLButtonElement>) => {
+			const Menu = DeveloperToolsContextMenu;
+			if (!Menu) {
+				return;
+			}
 			ContextMenuCommands.openFromElementBottomRight(
 				event,
 				({onClose}) => (
-					<DeveloperToolsContextMenu
+					<Menu
 						onClose={onClose}
 						data-flx="channel.channel-header-components.utility-buttons.handle-open-tools.developer-tools-context-menu"
 					/>
@@ -76,7 +81,7 @@ export const StaffToolsButton = observer(({className, ...rest}: HeaderUtilityBut
 		},
 		[withTracking],
 	);
-	if (!isStaffToolsButtonVisible()) {
+	if (!DeveloperToolsContextMenu) {
 		return null;
 	}
 	return (

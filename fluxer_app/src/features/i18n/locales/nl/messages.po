@@ -3696,6 +3696,13 @@ msgstr ""
 msgid "{productName} wordmark"
 msgstr "{productName}-woordmerk"
 
+#. Download progress shown under a file name in the downloads panel.
+#. {progress} is the formatted percentage downloaded so far, for example 42%.
+#. {total} is the formatted size of the whole file, for example 3.2 MB.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "{progress} of {total}"
+msgstr "{progress} van {total}"
+
 #: src/features/connection/components/modals/AddConnectionModal.tsx
 msgid ""
 "{providerName} opens in your browser. Sign in there to connect your account."
@@ -3805,6 +3812,13 @@ msgstr ""
 #: src/features/channel/components/bottomsheets/ChannelSearchBottomSheet.tsx
 msgid "{resultCount, plural, one {# result} other {# results}}"
 msgstr "{resultCount, plural, one {# resultaat} other {# resultaten}}"
+
+#. OAuth authorize page error shown when the authorization link asks for a
+#. scope this app does not offer. Preserve {scope}, it is the technical scope
+#. name inserted by code.
+#: src/features/auth/components/pages/oauth_authorize_page/state/useAuthorizeFlow.ts
+msgid "{scope} is not a supported scope."
+msgstr ""
 
 #. AFK timeout label for a stored custom duration shown in the idle settings
 #. section.
@@ -5205,6 +5219,50 @@ msgstr ""
 "Voeg een passkey toe om in te loggen met je vingerafdruk, gezicht of "
 "schermvergrendeling. Je kunt dit ook later doen in de instellingen."
 
+#. Description of the account settings row for single sign-on when the account
+#. has no other way to sign in. providerName is the provider name typed by the
+#. admin.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid ""
+"Add a password or passkey to your account before you disconnect "
+"{providerName}."
+msgstr ""
+"Voeg een wachtwoord of passkey toe aan je account voordat je {providerName} "
+"ontkoppelt."
+
+#. Description of the account settings row for single sign-on when the account
+#. has no other way to sign in and the admin has not given the provider a
+#. name.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid ""
+"Add a password or passkey to your account before you disconnect single sign-"
+"on."
+msgstr ""
+"Voeg een wachtwoord of passkey toe aan je account voordat je single sign-on "
+"ontkoppelt."
+
+#. Description of the account settings row for single sign-on when the account
+#. has no other way to sign in and the instance allows sign-in with codes sent
+#. by email. providerName is the provider name typed by the admin.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid ""
+"Add a password or passkey, or confirm your email address to sign in with "
+"emailed codes, before you disconnect {providerName}."
+msgstr ""
+"Voeg een wachtwoord of passkey toe, of bevestig je e-mailadres om in te "
+"loggen met codes per e-mail, voordat je {providerName} ontkoppelt."
+
+#. Description of the account settings row for single sign-on when the account
+#. has no other way to sign in, the instance allows sign-in with codes sent by
+#. email and the admin has not given the provider a name.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid ""
+"Add a password or passkey, or confirm your email address to sign in with "
+"emailed codes, before you disconnect single sign-on."
+msgstr ""
+"Voeg een wachtwoord of passkey toe, of bevestig je e-mailadres om in te "
+"loggen met codes per e-mail, voordat je single sign-on ontkoppelt."
+
 #. Form placeholder for the tag input on an expression form.
 #: src/features/expressions/components/modals/TagListField.tsx
 msgid "Add a tag"
@@ -5246,8 +5304,12 @@ msgstr "Account toevoegen"
 msgid "Add action."
 msgstr "Actie toevoegen."
 
+#. Button on the startup screen shown when the current account's instance is
+#. offline or not responding. Restarts the app signed out so the person can
+#. sign in to an account on any instance. The current account stays saved.
 #. Last tile in the account switcher grid, and the title of the step it opens,
 #. where another saved account is added by signing in or registering.
+#: src/features/app/components/BootstrapErrorScreen.tsx
 #: src/features/auth/components/accounts/account_switcher_modal/AccountSwitcherAuthFlow.tsx
 msgid "Add an account"
 msgstr "Account toevoegen"
@@ -7572,6 +7634,11 @@ msgstr ""
 msgid "Approved"
 msgstr "Goedgekeurd"
 
+#. Short label in the Explore page sidebar. Keep it concise.
+#: src/features/discovery/discovery/DiscoverySidebar.tsx
+msgid "Apps"
+msgstr "Apps"
+
 #. Security settings card title for third-party app access and signed-in
 #. devices.
 #: src/features/user/components/modals/tabs/account_security_tab/SecurityTab.tsx
@@ -8699,6 +8766,12 @@ msgstr "Back-upcodes opnieuw gegenereerd"
 msgid "Badge and wall count: {count}"
 msgstr "Aantal voor badge en muur: {count}"
 
+#. Desktop setting toggle label on Linux. Controls whether unread messages
+#. without mentions put a badge on the app icon in the taskbar or dock.
+#: src/features/user/components/modals/tabs/DesktopSettingsTab.tsx
+msgid "Badge the app icon for unread messages"
+msgstr ""
+
 #. Title of the profile settings section that lists the badges you hold and
 #. lets you hide each one.
 #. Title of the window that lists every badge of a person or community.
@@ -8986,6 +9059,12 @@ msgstr "Biometrie"
 #: src/features/user/utils/UserMessageDescriptors.ts
 msgid "Bitrate"
 msgstr "Bitrate"
+
+#. Tray icon color option for a black monochrome tray icon, for light taskbars
+#. and panels.
+#: src/features/user/components/modals/tabs/DesktopSettingsTab.tsx
+msgid "Black"
+msgstr ""
 
 #. Generic destructive action label that blocks a user.
 #. Settings search synonym. Used to match this term when the user types it in
@@ -9591,6 +9670,16 @@ msgstr "Knop met contextmenu"
 msgid "Buttons"
 msgstr "Knoppen"
 
+#. Help text under the theme color picker in the setup wizard branding step.
+#: src/features/app/components/setup/SetupBrandingFields.tsx
+msgid ""
+"Buttons and highlights across the app use this color, and phone browsers use"
+" it for their toolbar. Reset it to keep Fluxer's indigo."
+msgstr ""
+"Knoppen en markeringen in de hele app gebruiken deze kleur, en browsers op "
+"telefoons gebruiken hem voor hun werkbalk. Zet hem terug om het indigo van "
+"sanalyer te houden."
+
 #: src/features/user/components/modals/tabs/component_gallery_tab/ComponentGalleryTabButtonsTab.tsx
 msgid ""
 "Buttons can trigger context menus on click by passing the onClick event "
@@ -9614,16 +9703,6 @@ msgstr ""
 #: src/features/user/components/modals/tabs/component_gallery_tab/ComponentGalleryTabButtonsTab.tsx
 msgid "Buttons with icons"
 msgstr "Knoppen met pictogrammen"
-
-#. Help text under the theme color picker in the setup wizard branding step.
-#: src/features/app/components/setup/SetupBrandingFields.tsx
-msgid ""
-"Buttons, links and highlights across the app use this color, and phone "
-"browsers use it for their toolbar. Reset it to keep Fluxer's indigo."
-msgstr ""
-"Knoppen, links en markeringen in de hele app gebruiken deze kleur, en "
-"browsers op telefoons gebruiken hem voor hun werkbalk. Zet hem terug om het "
-"indigo van sanalyer te houden."
 
 #. Gift inventory empty-state description. premiumProductName is the premium
 #. tab name and product name.
@@ -10049,6 +10128,11 @@ msgstr "Kan hier geen bestanden uploaden"
 msgid "Cancel"
 msgstr "Annuleren"
 
+#. Stops an in-progress download and deletes the partial file.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Cancel download"
+msgstr "Download annuleren"
+
 #. Button or menu action label in the channel and chat edit bar. Keep it
 #. concise.
 #: src/features/channel/components/ChannelEditBar.tsx
@@ -10133,6 +10217,13 @@ msgstr "Vriendschapsverzoek aan {displayName} annuleren?"
 #: src/features/user/components/settings_utils/section_registry/VoiceVideoSections.ts
 msgid "Cancellation"
 msgstr "Echo-onderdrukking"
+
+#. Status shown under a file name in the downloads panel after the user
+#. cancels the download. The part of the file that had already downloaded is
+#. deleted.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Cancelled. The partial file was deleted."
+msgstr "Geannuleerd. Het gedeeltelijke bestand is verwijderd."
 
 #: src/features/app/components/dialogs/components/plutonium/SubscriptionDescription.tsx
 msgid "Cancels on <0>{cancelDate}</0>. <1/> remain active until then."
@@ -11067,7 +11158,7 @@ msgstr "Kanaaltoegang"
 
 #. Title of the alert shown when clicking a message link the user does not
 #. have permission to view.
-#: src/features/messaging/components/markdown/renderers/LinkRenderer.tsx
+#: src/features/messaging/utils/InAppLinkUtils.tsx
 msgid "Channel access denied"
 msgstr "Toegang tot kanaal geweigerd"
 
@@ -12101,6 +12192,12 @@ msgstr "Alle reacties van dit bericht verwijderen?"
 msgid "Clear friends search"
 msgstr "Zoekopdracht naar vrienden wissen"
 
+#. Removes finished downloads from the downloads panel. Downloaded files stay
+#. on disk and in-progress downloads stay in the list.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Clear list"
+msgstr "Lijst wissen"
+
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
 #: src/features/user/components/settings_utils/search_index/ChatSettingsIndex.ts
@@ -13106,6 +13203,12 @@ msgstr "Vergelijking"
 msgid "Complete payment"
 msgstr "Betaling afronden"
 
+#. Status shown under a file name in the downloads panel once the file has
+#. finished downloading. Keep it short.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Completed"
+msgstr "Voltooid"
+
 #: src/features/auth/components/pages/SignInLinkPage.tsx
 #: src/features/auth/components/pages/SsoCallbackPage.tsx
 msgid "Completing sign-in…"
@@ -13657,6 +13760,12 @@ msgstr "Verbonden met spraakchat"
 msgctxt "us-state"
 msgid "Connecticut"
 msgstr "Connecticut"
+
+#. Heading on the SSO callback page while connecting single sign-on from
+#. account settings.
+#: src/features/auth/components/pages/SsoCallbackPage.tsx
+msgid "Connecting single sign-on…"
+msgstr "Single sign-on koppelen…"
 
 #. Auth status shown while connecting to an instance, when the instance
 #. selector resolves it or when sign-in waits for the live connection. Domain
@@ -14678,6 +14787,9 @@ msgstr "Aanmelden is mislukt. Probeer het opnieuw."
 
 #. Error title shown when starting to connect single sign-on from account
 #. settings fails.
+#. Heading on the SSO callback page when connecting single sign-on from
+#. account settings failed.
+#: src/features/auth/components/pages/SsoCallbackPage.tsx
 #: src/features/user/components/modals/tabs/account_security_tab/SsoConnectRow.tsx
 msgid "Couldn't connect single sign-on"
 msgstr "Single sign-on kon niet worden gekoppeld"
@@ -14808,6 +14920,11 @@ msgstr "Webhook kon niet worden verwijderd"
 #: src/features/guild/hooks/useDeleteMyMessagesInGuild.tsx
 msgid "Couldn't delete your messages"
 msgstr "Je berichten konden niet worden verwijderd"
+
+#. Error title shown when disconnecting single sign-on fails.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid "Couldn't disconnect single sign-on"
+msgstr "Koppeling met single sign-on kon niet worden verbroken"
 
 #. Modal title shown when a desktop update download fails.
 #: src/features/updater/commands/UpdaterModalCommands.tsx
@@ -17000,14 +17117,11 @@ msgstr "Verwijderbevestiging"
 msgid "Delete redirect URI"
 msgstr "Omleidings-URI verwijderen"
 
-#. Danger action in the channel permissions overwrite context menu that
-#. removes a role permission override from the channel.
 #. Destructive button in the role editor that removes the selected role.
 #. Removes the role from every member; keep tone plain.
 #. Destructive context menu action in the community roles settings tab that
 #. immediately removes the right-clicked role from every member. Keep it
 #. short.
-#: src/features/channel/components/modals/channel_tabs/channel_permissions_tab/OverwriteContextMenu.tsx
 #: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx
 #: src/features/guild/components/modals/guild_tabs/GuildRolesTab.tsx
 #: src/features/ui/action_menu/RoleContextMenu.tsx
@@ -17080,12 +17194,6 @@ msgstr ""
 #: src/features/threads/utils/ThreadMessageDescriptors.ts
 msgid "Delete thread"
 msgstr "Thread verwijderen"
-
-#. Danger action in the channel permissions overwrite context menu that
-#. removes a member permission override from the channel.
-#: src/features/channel/components/modals/channel_tabs/channel_permissions_tab/OverwriteContextMenu.tsx
-msgid "Delete user"
-msgstr "Gebruiker verwijderen"
 
 #. Danger button label that deletes a webhook.
 #: src/features/webhook/components/WebhookListItem.tsx
@@ -17614,14 +17722,14 @@ msgstr "Ontwikkelaarsstatus"
 #. Title of the info alert shown when clicking an internal developer-tools
 #. deep link.
 #: src/features/channel/components/channel_header_components/UtilityButtons.tsx
-#: src/features/messaging/components/markdown/renderers/LinkRenderer.tsx
+#: src/features/messaging/utils/InAppLinkUtils.tsx
 #: src/features/ui/action_menu/items/StaffDeveloperUserControlsMenuItem.tsx
 msgid "Developer tools"
 msgstr "Ontwikkelaarstools"
 
 #. Body of the developer-tools info alert. Refers to the staff badge button in
 #. the channel header.
-#: src/features/messaging/components/markdown/renderers/LinkRenderer.tsx
+#: src/features/messaging/utils/InAppLinkUtils.tsx
 msgid ""
 "Developer tools are available from the staff badge in the channel header."
 msgstr ""
@@ -17800,6 +17908,7 @@ msgstr "Voorvertoningen van directe berichten"
 #. Review row label for direct messages.
 #: src/features/app/components/setup/SetupWizardSteps.tsx
 #: src/features/channel/components/direct_message/DirectMessageList.tsx
+#: src/features/guild/components/modals/guild_tabs/GuildModerationTab.tsx
 #: src/features/i18n/utils/CommonMessageDescriptors.ts
 #: src/features/user/components/modals/tabs/privacy_safety_tab/ConnectionsTab.tsx
 msgid "Direct messages"
@@ -18074,6 +18183,19 @@ msgstr "Spraakbericht weggooien"
 msgid "Disconnect"
 msgstr "Verbinding verbreken"
 
+#. Button that disconnects the account from single sign-on.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgctxt "sso"
+msgid "Disconnect"
+msgstr "Ontkoppelen"
+
+#. Confirmation title when disconnecting the current account from the
+#. instance's single sign-on provider. providerName is the provider name typed
+#. by the admin.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid "Disconnect {providerName}?"
+msgstr "{providerName} ontkoppelen?"
+
 #. Voice menu action that disconnects every active device or session from
 #. voice chat.
 #: src/features/voice/utils/VoiceMessageDescriptors.ts
@@ -18100,6 +18222,12 @@ msgstr "Verbinding met {channel} verbreken"
 #: src/features/platform/utils/DesktopLocaleBridge.ts
 msgid "Disconnect from voice"
 msgstr "Verbinding met spraakchat verbreken"
+
+#. Confirmation title when disconnecting the current account from single sign-
+#. on and the admin has not given the provider a name.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid "Disconnect single sign-on?"
+msgstr "Single sign-on ontkoppelen?"
 
 #: src/features/channel/components/channel_header_components/developer_tools/ToolsMenu.tsx
 msgid "Disconnect socket"
@@ -18677,6 +18805,11 @@ msgstr "Download de nieuwe versie om {appName} te updaten."
 #: src/features/ui/action_menu/items/MediaMenuData.tsx
 msgid "Download video"
 msgstr "Video downloaden"
+
+#. Heading of the downloads panel.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Downloads"
+msgstr "Downloads"
 
 #. Short heading in the keyboard shortcuts cheatsheet.
 #. Short label in the keybinds tab. Keep it concise.
@@ -21096,6 +21229,12 @@ msgstr "Laden van berichten laten mislukken"
 msgid "Fail message sends"
 msgstr "Verzenden van berichten laten mislukken"
 
+#. Status shown under a file name in the downloads panel when the download did
+#. not finish. Keep it short.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Failed"
+msgstr "Mislukt"
+
 #: src/features/moderation/components/modals/BanMemberModal.tsx
 msgid "Failed to ban member. Try again."
 msgstr "Lid verbannen mislukt. Probeer het opnieuw."
@@ -21964,18 +22103,6 @@ msgstr ""
 "deze aanmelding heeft goedgekeurd. Controleer je verbinding en kies dan "
 "\"Opnieuw proberen\"."
 
-#. Error shown in the desktop app when a passkey prompt starts but no security
-#. key is connected to the computer.
-#: src/features/auth/utils/PasskeyErrorMessages.ts
-msgid ""
-"sanalyer couldn't find a security key on this computer. Connect your "
-"security key and try again, or open sanalyer in your web browser and use "
-"your passkey there."
-msgstr ""
-"sanalyer kon geen beveiligingssleutel vinden op deze computer. Sluit je "
-"beveiligingssleutel aan en probeer het opnieuw, of open sanalyer in je "
-"webbrowser en gebruik daar je passkey."
-
 #. Name of the section in the Operator Pass settings tab about the Fluxer Labs
 #. community. Fluxer Labs is the name of a community, keep it as is.
 #: src/features/premium/utils/PremiumMessageDescriptors.ts
@@ -22627,6 +22754,12 @@ msgctxt "privacy-settings-section"
 msgid "Friends & direct messages"
 msgstr "Vrienden en directe berichten"
 
+#. Privacy > Profile privacy: radio option label allowing every community
+#. member to see the profile.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/ProfilePrivacyTab.tsx
+msgid "Friends and all communities"
+msgstr "Vrienden en alle communities"
+
 #. Privacy > Communication: select option for the custom group chat add
 #. permission tier.
 #: src/features/user/components/modals/tabs/privacy_safety_tab/CommunicationTab.tsx
@@ -22639,6 +22772,12 @@ msgstr ""
 #: src/features/user/components/modals/tabs/privacy_safety_tab/CommunicationTab.tsx
 msgid "Friends and selected groups can call you"
 msgstr "Vrienden en geselecteerde groepen kunnen je bellen"
+
+#. Privacy > Profile privacy: radio option label allowing only friends and
+#. members of small communities.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/ProfilePrivacyTab.tsx
+msgid "Friends and small communities only"
+msgstr "Alleen vrienden en kleine communities"
 
 #. Reassurance in the privacy setup modal that friends can always send direct
 #. messages.
@@ -22653,6 +22792,16 @@ msgid ""
 msgstr ""
 "Vrienden kunnen je altijd berichten sturen. Deze instellingen gelden voor "
 "mensen en bots met wie je alleen een community deelt."
+
+#. Help text under the switch that turns off direct messages between community
+#. members who are not friends, in the community moderation settings tab.
+#: src/features/guild/components/modals/guild_tabs/GuildModerationTab.tsx
+msgid ""
+"Friends can still DM each other, and so can members who share another "
+"community. Bots aren't affected."
+msgstr ""
+"Vrienden kunnen elkaar nog steeds DM'en, net als leden die een andere "
+"community delen. Bots worden niet beïnvloed."
 
 #. Privacy option label for people connected through mutual friends.
 #: src/features/i18n/utils/CommonMessageDescriptors.ts
@@ -24061,6 +24210,20 @@ msgstr "Verbergen"
 #: src/features/platform/utils/DesktopLocaleBridge.ts
 msgid "Hide {appName}"
 msgstr "{appName} verbergen"
+
+#. Switch under the premium badge row in the "Badges" profile settings.
+#. Preserve {premiumProductName}; it is inserted by code. Keep the tone plain
+#. and specific.
+#: src/features/user/components/modals/tabs/my_profile_tab/ProfileBadgeSettings.tsx
+msgid "Hide {premiumProductName} purchase date"
+msgstr "Aankoopdatum van {premiumProductName} verbergen"
+
+#. Context menu item on the Plutonium button in the direct messages list.
+#. Hides the button. productName is the premium product name, Plutonium on
+#. fluxer.com.
+#: src/features/channel/components/direct_message/DirectMessageList.tsx
+msgid "Hide {productName} button"
+msgstr ""
 
 #. Accessible label for the button that collapses the other accounts section
 #. in the inbox.
@@ -27605,7 +27768,7 @@ msgstr "Linkstijl"
 
 #. Title of the alert shown when clicking an internal link that is not
 #. available to the current account.
-#: src/features/messaging/components/markdown/renderers/LinkRenderer.tsx
+#: src/features/messaging/utils/InAppLinkUtils.tsx
 msgid "Link unavailable"
 msgstr "Link niet beschikbaar"
 
@@ -27697,6 +27860,13 @@ msgstr "Linux-app"
 #: src/features/voice/utils/VoiceMessageDescriptors.ts
 msgid "Linux default"
 msgstr "Standaard van Linux"
+
+#. Desktop setting description under the Linux unread app icon badge toggle.
+#: src/features/user/components/modals/tabs/DesktopSettingsTab.tsx
+msgid ""
+"Linux taskbars can only show a number, so unread messages without mentions "
+"show as 1. Mentions always show their count."
+msgstr ""
 
 #. Forum layout name shown inside an activity log row.
 #. Forum layout option that shows posts as rows.
@@ -28072,6 +28242,14 @@ msgid "Make {userName} the group owner? You'll lose owner privileges."
 msgstr ""
 "Wil je {userName} de groepseigenaar maken? Je verliest dan je "
 "eigenaarsrechten."
+
+#. Description of the community ownership transfer section in community
+#. settings.
+#: src/features/guild/components/modals/guild_tabs/guild_overview_tab/sections/OwnerTransferSection.tsx
+msgid "Make another member the owner of this community. You cannot undo this."
+msgstr ""
+"Maak een ander lid eigenaar van deze community. Je kunt dit niet ongedaan "
+"maken."
 
 #. Group DM action that transfers ownership of the group to the selected
 #. member.
@@ -28489,6 +28667,12 @@ msgstr "Hoofdvolume"
 msgctxt "code-editor"
 msgid "Match case"
 msgstr "Hoofdlettergevoelig"
+
+#. Tray icon color option. The app picks white or black from the taskbar or
+#. panel color.
+#: src/features/user/components/modals/tabs/DesktopSettingsTab.tsx
+msgid "Match the taskbar"
+msgstr ""
 
 #: src/features/channel/components/MatureContentChannelGate.tsx
 msgid "Mature category"
@@ -31933,6 +32117,12 @@ msgstr "Niet toegestaan"
 msgid "Not applied yet"
 msgstr "Nog niet toegepast"
 
+#. Shown instead of a key when the desktop has no key assigned to a system-
+#. wide shortcut.
+#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
+msgid "Not assigned"
+msgstr "Niet toegewezen"
+
 #. Screen reader text for a cross in the Plutonium page comparison table.
 #: src/features/premium/components/plutonium_page/PlutoniumPageMessages.ts
 msgid "Not available"
@@ -33243,6 +33433,12 @@ msgstr "Betaalpagina opnieuw openen"
 #: src/features/ui/components/form/FormCombobox.tsx
 msgid "Open popup"
 msgstr "Keuzelijst openen"
+
+#. Accessible label of a picture or video tile in the Media tab of the full
+#. profile page; opens that post.
+#: src/features/user/components/pages/ProfileMediaGrid.tsx
+msgid "Open post"
+msgstr "Open post"
 
 #. Accessible label for the avatar button in the channel header of a DM. Opens
 #. the recipient user profile.
@@ -35004,6 +35200,11 @@ msgstr ""
 msgid "Pick which kinds of conversations to clean up."
 msgstr "Kies welke soorten gesprekken je wilt opschonen."
 
+#. Description under the automatic tray icon color option.
+#: src/features/user/components/modals/tabs/DesktopSettingsTab.tsx
+msgid "Pick white or black from the color of your taskbar or panel."
+msgstr ""
+
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
 #: src/features/user/components/settings_utils/search_index/MyProfileIndex.ts
@@ -35202,6 +35403,11 @@ msgstr "Afspelen"
 msgid "Play animated emojis"
 msgstr "Geanimeerde emoji's afspelen"
 
+#. Short label for a toggle in the animation tab. Keep it concise.
+#: src/features/user/components/modals/tabs/accessibility_tab/AnimationTab.tsx
+msgid "Play GIFs in the GIF picker"
+msgstr "GIF's afspelen in de GIF-kiezer"
+
 #. Short label in the accessibility tab. Keep it concise.
 #: src/features/user/components/modals/tabs/AccessibilityTab.tsx
 msgid "Play sample"
@@ -35278,6 +35484,12 @@ msgstr "Wacht even en probeer het opnieuw te verwijderen."
 #: src/features/emoji/components/emojis/EmojiListItem.tsx
 msgid "Please wait a moment and try renaming again."
 msgstr "Wacht even en probeer de naam opnieuw te wijzigen."
+
+#. Settings search entry description. One-line summary of what the setting
+#. controls. Plutonium is the product name.
+#: src/features/user/components/settings_utils/search_index/AppearanceIndex.ts
+msgid "Plutonium button in the direct messages list"
+msgstr ""
 
 #. Country name. EU member state in the illegal-content report country
 #. dropdown.
@@ -35470,6 +35682,12 @@ msgstr "Voorkeurscodec voor schermdelen"
 #: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
 msgid "Prefers reduced motion"
 msgstr "Voorkeur voor minder beweging"
+
+#. Settings search synonym. Used to match this term when the user types it in
+#. the settings search bar.
+#: src/features/user/components/settings_utils/search_index/PlutoniumIndex.ts
+msgid "Premium"
+msgstr "Premium"
 
 #. Progress label on the save button while an animated image crop starts. Keep
 #. it concise.
@@ -37425,6 +37643,11 @@ msgstr "Verwijderen uit favorieten"
 msgid "Remove from group"
 msgstr "Uit groep verwijderen"
 
+#. Removes a finished download from the downloads panel.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Remove from list"
+msgstr "Uit lijst verwijderen"
+
 #. Context menu item that removes a self-hosted instance from the
 #. authentication instance picker history.
 #: src/features/auth/flow/instance_selector/InstancePickerRows.tsx
@@ -37513,6 +37736,12 @@ msgstr "Reacties verwijderen"
 msgid "Remove reverse image search"
 msgstr "Omgekeerd zoeken naar afbeeldingen verwijderen"
 
+#. Danger action in the channel permissions overwrite context menu that
+#. removes a role permission override from the channel.
+#: src/features/channel/components/modals/channel_tabs/channel_permissions_tab/OverwriteContextMenu.tsx
+msgid "Remove role"
+msgstr "Rol weghalen"
+
 #. Button or menu action label in the community role management. Keep it
 #. concise. Preserve {roleName}; it is inserted by code. Keep the tone plain
 #. and specific.
@@ -37567,6 +37796,21 @@ msgstr "Time-out opheffen"
 #: src/features/user/components/modals/tabs/chat_settings_tab/SearchEnginesTab.tsx
 msgid "Remove translator"
 msgstr "Vertaler verwijderen"
+
+#. Danger action in the channel permissions overwrite context menu that
+#. removes a member permission override from the channel.
+#: src/features/channel/components/modals/channel_tabs/channel_permissions_tab/OverwriteContextMenu.tsx
+msgid "Remove user"
+msgstr "Gebruiker weghalen"
+
+#. Description of the switch that hides the purchase date, under the premium
+#. badge row in the "Badges" profile settings. Preserve {premiumProductName};
+#. it is inserted by code. Keep the tone plain and specific.
+#: src/features/user/components/modals/tabs/my_profile_tab/ProfileBadgeSettings.tsx
+msgid "Remove when you first bought {premiumProductName} from your badge"
+msgstr ""
+"Verberg op je badge wanneer je {premiumProductName} voor het eerst hebt "
+"gekocht"
 
 #. Title of the confirmation shown before deleting the age range from an Apple
 #. or Google account.
@@ -40090,6 +40334,12 @@ msgstr "Zoek taalcode…"
 msgid "Search languages…"
 msgstr "Talen zoeken…"
 
+#. Placeholder of the member search in the community ownership transfer
+#. section.
+#: src/features/guild/components/modals/guild_tabs/guild_overview_tab/sections/OwnerTransferSection.tsx
+msgid "Search members"
+msgstr "Leden zoeken"
+
 #. Placeholder of the search box in the add members or roles step of the
 #. create channel modal.
 #: src/features/channel/components/modals/ChannelCreateAccessStep.tsx
@@ -42441,6 +42691,11 @@ msgstr "Pictogram tonen wanneer ingeklapt"
 msgid "Show in all communities"
 msgstr "In alle communities weergeven"
 
+#. Opens the folder containing a downloaded file.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Show in folder"
+msgstr "Weergeven in map"
+
 #. Setting label that shows a badge for incoming friend requests.
 #: src/features/ui/action_menu/FluxerButtonContextMenu.tsx
 msgid "Show incoming friend request count"
@@ -42627,6 +42882,12 @@ msgstr "Wachtwoord tonen"
 #: src/features/user/components/settings_utils/search_index/VoiceVideoIndex.ts
 msgid "Show per-device participant volume sliders in voice menus"
 msgstr "Volumeregelaars voor deelnemers per apparaat tonen in spraakmenu’s"
+
+#. Toggle label and settings search entry for showing the Plutonium button in
+#. the direct messages list. Plutonium is the product name.
+#: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
+msgid "Show Plutonium button"
+msgstr ""
 
 #. Row in the quick CSS editor shortcuts dialog.
 #: src/features/theme_settings/components/QuickCssShortcutsModal.tsx
@@ -42997,7 +43258,7 @@ msgstr "Inloggen met je oude {productName}-app"
 #. provider.
 #: src/features/auth/flow/AuthSsoPanel.tsx
 msgid "Sign in with your organization's single sign-on provider."
-msgstr "Log in via de aanbieder van eenmalige aanmelding van je organisatie."
+msgstr "Log in via de single sign-on-aanbieder van je organisatie."
 
 #. Generic action label that signs the current user out of the app.
 #. Quiet text button on the date of birth step that signs out instead.
@@ -43220,8 +43481,8 @@ msgstr "Eén regel"
 
 #. Heading of the single sign-on panel when the admin has not given the sign-
 #. in provider a name.
-#. Label of the account settings row for connecting single sign-on when the
-#. admin has not given the provider a name.
+#. Label of the account settings row for single sign-on when the admin has not
+#. given the provider a name.
 #: src/features/auth/flow/AuthSsoPanel.tsx
 #: src/features/user/components/modals/tabs/account_security_tab/SsoConnectRow.tsx
 msgid "Single sign-on"
@@ -44488,6 +44749,12 @@ msgstr "Gestart door {name}"
 #: src/features/guild/utils/guild_tabs/audit_log/AuditLogRoleMessages.ts
 msgid "Started displaying members with this role separately"
 msgstr "Leden met deze rol worden nu apart weergegeven"
+
+#. Status shown under a file name in the downloads panel while the download is
+#. starting and no data has arrived yet. Keep it short.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Starting"
+msgstr "Bezig met starten"
 
 #. SMTP encryption option that upgrades only when the mail server offers
 #. STARTTLS.
@@ -46529,6 +46796,12 @@ msgid ""
 msgstr ""
 "Het bestand bevat de verificatietoken die we ophalen van <0>{dnsUrl}</0>."
 
+#. Status shown under a file name in the downloads panel when the download
+#. finished but the file is no longer where it was saved.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "The file was moved or deleted."
+msgstr "Het bestand is verplaatst of verwijderd."
+
 #. Body of the file-too-large alert when a single file exceeds the per-file
 #. size limit.
 #: src/features/messaging/components/alerts/FileSizeTooLargeModal.tsx
@@ -46538,19 +46811,6 @@ msgid ""
 msgstr ""
 "Het bestand dat je probeert te uploaden is groter dan de maximale limiet van"
 " {maxSizeFormatted}."
-
-#. Helper text under "Age range from your Apple or Google account" in the
-#. sensitive content settings.
-#: src/features/user/components/modals/tabs/privacy_safety_tab/AgeRangeSection.tsx
-msgid ""
-"The sanalyer app for iPhone, iPad or Android sent us this age range. If it "
-"shows that you're 18 or older, you can see 18+ content in the UK and Brazil."
-" It doesn't change your date of birth."
-msgstr ""
-"De sanalyer-app voor iPhone, iPad of Android heeft ons deze leeftijdsgroep "
-"gestuurd. Als die laat zien dat je 18 of ouder bent, kun je 18+-inhoud zien "
-"in het Verenigd Koninkrijk en Brazilië. Je geboortedatum verandert daardoor "
-"niet."
 
 #. Setup wizard body explaining the push relay.
 #: src/features/app/components/setup/SetupPolicySteps.tsx
@@ -47790,6 +48050,14 @@ msgstr ""
 "Deze community heeft uitnodigingen gepauzeerd. Je kunt het later opnieuw "
 "proberen."
 
+#. Shown in the community privacy modal under the direct messages switch when
+#. the community admins have turned off direct messages between members who
+#. are not friends, so the personal switch has no effect.
+#: src/features/guild/components/modals/GuildPrivacySettingsModal.tsx
+msgid "This community has turned off DMs between members who aren't friends"
+msgstr ""
+"Deze community heeft DM's uitgeschakeld tussen leden die geen vrienden zijn"
+
 #. Description text in the guild at capacity modal.
 #: src/features/guild/components/alerts/GuildAtCapacityModal.tsx
 msgid ""
@@ -48224,6 +48492,18 @@ msgstr ""
 "Deze instantie heeft single sign-on nog niet ingesteld. Vraag een beheerder "
 "om dit in te schakelen."
 
+#. Description of the account settings row for single sign-on when the
+#. instance requires it. providerName is the provider name typed by the admin.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid "This instance requires you to sign in with {providerName}."
+msgstr "Deze instantie vereist dat je inlogt met {providerName}."
+
+#. Description of the account settings row for single sign-on when the
+#. instance requires it and the admin has not given the provider a name.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid "This instance requires you to sign in with single sign-on."
+msgstr "Deze instantie vereist dat je inlogt met single sign-on."
+
 #. Setup wizard explanation of why the sign-in method is fixed: the instance
 #. is older than username sign-in.
 #: src/features/app/components/setup/SetupWizardSteps.tsx
@@ -48439,7 +48719,7 @@ msgid "This link has expired"
 msgstr "Deze link is verlopen"
 
 #. Body of the link-unavailable alert.
-#: src/features/messaging/components/markdown/renderers/LinkRenderer.tsx
+#: src/features/messaging/utils/InAppLinkUtils.tsx
 msgid "This link is not available for your account."
 msgstr "Deze link is niet beschikbaar voor je account."
 
@@ -49365,6 +49645,31 @@ msgctxt "code-editor"
 msgid "to"
 msgstr "tot"
 
+#. Instructions for GNOME. Keep "Settings" and "Apps" as the GNOME menu names
+#. in your language. {productName} is the app name.
+#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
+msgid "To change the keys, go to Settings > Apps > {productName}."
+msgstr ""
+"Ga naar Instellingen > Apps > {productName} om de toetsen te wijzigen."
+
+#. Instructions for KDE Plasma. Keep "System Settings", "Keyboard" and
+#. "Shortcuts" as the KDE menu names in your language. {productName} is the
+#. app name.
+#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
+msgid ""
+"To change the keys, go to System Settings > Keyboard > Shortcuts > "
+"{productName}."
+msgstr ""
+"Ga naar Systeeminstellingen > Toetsenbord > Sneltoetsen > {productName} om "
+"de toetsen te wijzigen."
+
+#. Instructions for changing system-wide shortcut keys on an unrecognized
+#. Linux desktop.
+#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
+msgid "To change the keys, open your desktop's keyboard shortcut settings."
+msgstr ""
+"Open de sneltoetsinstellingen van je desktop om de toetsen te wijzigen."
+
 #. Follows a Shift + Enter key hint under the forum search box. Starts
 #. lowercase because it continues the key hint.
 #: src/features/forum/utils/ForumMessageDescriptors.ts
@@ -49384,6 +49689,17 @@ msgstr ""
 msgid "To let people in, make a registration link in the admin panel."
 msgstr ""
 "Maak in het beheerpaneel een registratielink om mensen binnen te laten."
+
+#. Description of the account settings row for single sign-on in the desktop
+#. app, which cannot connect it. providerName is the provider name typed by
+#. the admin.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoConnectRow.tsx
+msgid ""
+"To sign in to this account with {providerName}, connect it in the web app in"
+" a browser."
+msgstr ""
+"Koppel dit account in de webapp in een browser om met {providerName} in te "
+"loggen."
 
 #: src/features/guild/components/modals/GuildOwnershipWarningModal.tsx
 msgid ""
@@ -49489,6 +49805,12 @@ msgstr "Opgeslagen media tonen of verbergen"
 #: src/features/user/components/modals/tabs/component_gallery_tab/SelectionsTab.tsx
 msgid "Toggle switches on and off to see state changes."
 msgstr "Schakel aan en uit om statuswijzigingen te zien."
+
+#. Keyboard shortcut action label shown in the shortcuts list and keybind
+#. editor. Keep short, sentence case.
+#: src/features/input/state/input_keybind/shared.ts
+msgid "Toggle the downloads panel"
+msgstr "Downloadpaneel openen/sluiten"
 
 #. Keyboard shortcut action label shown in the shortcuts list and keybind
 #. editor. Keep short, sentence case.
@@ -49657,8 +49979,9 @@ msgstr "Tracking"
 msgid "Tracking parameters"
 msgstr "Trackingparameters"
 
-#. Short label in the transfer ownership modal. Keep it concise.
-#: src/features/guild/components/modals/TransferOwnershipModal.tsx
+#. Title of the community ownership transfer section in community settings and
+#. of its confirmation modal.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
 msgid "Transfer community ownership"
 msgstr "Community-eigendom overdragen"
 
@@ -49669,10 +49992,15 @@ msgstr "Groepseigendom overdragen aan {userName}?"
 
 #. Action label in community settings that hands ownership of the community to
 #. another member.
-#: src/features/guild/components/modals/TransferOwnershipModal.tsx
 #: src/features/i18n/utils/CommonMessageDescriptors.ts
 msgid "Transfer ownership"
 msgstr "Eigendom overdragen"
+
+#. Disabled confirm button in the transfer ownership modal. The number is a
+#. countdown in seconds until the button can be pressed.
+#: src/features/guild/components/modals/TransferOwnershipModal.tsx
+msgid "Transfer ownership ({secondsRemaining})"
+msgstr "Eigendom overdragen ({secondsRemaining})"
 
 #. Activity log detail line under a community settings update, shown when the
 #. community got a new owner. It continues the entry summary, so it has no
@@ -49753,6 +50081,12 @@ msgstr ""
 "herstart toegepast. Het systeemvakprotocol laat apps tijdens gebruik niet "
 "betrouwbaar pictogrammen toevoegen of verwijderen. Start nu opnieuw op om je"
 " wijziging toe te passen."
+
+#. Desktop settings section title on Windows and Linux for choosing the color
+#. of the monochrome system tray icon.
+#: src/features/user/components/modals/tabs/DesktopSettingsTab.tsx
+msgid "Tray icon color"
+msgstr ""
 
 #. Short label in the channel and chat gif picker grid. Keep it concise.
 #. Short label in the channel and chat gif picker header. Keep it concise.
@@ -50097,6 +50431,13 @@ msgstr "Apparaatcamera uitschakelen"
 msgid "Turn off device stream"
 msgstr "Apparaatstream uitschakelen"
 
+#. Switch label in the community moderation settings tab. When on, members of
+#. this community who are not friends cannot start or continue direct messages
+#. through this community.
+#: src/features/guild/components/modals/guild_tabs/GuildModerationTab.tsx
+msgid "Turn off DMs between members who aren't friends"
+msgstr "DM's uitschakelen tussen leden die geen vrienden zijn"
+
 #. Voice menu action that ends the current user screen share.
 #: src/features/ui/action_menu/items/voice_participant_menu_data/shared.ts
 msgid "Turn off stream"
@@ -50110,6 +50451,12 @@ msgid ""
 msgstr ""
 "Schakel streamingprivacy uit voordat je inlog- of "
 "accountbeveiligingsgegevens bekijkt."
+
+#. Section description shown when the colored tray icon is on, so the
+#. monochrome color choice has no effect.
+#: src/features/user/components/modals/tabs/DesktopSettingsTab.tsx
+msgid "Turn off the colored tray icon to choose a color here."
+msgstr ""
 
 #. Button that turns on the Operator Pass that comes with Visionary, in
 #. profile settings and at the bottom of its dialog. Nothing is bought.
@@ -50184,6 +50531,26 @@ msgstr "Zet tekstsmileys om in emoji"
 #: src/features/theme_settings/components/QuickCssFiles.tsx
 msgid "Turn this theme on to see your changes in the app."
 msgstr "Zet dit thema aan om je wijzigingen in de app te zien."
+
+#. Activity log detail line under a community settings update, shown when the
+#. setting that stops direct messages between community members who are not
+#. friends was turned off again. It continues the entry summary, so it has no
+#. subject. It is a past tense record of a change the actor in the summary
+#. already made, never an instruction to the reader. Do not write it as a
+#. command, a button label or in first or second person.
+#: src/features/guild/utils/guild_tabs/audit_log/AuditLogGuildMessages.ts
+msgid "Turned DMs between members who aren't friends back on"
+msgstr "DM's tussen leden die geen vrienden zijn weer ingeschakeld"
+
+#. Activity log detail line under a community settings update, shown when the
+#. setting that stops direct messages between community members who are not
+#. friends was turned on. It continues the entry summary, so it has no
+#. subject. It is a past tense record of a change the actor in the summary
+#. already made, never an instruction to the reader. Do not write it as a
+#. command, a button label or in first or second person.
+#: src/features/guild/utils/guild_tabs/audit_log/AuditLogGuildMessages.ts
+msgid "Turned off DMs between members who aren't friends"
+msgstr "DM's tussen leden die geen vrienden zijn uitgeschakeld"
 
 #. Activity log detail line under a community settings update, shown when the
 #. Mature content setting of the community was turned off. It continues the
@@ -53011,6 +53378,22 @@ msgstr "Details bekijken"
 msgid "View devices that are signed in to your account"
 msgstr "Bekijk apparaten die zijn aangemeld bij je account"
 
+#. Button in the app layout native titlebar that opens the downloads panel.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "View downloads"
+msgstr "Downloads bekijken"
+
+#. Screen reader label of the titlebar button that opens the downloads panel,
+#. used while downloads are running. {count} is the number of downloads in
+#. progress.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid ""
+"View downloads. {count, plural, one {# download in progress} other {# "
+"downloads in progress}}"
+msgstr ""
+"Downloads bekijken. {count, plural, one {# download bezig} other {# "
+"downloads bezig}}"
+
 #: src/features/user/components/popouts/UserProfileShared.tsx
 msgid "View full profile"
 msgstr "Volledig profiel bekijken"
@@ -53865,21 +54248,6 @@ msgstr "We konden je leeftijdsgroep niet verwijderen. Probeer het opnieuw."
 msgid "We couldn't save that theme."
 msgstr "We konden dat thema niet opslaan."
 
-#. Body of the confirmation shown before deleting the age range. App Attest is
-#. an Apple product name and stays in English.
-#: src/features/user/components/modals/tabs/privacy_safety_tab/AgeRangeSection.tsx
-msgid ""
-"We delete the age range, the time we got it and the App Attest keys for your"
-" Apple devices. In the UK and Brazil, you can't see 18+ content until the "
-"app sends an age range again. The app may send it again later if your Apple "
-"or Google account still shares it with sanalyer."
-msgstr ""
-"We verwijderen de leeftijdsgroep, het tijdstip waarop we die kregen en de "
-"App Attest-sleutels voor je Apple-apparaten. In het Verenigd Koninkrijk en "
-"Brazilië kun je geen 18+-inhoud zien totdat de app opnieuw een "
-"leeftijdsgroep stuurt. De app kan je leeftijdsgroep later opnieuw sturen als"
-" je Apple- of Google-account die nog met sanalyer deelt."
-
 #. Modal body for existing-subscription block. Directs the user to the billing
 #. portal and addresses the just-paid race case. Keep plain and reassuring.
 #: src/features/app/components/dialogs/components/plutonium/hooks/useCheckoutActions.tsx
@@ -54702,6 +55070,21 @@ msgstr ""
 "Wanneer gestart bij het inloggen, start in het systeemvak in plaats van het "
 "venster te openen"
 
+#. Description for the GIF picker animation toggle in the animation tab on
+#. desktop.
+#: src/features/user/components/modals/tabs/accessibility_tab/AnimationTab.tsx
+msgid ""
+"When off, GIFs in the picker show a still frame until you hover over them."
+msgstr ""
+"Als dit uit staat, tonen GIF's in de kiezer een stilstaand beeld tot je er "
+"met de muis overheen gaat."
+
+#. Description for the GIF picker animation toggle in the animation tab on
+#. mobile.
+#: src/features/user/components/modals/tabs/accessibility_tab/AnimationTab.tsx
+msgid "When off, GIFs in the picker show a still frame."
+msgstr "Als dit uit staat, tonen GIF's in de kiezer een stilstaand beeld."
+
 #. Label in the display tab.
 #: src/features/user/components/modals/tabs/chat_settings_tab/DisplayTab.tsx
 msgid "When posted as links in chat"
@@ -54842,6 +55225,12 @@ msgid ""
 msgstr ""
 "Zolang deze badge verborgen is, toont {labsName} je zonder de Operator-rol "
 "en houd je #operators."
+
+#. Tray icon color option for a white monochrome tray icon, for dark taskbars
+#. and panels.
+#: src/features/user/components/modals/tabs/DesktopSettingsTab.tsx
+msgid "White"
+msgstr ""
 
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
@@ -55407,15 +55796,19 @@ msgstr "Je hebt deze verbinding al."
 msgid "You are about to leave {productName}"
 msgstr "Je staat op het punt om {productName} te verlaten"
 
+#. Warning in the ownership transfer confirmation. {0} is the new owner's
+#. display name and targetUserId is their numeric user ID, shown in brackets
+#. after the name.
 #. placeholder {0}: NicknameUtils.getNickname(targetUser, guildId)
 #: src/features/guild/components/modals/TransferOwnershipModal.tsx
 msgid ""
-"You are about to transfer ownership of this community to <0>{0}</0>. This "
-"action is <1>irreversible</1> and you will lose all owner privileges."
+"You are about to transfer ownership of this community to <0>{0}</0> "
+"({targetUserId}). This action is <1>irreversible</1> and you will lose all "
+"owner privileges."
 msgstr ""
 "Je staat op het punt het eigendom van deze community over te dragen aan "
-"<0>{0}</0>. Deze actie is <1>onomkeerbaar</1> en je verliest alle "
-"eigenaarsrechten."
+"<0>{0}</0> ({targetUserId}). Deze actie is <1>onomkeerbaar</1> en je "
+"verliest alle eigenaarsrechten."
 
 #. Error message in the user banned from guild modal. Keep the tone plain and
 #. specific.
@@ -55436,11 +55829,6 @@ msgid ""
 msgstr ""
 "Je bewerkt je profiel voor deze community. Dit profiel is alleen zichtbaar "
 "in deze community en overschrijft je algemene profiel."
-
-#. Body text in the settings dialog client info.
-#: src/features/app/components/dialogs/components/ClientInfo.tsx
-msgid "You are now a developer!"
-msgstr "Je bent nu een ontwikkelaar!"
 
 #. Modal body for the mobile checkout confirmation. Explains that the user is
 #. leaving the app to pay.
@@ -55579,18 +55967,6 @@ msgstr ""
 "Je kunt tot en met {date} een volledige terugbetaling krijgen. Dit beëindigt"
 " ook meteen je abonnement."
 
-#. Nagbar body telling people that the Fluxer app for Android phones can be
-#. installed from Google Play. {googlePlay} is the store brand name Google
-#. Play and must stay as is. Keep Fluxer and Android untranslated. Keep the
-#. tone calm and plain.
-#: src/features/app/components/layout/app_layout/nagbars/AndroidAppNagbar.tsx
-msgid ""
-"You can get the sanalyer app for Android on {googlePlay} and chat from your "
-"phone."
-msgstr ""
-"Je kunt de sanalyer-app voor Android downloaden via {googlePlay} en chatten "
-"vanaf je telefoon."
-
 #. Line under "Full refund" in the Payments settings. {amount} is the price
 #. paid, with currency, and {date} is the last day of the refund window, such
 #. as Nov 2, 2026. Both are filled in by code.
@@ -55684,6 +56060,19 @@ msgstr ""
 #: src/features/auth/components/accounts/AccountSwitcherModal.tsx
 msgid "You can sign back in at any time."
 msgstr "Je kunt op elk moment weer inloggen."
+
+#. Description of the account settings row that disconnects the account from
+#. the instance's single sign-on provider. providerName is the provider name
+#. typed by the admin.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid "You can sign in to this account with {providerName}."
+msgstr "Je kunt met {providerName} inloggen op dit account."
+
+#. Description of the account settings row that disconnects the account from
+#. single sign-on when the admin has not given the provider a name.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid "You can sign in to this account with single sign-on."
+msgstr "Je kunt met single sign-on inloggen op dit account."
 
 #. Cooldown notice in the new thread pane when the parent channel has
 #. slowmode. seconds is the wait time.
@@ -56054,7 +56443,7 @@ msgstr ""
 "tenzij het wordt verlengd."
 
 #. Body of the access-denied alert for clicked message links.
-#: src/features/messaging/components/markdown/renderers/LinkRenderer.tsx
+#: src/features/messaging/utils/InAppLinkUtils.tsx
 msgid "You do not have access to the channel where this message was sent."
 msgstr "Je hebt geen toegang tot het kanaal waar dit bericht is verzonden."
 
@@ -56531,6 +56920,26 @@ msgstr "Moderators hebben je geluid uitgeschakeld"
 #: src/features/auth/components/pages/oauth_authorize_page/OAuthAuthorizeActions.tsx
 msgid "You will be taken to {redirectHostname} after authorizing."
 msgstr "Je wordt doorgestuurd naar {redirectHostname} na autorisatie."
+
+#. Warning shown before disconnecting single sign-on. providerName is the
+#. provider name typed by the admin.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid ""
+"You won't be able to sign in with {providerName} anymore. You can still use "
+"your other sign-in methods."
+msgstr ""
+"Je kunt dan niet meer inloggen met {providerName}. Je andere inlogmethoden "
+"blijven werken."
+
+#. Warning shown before disconnecting single sign-on when the admin has not
+#. given the provider a name.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid ""
+"You won't be able to sign in with single sign-on anymore. You can still use "
+"your other sign-in methods."
+msgstr ""
+"Je kunt dan niet meer inloggen met single sign-on. Je andere inlogmethoden "
+"blijven werken."
 
 #. Security settings: confirmation modal body for turning off passkey-based
 #. two-factor authentication when the account also has an authenticator app.
@@ -57402,6 +57811,31 @@ msgstr "Je huidige kit werkt niet meer zodra de nieuwe is aangemaakt."
 msgid "Your desktop didn't set up system-wide keybinds."
 msgstr "Je desktop heeft geen systeembrede sneltoetsen ingesteld."
 
+#. Linux settings note under the list of system-wide shortcuts the desktop
+#. runs (KDE, GNOME). A key assigned here stops reaching every other app.
+#. {productName} is the app name.
+#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
+msgid ""
+"Your desktop keeps these keys for {productName}, so other apps can't use "
+"them."
+msgstr ""
+"Je desktop reserveert deze toetsen voor {productName}, zodat andere apps ze "
+"niet kunnen gebruiken."
+
+#. Linux settings note under the list of system-wide shortcuts the desktop
+#. runs (KDE, GNOME), shown when the "Use direct input device access" switch
+#. is offered below it. A key assigned here stops reaching every other app.
+#. {productName} is the app name.
+#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
+msgid ""
+"Your desktop keeps these keys for {productName}, so other apps can't use "
+"them. To use the same key in other apps, turn on direct input device access "
+"below."
+msgstr ""
+"Je desktop reserveert deze toetsen voor {productName}, zodat andere apps ze "
+"niet kunnen gebruiken. Schakel hieronder directe toegang tot invoerapparaten"
+" in om dezelfde toets in andere apps te gebruiken."
+
 #. Subtitle above the list of system-wide shortcuts assigned by the Linux
 #. desktop. {productName} is the app name.
 #: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
@@ -57485,6 +57919,12 @@ msgid ""
 msgstr ""
 "Je standaardbinnenkomstgeluid voor alle communities en DM’s. Specifiekere "
 "instellingen hebben voorrang."
+
+#. Shown in the invite modal when every friend is already a member of this
+#. community.
+#: src/features/invite/components/modals/InviteModal.tsx
+msgid "Your friends are already in this community."
+msgstr ""
 
 #. Empty state title in the friends list Online tab when no friends are
 #. online. Tone can be friendly.
@@ -57601,6 +58041,18 @@ msgstr ""
 "Je bericht kon niet worden bezorgd omdat het is gemarkeerd door onze "
 "veiligheidssystemen. Als je denkt dat dit een fout is, neem dan contact op "
 "met de beheerders van deze instantie."
+
+#. System message in a DM after a send fails because the only community the
+#. two people share has turned off direct messages between members who are not
+#. friends.
+#: src/features/messaging/state/MessageQueue.tsx
+msgid ""
+"Your message could not be delivered. A community you share with this person "
+"has turned off direct messages between members who aren't friends."
+msgstr ""
+"Je bericht kon niet worden bezorgd. Een community die je met deze persoon "
+"deelt, heeft privéberichten uitgeschakeld tussen leden die geen vrienden "
+"zijn."
 
 #. Label in the message queue state.
 #: src/features/messaging/state/MessageQueue.tsx
@@ -58196,6 +58648,68 @@ msgstr "Inzoomen"
 #: src/features/user/components/settings_utils/search_index/KeybindsIndex.ts
 msgid "Zoom out"
 msgstr "Uitzoomen"
+
+#. Help text under the theme color picker in the setup wizard branding step.
+#: src/features/app/components/setup/SetupBrandingFields.tsx
+msgid ""
+"Buttons, links and highlights across the app use this color, and phone "
+"browsers use it for their toolbar. Reset it to keep Fluxer's indigo."
+msgstr ""
+"Knoppen, links en markeringen in de hele app gebruiken deze kleur, en "
+"browsers op telefoons gebruiken hem voor hun werkbalk. Zet hem terug om het "
+"indigo van sanalyer te houden."
+
+#. Error shown in the desktop app when a passkey prompt starts but no security
+#. key is connected to the computer.
+#: src/features/auth/utils/PasskeyErrorMessages.ts
+msgid ""
+"sanalyer couldn't find a security key on this computer. Connect your "
+"security key and try again, or open sanalyer in your web browser and use "
+"your passkey there."
+msgstr ""
+"sanalyer kon geen beveiligingssleutel vinden op deze computer. Sluit je "
+"beveiligingssleutel aan en probeer het opnieuw, of open sanalyer in je "
+"webbrowser en gebruik daar je passkey."
+
+#. Helper text under "Age range from your Apple or Google account" in the
+#. sensitive content settings.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/AgeRangeSection.tsx
+msgid ""
+"The sanalyer app for iPhone, iPad or Android sent us this age range. If it "
+"shows that you're 18 or older, you can see 18+ content in the UK and Brazil."
+" It doesn't change your date of birth."
+msgstr ""
+"De sanalyer-app voor iPhone, iPad of Android heeft ons deze leeftijdsgroep "
+"gestuurd. Als die laat zien dat je 18 of ouder bent, kun je 18+-inhoud zien "
+"in het Verenigd Koninkrijk en Brazilië. Je geboortedatum verandert daardoor "
+"niet."
+
+#. Body of the confirmation shown before deleting the age range. App Attest is
+#. an Apple product name and stays in English.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/AgeRangeSection.tsx
+msgid ""
+"We delete the age range, the time we got it and the App Attest keys for your"
+" Apple devices. In the UK and Brazil, you can't see 18+ content until the "
+"app sends an age range again. The app may send it again later if your Apple "
+"or Google account still shares it with sanalyer."
+msgstr ""
+"We verwijderen de leeftijdsgroep, het tijdstip waarop we die kregen en de "
+"App Attest-sleutels voor je Apple-apparaten. In het Verenigd Koninkrijk en "
+"Brazilië kun je geen 18+-inhoud zien totdat de app opnieuw een "
+"leeftijdsgroep stuurt. De app kan je leeftijdsgroep later opnieuw sturen als"
+" je Apple- of Google-account die nog met sanalyer deelt."
+
+#. Nagbar body telling people that the Fluxer app for Android phones can be
+#. installed from Google Play. {googlePlay} is the store brand name Google
+#. Play and must stay as is. Keep Fluxer and Android untranslated. Keep the
+#. tone calm and plain.
+#: src/features/app/components/layout/app_layout/nagbars/AndroidAppNagbar.tsx
+msgid ""
+"You can get the sanalyer app for Android on {googlePlay} and chat from your "
+"phone."
+msgstr ""
+"Je kunt de sanalyer-app voor Android downloaden via {googlePlay} en chatten "
+"vanaf je telefoon."
 
 #. Instance selector error shown when no Fluxer instance answered at the
 #. address. Domain is interpolated.
@@ -61173,12 +61687,6 @@ msgstr "Open first, then add to sets."
 msgid "Open Microsoft Store"
 msgstr "Open Microsoft Store"
 
-#. Accessible label of a picture or video tile in the Media tab of the full
-#. profile page; opens that post.
-#: src/features/user/components/pages/ProfileMediaGrid.tsx
-msgid "Open post"
-msgstr "Open post"
-
 #. Button on the small profile card, the profile modal and the mobile profile
 #. sheet that opens the full profile page.
 #. Button on the small profile card, the profile modal and the mobile profile
@@ -61852,11 +62360,6 @@ msgstr ""
 #: src/features/feed/utils/FeedReportCopy.ts
 msgid "Scams, malware, or misinformation"
 msgstr "Oplichting, malware of misinformatie"
-
-#. Search community members before viewing their bot warnings.
-#: src/features/micupbot/components/MicupBotWarnings.tsx
-msgid "Search members"
-msgstr "Leden zoeken"
 
 #. Link under the Plus perk tiles; opens the shop. Ultra decorations (wings)
 #. are sold, not included.
@@ -66527,98 +67030,3 @@ msgstr "Timing test"
 msgctxt "band-latency-hint"
 msgid "Dismiss"
 msgstr "Dismiss"
-
-#. Short label in the Explore page sidebar. Keep it concise.
-#: src/features/discovery/discovery/DiscoverySidebar.tsx
-msgid "Apps"
-msgstr "Apps"
-
-#. Description of the switch that hides the purchase date, under the premium
-#. badge row in the "Badges" profile settings. Preserve {premiumProductName};
-#. it is inserted by code. Keep the tone plain and specific.
-#: src/features/user/components/modals/tabs/my_profile_tab/ProfileBadgeSettings.tsx
-msgid "Remove when you first bought {premiumProductName} from your badge"
-msgstr ""
-"Verberg op je badge wanneer je {premiumProductName} voor het eerst hebt "
-"gekocht"
-
-#. Linux settings note under the list of system-wide shortcuts the desktop
-#. runs (KDE, GNOME). A key assigned here stops reaching every other app.
-#. {productName} is the app name.
-#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
-msgid ""
-"Your desktop keeps these keys for {productName}, so other apps can't use "
-"them."
-msgstr ""
-"Je desktop reserveert deze toetsen voor {productName}, zodat andere apps ze "
-"niet kunnen gebruiken."
-
-#. Settings search synonym. Used to match this term when the user types it in
-#. the settings search bar.
-#: src/features/user/components/settings_utils/search_index/PlutoniumIndex.ts
-msgid "Premium"
-msgstr "Premium"
-
-#. Linux settings note under the list of system-wide shortcuts the desktop
-#. runs (KDE, GNOME), shown when the "Use direct input device access" switch
-#. is offered below it. A key assigned here stops reaching every other app.
-#. {productName} is the app name.
-#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
-msgid ""
-"Your desktop keeps these keys for {productName}, so other apps can't use "
-"them. To use the same key in other apps, turn on direct input device access "
-"below."
-msgstr ""
-"Je desktop reserveert deze toetsen voor {productName}, zodat andere apps ze "
-"niet kunnen gebruiken. Schakel hieronder directe toegang tot invoerapparaten"
-" in om dezelfde toets in andere apps te gebruiken."
-
-#. Instructions for GNOME. Keep "Settings" and "Apps" as the GNOME menu names
-#. in your language. {productName} is the app name.
-#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
-msgid "To change the keys, go to Settings > Apps > {productName}."
-msgstr ""
-"Ga naar Instellingen > Apps > {productName} om de toetsen te wijzigen."
-
-#. Privacy > Profile privacy: radio option label allowing every community
-#. member to see the profile.
-#: src/features/user/components/modals/tabs/privacy_safety_tab/ProfilePrivacyTab.tsx
-msgid "Friends and all communities"
-msgstr "Vrienden en alle communities"
-
-#. Privacy > Profile privacy: radio option label allowing only friends and
-#. members of small communities.
-#: src/features/user/components/modals/tabs/privacy_safety_tab/ProfilePrivacyTab.tsx
-msgid "Friends and small communities only"
-msgstr "Alleen vrienden en kleine communities"
-
-#. Shown instead of a key when the desktop has no key assigned to a system-
-#. wide shortcut.
-#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
-msgid "Not assigned"
-msgstr "Niet toegewezen"
-
-#. Instructions for changing system-wide shortcut keys on an unrecognized
-#. Linux desktop.
-#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
-msgid "To change the keys, open your desktop's keyboard shortcut settings."
-msgstr ""
-"Open de sneltoetsinstellingen van je desktop om de toetsen te wijzigen."
-
-#. Switch under the premium badge row in the "Badges" profile settings.
-#. Preserve {premiumProductName}; it is inserted by code. Keep the tone plain
-#. and specific.
-#: src/features/user/components/modals/tabs/my_profile_tab/ProfileBadgeSettings.tsx
-msgid "Hide {premiumProductName} purchase date"
-msgstr "Aankoopdatum van {premiumProductName} verbergen"
-
-#. Instructions for KDE Plasma. Keep "System Settings", "Keyboard" and
-#. "Shortcuts" as the KDE menu names in your language. {productName} is the
-#. app name.
-#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
-msgid ""
-"To change the keys, go to System Settings > Keyboard > Shortcuts > "
-"{productName}."
-msgstr ""
-"Ga naar Systeeminstellingen > Toetsenbord > Sneltoetsen > {productName} om "
-"de toetsen te wijzigen."

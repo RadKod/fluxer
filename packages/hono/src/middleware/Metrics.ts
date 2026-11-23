@@ -3,7 +3,7 @@
 import {BlockList, isIP} from 'node:net';
 import {isLoopbackIpAddress} from '@fluxer/ip_utils/src/IpAddress';
 import type {HttpBindings} from '@hono/node-server';
-import type {Context, Handler, MiddlewareHandler} from 'hono';
+import {type Context, type Handler, Hono, type MiddlewareHandler} from 'hono';
 
 const SKIP_PATHS = new Set(['/_health', '/_healthz', '/_metrics']);
 const METRICS_ALLOWED_CIDRS_ENV = 'FLUXER_METRICS_ALLOWED_CIDRS';
@@ -191,18 +191,34 @@ function renderRegisteredMetrics(): Array<string> {
 
 const METRICS_CONTENT_TYPE = 'text/plain; version=0.0.4; charset=utf-8';
 
-function renderMetricsResponse(c: Context, sections: Array<string>, allowList: BlockList): Response {
-	if (!isAllowedPeer(c.env, allowList)) {
-		return c.text('FORBIDDEN', 403, {'Content-Type': 'text/plain'});
-	}
-	return c.text(`${[...sections, ...renderRegisteredSections(), ...renderRegisteredMetrics()].join('\n\n')}\n`, 200, {
-		'Content-Type': METRICS_CONTENT_TYPE,
-	});
+type MetricsRenderer = () => string;
+
+function renderMetricsText(sections: Array<string>): string {
+	return `${[...sections, ...renderRegisteredMetrics()].join('\n\n')}\n`;
 }
 
-export function createRegisteredMetricsHandler(options: MetricsOptions = {}): Handler {
-	const allowList = buildAllowList(options.allowedCidrs ?? allowedCidrsFromEnv());
-	return (c) => renderMetricsResponse(c, [], allowList);
+function metricsResponse(c: Context, body: string): Response {
+	return c.text(body, 200, {'Content-Type': METRICS_CONTENT_TYPE});
+}
+
+// sanalyer: the public port also serves metrics to peers in FLUXER_METRICS_ALLOWED_CIDRS, not only to loopback.
+function createAllowListMetricsHandler(render: MetricsRenderer, allowList: BlockList): Handler {
+	return (c) => {
+		if (!isAllowedPeer(c.env, allowList)) {
+			return c.text('FORBIDDEN', 403, {'Content-Type': 'text/plain'});
+		}
+		return metricsResponse(c, render());
+	};
+}
+
+export function renderRegisteredMetricsText(): string {
+	return renderMetricsText(renderRegisteredSections());
+}
+
+export function createMetricsPortApp(render: MetricsRenderer): Hono {
+	const app = new Hono();
+	app.get('/_metrics', (c) => metricsResponse(c, render()));
+	return app;
 }
 
 interface MetricsState {
@@ -215,6 +231,7 @@ interface MetricsState {
 interface MetricsResult {
 	middleware: MiddlewareHandler;
 	metricsHandler: Handler;
+	renderMetrics: MetricsRenderer;
 	state: MetricsState;
 }
 
@@ -256,17 +273,15 @@ export function createMetricsMiddleware(serviceName: string, options: MetricsOpt
 		}
 	};
 
-	const metricsHandler: Handler = (c) =>
-		renderMetricsResponse(
-			c,
-			[
-				requestsTotal.render(`${prefix}_http_requests_total`, 'Total HTTP requests'),
-				requestDuration.render(`${prefix}_http_request_duration_seconds`, 'HTTP request duration in seconds'),
-				errorsTotal.render(`${prefix}_http_errors_total`, 'Total HTTP 5xx errors'),
-				uptime.render(`${prefix}_uptime_seconds`, 'Process uptime in seconds'),
-			],
-			allowList,
-		);
+	const renderMetrics: MetricsRenderer = () =>
+		renderMetricsText([
+			requestsTotal.render(`${prefix}_http_requests_total`, 'Total HTTP requests'),
+			requestDuration.render(`${prefix}_http_request_duration_seconds`, 'HTTP request duration in seconds'),
+			errorsTotal.render(`${prefix}_http_errors_total`, 'Total HTTP 5xx errors'),
+			uptime.render(`${prefix}_uptime_seconds`, 'Process uptime in seconds'),
+			...renderRegisteredSections(),
+		]);
+	const metricsHandler = createAllowListMetricsHandler(renderMetrics, allowList);
 
-	return {middleware, metricsHandler, state};
+	return {middleware, metricsHandler, renderMetrics, state};
 }

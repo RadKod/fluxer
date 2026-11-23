@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {BUILD_CHANNEL} from '@electron/common/BuildChannel';
-import {DESKTOP_PREBOOT_THEME_CHANNEL, LOCAL_DEVELOPMENT_INSTANCE_URL} from '@electron/common/Constants';
+import {
+	DESKTOP_PREBOOT_THEME_CHANNEL,
+	LOCAL_DEVELOPMENT_INSTANCE_URL,
+	RELEASE_RENDERER_MEMORY_CHANNEL,
+} from '@electron/common/Constants';
 import {type GameActivityState, isGameActivityState} from '@electron/common/GameActivityTypes';
 import {IS_OFFLINE_BUILD} from '@electron/common/OfflineBuild';
 import {readExactPlainRecord} from '@electron/common/PlainRecord';
@@ -17,6 +21,7 @@ import type {
 	DesktopWindowBehaviorSettings,
 	DisplayMediaPortalSurfacePreference,
 	DisplayMediaRequestInfo,
+	DownloadEntryEvent,
 	DownloadFileResult,
 	ElectronAPI,
 	GetDesktopSourcesOptions,
@@ -78,6 +83,7 @@ import {createFirstContentPaintSignal} from '@electron/preload/FirstContentPaint
 import {applyLegacyRawLocalStorage} from '@electron/preload/LegacyRawStorageSeed';
 import {createLocalAppPreloadAPI} from '@electron/preload/LocalAppPreload';
 import {createNativeGatewayPreloadAPI} from '@electron/preload/NativeGatewayPreload';
+import {DESKTOP_API_ATTACHMENT_AUTHORIZATION_CHANNEL} from '@fluxer/desktop_ipc/src/ApiAttachmentAuthorizationContract';
 import type {DesktopCapabilityManifest} from '@fluxer/desktop_ipc/src/CapabilityManifest';
 import {DESKTOP_CAPABILITY_MANIFEST_CHANNEL} from '@fluxer/desktop_ipc/src/CapabilityManifest';
 import {DESKTOP_DIRECT_MESSAGES_AVAILABLE_CHANNEL} from '@fluxer/desktop_ipc/src/DirectMessagesContract';
@@ -514,6 +520,8 @@ const api: ElectronAPI = {
 	reportLastRoute: (routePath: string): void => {
 		ipcRenderer.send(DESKTOP_LAST_ROUTE_CHANNEL, routePath);
 	},
+	setApiAttachmentAuthorization: (apiEndpoint: string, token: string | null): Promise<boolean> =>
+		ipcRenderer.invoke(DESKTOP_API_ATTACHMENT_AUTHORIZATION_CHANNEL, {apiEndpoint, token}) as Promise<boolean>,
 	reportInstanceProductName: (instanceKey: string, productName: string): void => {
 		ipcRenderer.send(DESKTOP_INSTANCE_PRODUCT_NAME_CHANNEL, {instanceKey, productName});
 	},
@@ -602,7 +610,29 @@ const api: ElectronAPI = {
 		ipcRenderer.send('window-close');
 	},
 	windowIsMaximized: (): Promise<boolean> => ipcRenderer.invoke('window-is-maximized'),
-
+	onDownloadsChanged: (handler: (entries: Array<DownloadEntryEvent>) => void): (() => void) => {
+		const listener = (_event: Electron.IpcRendererEvent, entries: Array<DownloadEntryEvent>): void => handler(entries);
+		ipcRenderer.on('downloads-changed', listener);
+		return () => {
+			ipcRenderer.off('downloads-changed', listener);
+		};
+	},
+	downloadsList: (): Promise<Array<DownloadEntryEvent>> => ipcRenderer.invoke('downloads-list'),
+	downloadCancel: (id: string): void => {
+		ipcRenderer.send('download-cancel', id);
+	},
+	downloadOpen: (id: string): void => {
+		ipcRenderer.send('download-open', id);
+	},
+	downloadReveal: (id: string): void => {
+		ipcRenderer.send('download-reveal', id);
+	},
+	downloadDismiss: (id: string): void => {
+		ipcRenderer.send('download-dismiss', id);
+	},
+	downloadsClear: (): void => {
+		ipcRenderer.send('downloads-clear');
+	},
 	popoutSetAlwaysOnTop: (key: string, flag: boolean): Promise<boolean> =>
 		ipcRenderer.invoke('popout:set-always-on-top', key, flag),
 	popoutFocus: (key: string): Promise<boolean> => ipcRenderer.invoke('popout:focus', key),
@@ -778,6 +808,7 @@ const api: ElectronAPI = {
 	},
 	getZoomFactor: (): Promise<number> => ipcRenderer.invoke('get-zoom-factor'),
 	getAccessibilitySupportEnabled: (): Promise<boolean> => ipcRenderer.invoke('get-accessibility-support-enabled'),
+	getSystemLocale: (): Promise<string> => ipcRenderer.invoke('system-locale-get'),
 	onAccessibilitySupportChanged: (callback: (enabled: boolean) => void): (() => void) => {
 		const handler = (_event: Electron.IpcRendererEvent, enabled: boolean): void => callback(enabled);
 		ipcRenderer.on('accessibility-support-changed', handler);
@@ -1112,6 +1143,10 @@ ipcRenderer.on('spellcheck-engine-resolved', (_event, info: SpellcheckResolvedEn
 	if (info?.mode === 'hunspell') {
 		installSpellcheckProvider();
 	}
+});
+
+ipcRenderer.on(RELEASE_RENDERER_MEMORY_CHANNEL, () => {
+	webFrame.clearCache();
 });
 
 contextBridge.exposeInMainWorld('electron', api);

@@ -61,6 +61,7 @@ const MODULE_REGISTRY_TEST_FILES = [
 	'src/api/worker/tasks/HarvestThreadMembershipPaging.test.ts',
 	'src/api/voice/tests/VoiceAvailabilityService.test.ts',
 	'src/api/billing_documents/BillingDocuments.test.ts',
+	'src/api/database/CassandraDriverPath.test.ts',
 	// Upstream billing suites that need the dormant Stripe paths (DormantStripeTestFixture mocks a module).
 	'src/api/stripe/tests/StripeWebhookBillingEmails.test.ts',
 	'src/api/stripe/tests/StripeCheckoutWithdrawalWaiver.test.ts',

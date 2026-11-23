@@ -115,9 +115,13 @@ export interface AppMetricsSnapshot {
 	freeMemoryMB: number;
 }
 
+export type MonochromeTrayIconTone = 'auto' | 'white' | 'black';
+
 export interface DesktopWindowBehaviorSettings {
 	showTrayIcon: boolean;
 	coloredTrayIcon: boolean;
+	monochromeTrayIconTone: MonochromeTrayIconTone;
+	unreadLauncherBadge: boolean;
 	minimizeToTray: boolean;
 	closeToTray: boolean;
 	startMinimized: boolean;
@@ -275,6 +279,17 @@ export type MediaAccessStatus = 'granted' | 'denied' | 'not-determined' | 'restr
 export type InputMonitoringPermissionStatus = 'granted' | 'denied' | 'not-determined' | 'unsupported';
 // 'restart-required': macOS holds the grant but it only takes effect after the app is relaunched.
 export type ScreenRecordingPermissionStatus = InputMonitoringPermissionStatus | 'restart-required';
+
+type DownloadEntryState = 'started' | 'progressing' | 'completed' | 'failed' | 'canceled';
+
+export interface DownloadEntryEvent {
+	id: string;
+	fileName: string;
+	state: DownloadEntryState;
+	receivedBytes: number;
+	totalBytes: number | null;
+	fileExists: boolean;
+}
 
 export interface DesktopSource {
 	id: string;
@@ -729,7 +744,13 @@ export interface ElectronAPI extends GameActivityAPI {
 	windowMaximize: () => void;
 	windowClose: () => void;
 	windowIsMaximized: () => Promise<boolean>;
-
+	onDownloadsChanged: (handler: (entries: Array<DownloadEntryEvent>) => void) => () => void;
+	downloadsList: () => Promise<Array<DownloadEntryEvent>>;
+	downloadCancel: (id: string) => void;
+	downloadOpen: (id: string) => void;
+	downloadReveal: (id: string) => void;
+	downloadDismiss: (id: string) => void;
+	downloadsClear: () => void;
 	popoutSetAlwaysOnTop: (key: string, flag: boolean) => Promise<boolean>;
 	popoutFocus: (key: string) => Promise<boolean>;
 	cssEditorWindow: true;
@@ -781,6 +802,7 @@ export interface ElectronAPI extends GameActivityAPI {
 	setZoomFactor: (factor: number) => void;
 	getZoomFactor: () => Promise<number>;
 	getAccessibilitySupportEnabled: () => Promise<boolean>;
+	getSystemLocale: () => Promise<string>;
 	onAccessibilitySupportChanged: (callback: (enabled: boolean) => void) => () => void;
 	getLinuxAppearance: () => Promise<LinuxAppearanceSnapshot>;
 	setPrebootTheme: (theme: string) => void;
@@ -859,6 +881,7 @@ export interface ElectronAPI extends GameActivityAPI {
 	capabilities: DesktopCapabilityManifest;
 	desktopModules: DesktopModuleAPI;
 	reportLastRoute: (routePath: string) => void;
+	setApiAttachmentAuthorization: (apiEndpoint: string, token: string | null) => Promise<boolean>;
 	reportInstanceProductName: (instanceKey: string, productName: string) => void;
 	notifyFirstContentPainted: () => void;
 	desktopAccounts: DesktopAccountStorageAPI;

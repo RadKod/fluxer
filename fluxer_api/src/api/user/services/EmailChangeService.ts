@@ -7,7 +7,7 @@ import {normalizeEmailKey} from '@app/api/auth/AccountCodes';
 import {EMAIL_CLEARABLE_SUSPICIOUS_ACTIVITY_FLAGS} from '@app/api/auth/AuthEmail';
 import * as AuthPassword from '@app/api/auth/AuthPassword';
 import {assertInstanceAcceptsEmailDomain} from '@app/api/auth/AuthRegistration';
-import {assertEmailNotBlocklisted} from '@app/api/auth/EmailBlocklist';
+import {assertEmailNotBlocklisted, assertMailHostsNotBlocklisted} from '@app/api/auth/EmailBlocklist';
 import type {User} from '@app/api/models/User';
 import {enqueueStripeCustomerEmailSync} from '@app/api/stripe/StripeCustomer';
 import {getAccountTier} from '@app/api/user/AccountTier';
@@ -190,6 +190,7 @@ export class EmailChangeService {
 		if (!hasValidDns) {
 			throw InputValidationError.fromCode('new_email', ValidationErrorCodes.EMAIL_DOMAIN_CANNOT_RECEIVE_MAIL);
 		}
+		await assertMailHostsNotBlocklisted(trimmedEmail, 'new_email', emailDnsValidation);
 		const existing = await users.findByEmail(trimmedEmail.toLowerCase());
 		if (existing && existing.id !== user.id) {
 			throw InputValidationError.fromCode('new_email', ValidationErrorCodes.EMAIL_ALREADY_IN_USE);

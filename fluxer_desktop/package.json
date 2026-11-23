@@ -11,11 +11,11 @@
 	"scripts": {
 		"build": "node scripts/build.mjs",
 		"generate:windows-badges": "electron scripts/generate-windows-badges.mjs",
-		"set-channel": "../tools/ci/run.sh build-desktop --step set_build_channel",
-		"test": "pnpm test:main && cargo test --manifest-path native/rust/Cargo.toml",
-		"test:main": "pnpm set-channel && node --test \"src/main/*.test.mjs\" \"src/preload/*.test.mjs\" \"src/common/*.test.mjs\" \"packaging/windows/store/*.test.mjs\"",
+		"package:dir": "node scripts/build.mjs && electron-builder --config electron-builder.config.cjs --dir",
+		"test": "pnpm test:main && vitest run && cargo test --manifest-path native/rust/Cargo.toml",
+		"test:main": "node --test \"src/main/*.test.mjs\" \"src/preload/*.test.mjs\" \"src/common/*.test.mjs\" \"packaging/windows/store/*.test.mjs\"",
 		"test:native": "cargo test --manifest-path native/rust/Cargo.toml && cargo test --manifest-path native/app-store/Cargo.toml && cargo test --manifest-path native/gateway-socket/Cargo.toml",
-		"typecheck": "pnpm set-channel && tsc --noEmit"
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@fluxer/constants": "workspace:*",
@@ -37,12 +37,8 @@
 		"electron-builder": "27.0.0-alpha.8",
 		"electron-builder-squirrel-windows": "27.0.0-alpha.8",
 		"esbuild": "catalog:",
-		"typescript": "catalog:ts7"
-	},
-	"knip": {
-		"ignoreDependencies": [
-			"electron-builder"
-		]
+		"typescript": "catalog:ts7",
+		"vitest": "catalog:"
 	},
 	"optionalDependencies": {
 		"@fluxer/app-store": "file:./native/app-store",

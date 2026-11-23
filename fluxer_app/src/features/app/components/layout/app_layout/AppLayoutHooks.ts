@@ -102,6 +102,7 @@ export const useNagbarConditions = (): NagbarConditions => {
 	const canShowTaskbarPin = useTaskbarPinNagbar(Authentication.isAuthenticated);
 	const user = Users.currentUser;
 	const nagbarState = Nagbar;
+	const syncedDismissalsLoaded = UserSettings.isHydrated();
 	const premiumOverrideType = DeveloperOptions.premiumTypeOverride;
 	const premiumWillCancel = user?.premiumWillCancel ?? false;
 	const isMockPremium = premiumOverrideType != null && premiumOverrideType > 0;
@@ -209,7 +210,7 @@ export const useNagbarConditions = (): NagbarConditions => {
 	const canShowDesktopDownload = (() => {
 		if (nagbarState.forceHideDesktopDownload) return false;
 		if (nagbarState.forceDesktopDownload) return true;
-		return isDesktopBrowser && !nagbarState.desktopDownloadDismissed;
+		return isDesktopBrowser && syncedDismissalsLoaded && !nagbarState.desktopDownloadDismissed;
 	})();
 	const androidAppNagbarStarted = useAndroidAppNagbarStarted();
 	const canShowAndroidApp = (() => {
@@ -217,7 +218,7 @@ export const useNagbarConditions = (): NagbarConditions => {
 		if (nagbarState.forceAndroidApp) return true;
 		if (hasBrokenElectronNativeContext) return false;
 		if (isIOSMobileOrTabletUserAgent(navigator.userAgent, navigator.maxTouchPoints)) return false;
-		return androidAppNagbarStarted && !nagbarState.androidAppDismissed;
+		return androidAppNagbarStarted && syncedDismissalsLoaded && !nagbarState.androidAppDismissed;
 	})();
 	const canShowVisionaryMfa = (() => {
 		if (isSelfHosted) return false;
@@ -389,7 +390,8 @@ export const useNagbarConditions = (): NagbarConditions => {
 	} else if (nagbarState.forceDesktopNotification) {
 		canShowDesktopNotification = true;
 	} else {
-		canShowDesktopNotification = shouldShowDesktopNotification && !nagbarState.desktopNotificationDismissed;
+		canShowDesktopNotification =
+			shouldShowDesktopNotification && syncedDismissalsLoaded && !nagbarState.desktopNotificationDismissed;
 	}
 	return {
 		canShowBuildEnvironment,

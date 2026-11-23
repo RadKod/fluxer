@@ -2249,13 +2249,17 @@ The single sign-on redirect URL of the admin panel. The admin service works it o
 
 The address the api service listens on. When it's empty, it listens on every interface.
 
+### `FLUXER_API_METRICS_PORT`
+
+A second port the api serves only its metrics on, to anyone who can reach it. The public port only serves metrics to the same machine. When it's empty, the api opens no second port. The stack doesn't collect api metrics.
+
 ### `FLUXER_API_WORKER_LANE`
 
 The job lane a worker runs when `FLUXER_API_WORKER_MODE` is `single_lane`. Each worker container in the stack runs every lane.
 
 ### `FLUXER_API_WORKER_METRICS_PORT`
 
-The port the worker serves its metrics on. The stack doesn't collect worker metrics.
+The port the worker serves its metrics on, to anyone who can reach it. The stack doesn't collect worker metrics.
 
 ### `FLUXER_API_WORKER_TASK`
 
@@ -2292,6 +2296,10 @@ The NATS subject the API sends gifs service requests to. The gifs service always
 ### `FLUXER_MEDIA_PROXY_HOST`
 
 The address the media proxy listens on. When it's empty, it listens on `0.0.0.0`.
+
+### `FLUXER_MEDIA_PROXY_METRICS_PORT`
+
+A second port the media proxy serves only its metrics on, to anyone who can reach it. The public port only serves metrics to the same machine. When it's empty, the media proxy opens no second port. The stack doesn't collect media proxy metrics.
 
 ### `FLUXER_MEDIA_PROXY_STORAGE_ROOT`
 
@@ -2789,6 +2797,14 @@ How many proxies in front of the push relay it trusts.
 
 The stack runs Postgres only.
 
+#### `FLUXER_CASSANDRA_ADDRESS_TRANSLATION`
+
+How the Rust services reach the Cassandra nodes the driver discovers. `auto` sends every connection to the contact point when `FLUXER_CASSANDRA_HOSTS` lists one host, and uses the nodes' own addresses otherwise. `contact_point` always sends every connection to the first host. `none` always uses the nodes' own addresses, so each request can go to a node that holds the data. Use `none` when every node's address is reachable, such as inside Kubernetes. Defaults to `auto`.
+
+#### `FLUXER_CASSANDRA_CONSISTENCY`
+
+The consistency level for Cassandra reads and writes that don't set their own: `one`, `local_one`, `quorum`, `local_quorum`, `each_quorum` or `all`. Defaults to `local_quorum`.
+
 #### `FLUXER_CASSANDRA_HOSTS`
 
 The Cassandra hosts.
@@ -2799,7 +2815,7 @@ The Cassandra keyspace.
 
 #### `FLUXER_CASSANDRA_LOCAL_DC`
 
-The local Cassandra data centre.
+The local Cassandra data centre. Requests go only to nodes in it, and `local_quorum` and `local_serial` count the replicas in it. When it's empty, the Rust services send requests to any data centre.
 
 #### `FLUXER_CASSANDRA_PASSWORD`
 
@@ -2808,6 +2824,10 @@ The Cassandra password.
 #### `FLUXER_CASSANDRA_PORT`
 
 The Cassandra port.
+
+#### `FLUXER_CASSANDRA_SERIAL_CONSISTENCY`
+
+The consistency level for Cassandra lightweight transactions and the reads that check them: `serial` or `local_serial`. Defaults to `local_serial`.
 
 #### `FLUXER_CASSANDRA_USERNAME`
 

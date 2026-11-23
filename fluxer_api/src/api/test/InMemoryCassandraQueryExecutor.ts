@@ -9,7 +9,8 @@ import type {
 	PreparedQuery,
 	WhereExpr,
 } from '@app/api/database/CassandraTypes';
-import {isConditionalQuery} from '@app/api/database/CassandraTypes';
+import {getStatementMeta, isConditionalQuery} from '@app/api/database/CassandraTypes';
+import {lwtRows, writeKeys} from '@app/api/database/capture/CaptureKeys';
 import {normalizeCql, rowComparator, valuesEqual} from '@app/api/database/PostgresKvQueryExecutor';
 import {MAX_TOKEN, MIN_TOKEN} from '@app/api/database/TokenRangeScan';
 import cassandra from 'cassandra-driver';
@@ -210,10 +211,21 @@ function projectRow(row: Row, columns: ReadonlyArray<string> | undefined): Row {
 	if (!columns) return cloneRow(row);
 	const projected: Row = {};
 	for (const column of columns) {
-		// Cassandra returns null for selected columns that have never been written.
 		projected[column] = cloneValue(row[column] ?? null);
 	}
 	return projected;
+}
+
+function assertCaptureCanKey(query: PreparedQuery, meta: KvQueryMeta | undefined): void {
+	const {type} = getStatementMeta(query.cql);
+	if (type === 'SELECT') return;
+	const params = meta?.nowColumn ? {...query.params, [meta.nowColumn]: true} : query.params;
+	const keyed = isConditionalQuery({cql: query.cql, params, kvMeta: meta})
+		? lwtRows(meta, params)
+		: writeKeys(meta, type, params);
+	if (keyed === undefined) {
+		throw new Error(`Cassandra write capture cannot key this write: ${query.cql}`);
+	}
 }
 
 function parseRawMeta(cql: string): KvQueryMeta<Row> | null {
@@ -303,6 +315,7 @@ export class InMemoryCassandraQueryExecutor implements CassandraQueryExecutorFor
 		const meta = this.meta(query);
 		const recordedMeta = query.kvMeta ?? getKvMeta(query.cql);
 		if (recordedMeta) this.executed.push(recordedMeta);
+		assertCaptureCanKey(query, recordedMeta);
 		switch (meta.action) {
 			case 'select':
 				return this.select(meta, query.params) as Array<T>;

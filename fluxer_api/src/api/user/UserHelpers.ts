@@ -6,6 +6,7 @@ import {getCachedInstancePremiumMode} from '@app/api/limits/InstancePremiumModeC
 import type {User} from '@app/api/models/User';
 import {getCachedDeferredPhoneGateEnabled} from '@app/api/user/DeferredPhoneGateCache';
 import {accountPolicyContactHasCapability} from '@app/api/user/LegacyAccountPolicy';
+import {isAccountLimited} from '@app/api/user/AccountLimit';
 import {isEnforcementReasonCode} from '@fluxer/constants/src/EnforcementReasons';
 import {
 	DEFERRABLE_PHONE_FLAGS,
@@ -302,8 +303,10 @@ export function isSignInRefused(user: Pick<User, 'flags' | 'deletionStartedAt' |
 	return isAccountClosed(user) || isTemporarilyBanned(user);
 }
 
-export function canOwnerRunBots(owner: Pick<User, 'flags' | 'deletionStartedAt' | 'tempBannedUntil'>): boolean {
-	return !isAccountClosed(owner) && !isAccountDisabled(owner);
+export function canOwnerRunBots(
+	owner: Pick<User, 'isBot' | 'isSystem' | 'flags' | 'deletionStartedAt' | 'tempBannedUntil'>,
+): boolean {
+	return !isAccountClosed(owner) && !isAccountDisabled(owner) && !isAccountLimited(owner);
 }
 
 export function isContentHidden(user: Pick<User, 'contentHiddenSince'>, messageId: bigint): boolean {
@@ -444,8 +447,4 @@ const PROFILE_SUBSTRING_EXEMPT_FLAGS = UserFlags.STAFF;
 
 export function isProfileSubstringExempt(user: Pick<PremiumCheckable, 'flags'>): boolean {
 	return (user.flags & PROFILE_SUBSTRING_EXEMPT_FLAGS) !== 0n;
-}
-
-export function isBugHunterBotUser(user: Pick<User, 'flags' | 'isBot'>): boolean {
-	return user.isBot && (user.flags & UserFlags.BUG_HUNTER) !== 0n;
 }

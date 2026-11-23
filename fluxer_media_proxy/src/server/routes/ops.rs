@@ -99,6 +99,14 @@ pub(in crate::server) async fn metrics_handler(
     if !allowed.is_metrics_peer_allowed(&peer) {
         return text(StatusCode::FORBIDDEN, "FORBIDDEN");
     }
+    metrics_response(&app)
+}
+
+pub(in crate::server) async fn metrics_port_handler(State(app): State<Arc<AppState>>) -> Response {
+    metrics_response(&app)
+}
+
+fn metrics_response(app: &AppState) -> Response {
     let mut response = Response::new(Body::from(app.metrics.render()));
     http_headers::add_security_headers(response.headers_mut());
     response.headers_mut().insert(

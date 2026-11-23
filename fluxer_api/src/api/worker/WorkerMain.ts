@@ -3,6 +3,10 @@
 import {Config} from '@app/api/Config';
 import {createApiContext} from '@app/api/CreateApiContext';
 import {setDatabaseQueryExecutor} from '@app/api/database/CassandraQueryExecution';
+import {
+	startCassandraWriteCapture,
+	stopCassandraWriteCapture,
+} from '@app/api/database/capture/CassandraWriteCaptureLifecycle';
 import {ensurePostgresKvSchema, PostgresKvQueryExecutor} from '@app/api/database/PostgresKvQueryExecutor';
 import {
 	activityEventsPublishing,
@@ -70,7 +74,7 @@ import {createWorkerProcessErrorHandler} from '@app/api/worker/WorkerProcessErro
 import {WorkerRunner} from '@app/api/worker/WorkerRunner';
 import {WorkerService} from '@app/api/worker/WorkerService';
 import {workerTasks} from '@app/api/worker/WorkerTaskRegistry';
-import {createRegisteredMetricsHandler} from '@fluxer/hono/src/middleware/Metrics';
+import {createMetricsPortApp, renderRegisteredMetricsText} from '@fluxer/hono/src/middleware/Metrics';
 import {createServer, setupGracefulShutdown} from '@fluxer/hono/src/Server';
 import type {ServerType} from '@hono/node-server';
 import {BACKGROUND_READ_TIMEOUT_MS, getClient, initCassandra, shutdownCassandra} from '@pkgs/cassandra/src/Client';
@@ -78,13 +82,13 @@ import type {IKVProvider} from '@pkgs/kv_client/src/IKVProvider';
 import {JetStreamConnectionManager} from '@pkgs/nats/src/JetStreamConnectionManager';
 import {getDefaultPostgresClient, initPostgres, shutdownPostgres} from '@pkgs/postgres/src/Client';
 import type {WorkerTaskHandler} from '@pkgs/worker/src/contracts/WorkerTask';
-import {Hono} from 'hono';
 import {ms} from 'itty-time';
 
 function startWorkerMetricsServer(port: number): ServerType {
-	const app = new Hono();
-	app.get('/_metrics', createRegisteredMetricsHandler());
-	return createServer(app, {port, onListen: (info) => Logger.info({port: info.port}, 'Worker metrics listening')});
+	return createServer(createMetricsPortApp(renderRegisteredMetricsText), {
+		port,
+		onListen: (info) => Logger.info({port: info.port}, 'Worker metrics listening'),
+	});
 }
 
 // Micup: kvClient is optional so the cron wiring tests can register jobs without a KV client.
@@ -213,6 +217,8 @@ export function registerCronJobs(cron: CronScheduler, jobsStreamMaxAgeMs: number
 		enabled: () => (kvClient ? singleCommunityJoinPending(kvClient) : false),
 	});
 	cron.upsert('liftExpiredGuildInvitePauses', 'liftExpiredGuildInvitePauses', {}, '0 * * * * *', {ledger: false});
+	cron.upsert('endExpiredPlannedJoinWaves', 'endExpiredPlannedJoinWaves', {}, '0 * * * * *', {ledger: false});
+	cron.upsert('restatePlannedJoinWaves', 'restatePlannedJoinWaves', {}, '0 20 4 * * *', {ledger: false});
 	cron.upsert('archiveInactiveThreads', 'archiveInactiveThreads', {}, '0 * * * * *', {
 		ledger: false,
 		enabled: () => true,
@@ -455,6 +461,7 @@ export async function startWorkerMain(): Promise<void> {
 				searchInitialized = false;
 			}
 		});
+		await cleanupStep('cassandra write capture', stopCassandraWriteCapture);
 		await cleanupStep('cassandra', async () => {
 			if (cassandraInitialized) {
 				await shutdownCassandra();
@@ -506,10 +513,11 @@ export async function startWorkerMain(): Promise<void> {
 				port: Config.cassandra.port,
 				keyspace: Config.cassandra.keyspace,
 				localDc: Config.cassandra.localDc,
+				consistency: Config.cassandra.consistency,
+				serialConsistency: Config.cassandra.serialConsistency,
 				username: Config.cassandra.username || undefined,
 				password: Config.cassandra.password || undefined,
 				readTimeoutMs: BACKGROUND_READ_TIMEOUT_MS,
-				consistency: Config.cassandra.consistency,
 			}).catch((error: unknown) => {
 				if (Config.instance.selfHosted) {
 					logMissingCassandraKeyspace(error, Config.cassandra.keyspace, Config.cassandra.localDc, Logger);
@@ -526,6 +534,7 @@ export async function startWorkerMain(): Promise<void> {
 					logger: Logger,
 				});
 			}
+			await startCassandraWriteCapture(Config.cassandraWriteCapture, 'worker');
 		}
 		snowflakeService = createSnowflakeService();
 		await snowflakeService.initialize();

@@ -10,7 +10,6 @@ import type {WorkerTaskName} from '@app/api/worker/WorkerLaneConfig';
 import type {
 	BunnyPurgeMode,
 	CachePurgeAdapterName,
-	CassandraConsistencyName,
 	StoreProductSlotName,
 	VoiceTurnServerConfig,
 } from '@fluxer/config/src/MasterConfig';
@@ -18,6 +17,7 @@ import type {AccountIdentityMode, TagStyle} from '@fluxer/constants/src/AccountI
 import type {SmtpTlsMode} from '@fluxer/constants/src/SmtpConstants';
 import type {GeoEntry} from '@fluxer/schema/src/domains/geolocation/GeolocationSchemas';
 import type {OperatorPassCurrency} from '@fluxer/schema/src/domains/operator_pass/OperatorPassSchemas';
+import type {CassandraConsistencyName, CassandraSerialConsistencyName} from '@pkgs/cassandra/src/Client';
 
 export type APIWorkerMode = 'all_lanes' | 'single_lane' | 'single_task';
 export type APIWorkerLaneName =
@@ -116,6 +116,7 @@ export interface APIConfig {
 	nodeEnv: 'development' | 'production';
 	port: number;
 	host?: string;
+	metricsPort?: number;
 	headersTimeoutMs: number;
 	requestTimeoutMs: number;
 	maxInflightRequests: number;
@@ -127,9 +128,10 @@ export interface APIConfig {
 		port: number;
 		keyspace: string;
 		localDc: string;
+		consistency: CassandraConsistencyName;
+		serialConsistency: CassandraSerialConsistencyName;
 		username: string;
 		password: string;
-		consistency?: CassandraConsistencyName | undefined;
 	};
 	postgres: {
 		url: string;
@@ -168,6 +170,12 @@ export interface APIConfig {
 		enabled: boolean;
 		stream: string;
 		skipBuckets: Array<string>;
+	};
+	cassandraWriteCapture: {
+		mode: 'off' | 'behind';
+		natsUrl: string;
+		authToken: string;
+		stream: string;
 	};
 	search: {
 		engine: 'elasticsearch' | 'meilisearch' | 'none';
@@ -233,6 +241,21 @@ export interface APIConfig {
 			reports: string;
 			harvests: string;
 		};
+		storeId: string;
+		dualStoreEnabled: boolean;
+		fallbackReadsEnabled: boolean;
+		fallback:
+			| {
+					storeId: string;
+					endpoint: string;
+					presignedUrlBase: string | undefined;
+					forcePathStyle: boolean;
+					region: string;
+					accessKeyId: string;
+					secretAccessKey: string;
+					bucketMap: string;
+			  }
+			| undefined;
 	};
 	email: {
 		enabled: boolean;

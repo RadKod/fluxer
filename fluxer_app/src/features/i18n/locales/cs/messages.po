@@ -3777,6 +3777,13 @@ msgstr ""
 msgid "{productName} wordmark"
 msgstr "Textové logo {productName}"
 
+#. Download progress shown under a file name in the downloads panel.
+#. {progress} is the formatted percentage downloaded so far, for example 42%.
+#. {total} is the formatted size of the whole file, for example 3.2 MB.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "{progress} of {total}"
+msgstr "{progress} z {total}"
+
 #: src/features/connection/components/modals/AddConnectionModal.tsx
 msgid ""
 "{providerName} opens in your browser. Sign in there to connect your account."
@@ -3895,6 +3902,13 @@ msgid "{resultCount, plural, one {# result} other {# results}}"
 msgstr ""
 "{resultCount, plural, one {# výsledek} few {# výsledky} many {# výsledku} "
 "other {# výsledků}}"
+
+#. OAuth authorize page error shown when the authorization link asks for a
+#. scope this app does not offer. Preserve {scope}, it is the technical scope
+#. name inserted by code.
+#: src/features/auth/components/pages/oauth_authorize_page/state/useAuthorizeFlow.ts
+msgid "{scope} is not a supported scope."
+msgstr ""
 
 #. AFK timeout label for a stored custom duration shown in the idle settings
 #. section.
@@ -5298,6 +5312,49 @@ msgstr ""
 "Přidejte si přístupový klíč pro přihlašování pomocí otisku prstu, obličeje "
 "nebo zámku obrazovky. Můžete to také provést později v nastavení."
 
+#. Description of the account settings row for single sign-on when the account
+#. has no other way to sign in. providerName is the provider name typed by the
+#. admin.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid ""
+"Add a password or passkey to your account before you disconnect "
+"{providerName}."
+msgstr ""
+"Než odpojíš {providerName}, přidej ke svému účtu heslo nebo přístupový klíč."
+
+#. Description of the account settings row for single sign-on when the account
+#. has no other way to sign in and the admin has not given the provider a
+#. name.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid ""
+"Add a password or passkey to your account before you disconnect single sign-"
+"on."
+msgstr ""
+"Než odpojíš jednotné přihlášení, přidej ke svému účtu heslo nebo přístupový "
+"klíč."
+
+#. Description of the account settings row for single sign-on when the account
+#. has no other way to sign in and the instance allows sign-in with codes sent
+#. by email. providerName is the provider name typed by the admin.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid ""
+"Add a password or passkey, or confirm your email address to sign in with "
+"emailed codes, before you disconnect {providerName}."
+msgstr ""
+"Než odpojíš {providerName}, přidej heslo nebo přístupový klíč, nebo potvrď "
+"svou e-mailovou adresu pro přihlašování kódy z e-mailu."
+
+#. Description of the account settings row for single sign-on when the account
+#. has no other way to sign in, the instance allows sign-in with codes sent by
+#. email and the admin has not given the provider a name.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid ""
+"Add a password or passkey, or confirm your email address to sign in with "
+"emailed codes, before you disconnect single sign-on."
+msgstr ""
+"Než odpojíš jednotné přihlášení, přidej heslo nebo přístupový klíč, nebo "
+"potvrď svou e-mailovou adresu pro přihlašování kódy z e-mailu."
+
 #. Form placeholder for the tag input on an expression form.
 #: src/features/expressions/components/modals/TagListField.tsx
 msgid "Add a tag"
@@ -5339,8 +5396,12 @@ msgstr "Přidat účet"
 msgid "Add action."
 msgstr "Přidat akci."
 
+#. Button on the startup screen shown when the current account's instance is
+#. offline or not responding. Restarts the app signed out so the person can
+#. sign in to an account on any instance. The current account stays saved.
 #. Last tile in the account switcher grid, and the title of the step it opens,
 #. where another saved account is added by signing in or registering.
+#: src/features/app/components/BootstrapErrorScreen.tsx
 #: src/features/auth/components/accounts/account_switcher_modal/AccountSwitcherAuthFlow.tsx
 msgid "Add an account"
 msgstr "Přidat účet"
@@ -7636,6 +7697,11 @@ msgstr ""
 msgid "Approved"
 msgstr "Schváleno"
 
+#. Short label in the Explore page sidebar. Keep it concise.
+#: src/features/discovery/discovery/DiscoverySidebar.tsx
+msgid "Apps"
+msgstr "Aplikace"
+
 #. Security settings card title for third-party app access and signed-in
 #. devices.
 #: src/features/user/components/modals/tabs/account_security_tab/SecurityTab.tsx
@@ -8756,6 +8822,12 @@ msgstr "Záložní kódy byly vygenerovány znovu"
 msgid "Badge and wall count: {count}"
 msgstr "Počet pro odznak a zeď: {count}"
 
+#. Desktop setting toggle label on Linux. Controls whether unread messages
+#. without mentions put a badge on the app icon in the taskbar or dock.
+#: src/features/user/components/modals/tabs/DesktopSettingsTab.tsx
+msgid "Badge the app icon for unread messages"
+msgstr ""
+
 #. Title of the profile settings section that lists the badges you hold and
 #. lets you hide each one.
 #. Title of the window that lists every badge of a person or community.
@@ -9042,6 +9114,12 @@ msgstr "Biometrické ověřování"
 #: src/features/user/utils/UserMessageDescriptors.ts
 msgid "Bitrate"
 msgstr "Přenosová rychlost"
+
+#. Tray icon color option for a black monochrome tray icon, for light taskbars
+#. and panels.
+#: src/features/user/components/modals/tabs/DesktopSettingsTab.tsx
+msgid "Black"
+msgstr ""
 
 #. Generic destructive action label that blocks a user.
 #. Settings search synonym. Used to match this term when the user types it in
@@ -9646,6 +9724,16 @@ msgstr "Tlačítko s kontextovou nabídkou"
 msgid "Buttons"
 msgstr "Tlačítka"
 
+#. Help text under the theme color picker in the setup wizard branding step.
+#: src/features/app/components/setup/SetupBrandingFields.tsx
+msgid ""
+"Buttons and highlights across the app use this color, and phone browsers use"
+" it for their toolbar. Reset it to keep Fluxer's indigo."
+msgstr ""
+"Tuto barvu používají tlačítka a zvýraznění v celé aplikaci a mobilní "
+"prohlížeče ji používají pro svůj panel nástrojů. Pokud ji obnovíte, zůstane "
+"indigová barva sanalyeru."
+
 #: src/features/user/components/modals/tabs/component_gallery_tab/ComponentGalleryTabButtonsTab.tsx
 msgid ""
 "Buttons can trigger context menus on click by passing the onClick event "
@@ -9668,16 +9756,6 @@ msgstr ""
 #: src/features/user/components/modals/tabs/component_gallery_tab/ComponentGalleryTabButtonsTab.tsx
 msgid "Buttons with icons"
 msgstr "Tlačítka s ikonami"
-
-#. Help text under the theme color picker in the setup wizard branding step.
-#: src/features/app/components/setup/SetupBrandingFields.tsx
-msgid ""
-"Buttons, links and highlights across the app use this color, and phone "
-"browsers use it for their toolbar. Reset it to keep Fluxer's indigo."
-msgstr ""
-"Tuto barvu používají tlačítka, odkazy a zvýraznění v celé aplikaci a mobilní"
-" prohlížeče ji používají pro svůj panel nástrojů. Pokud ji obnovíte, zůstane"
-" indigová barva sanalyeru."
 
 #. Gift inventory empty-state description. premiumProductName is the premium
 #. tab name and product name.
@@ -10094,6 +10172,11 @@ msgstr "Sem nelze nahrávat soubory"
 msgid "Cancel"
 msgstr "Zrušit"
 
+#. Stops an in-progress download and deletes the partial file.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Cancel download"
+msgstr "Zrušit stahování"
+
 #. Button or menu action label in the channel and chat edit bar. Keep it
 #. concise.
 #: src/features/channel/components/ChannelEditBar.tsx
@@ -10176,6 +10259,13 @@ msgstr "Zrušit žádost o přátelství pro uživatele {displayName}?"
 #: src/features/user/components/settings_utils/section_registry/VoiceVideoSections.ts
 msgid "Cancellation"
 msgstr "Potlačení ozvěny"
+
+#. Status shown under a file name in the downloads panel after the user
+#. cancels the download. The part of the file that had already downloaded is
+#. deleted.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Cancelled. The partial file was deleted."
+msgstr "Zrušeno. Částečně stažený soubor byl smazán."
 
 #: src/features/app/components/dialogs/components/plutonium/SubscriptionDescription.tsx
 msgid "Cancels on <0>{cancelDate}</0>. <1/> remain active until then."
@@ -11099,7 +11189,7 @@ msgstr "Přístup k kanálu"
 
 #. Title of the alert shown when clicking a message link the user does not
 #. have permission to view.
-#: src/features/messaging/components/markdown/renderers/LinkRenderer.tsx
+#: src/features/messaging/utils/InAppLinkUtils.tsx
 msgid "Channel access denied"
 msgstr "Přístup k tomuto kanálu odepřen"
 
@@ -12127,6 +12217,12 @@ msgstr "Smazat všechny reakce z této zprávy?"
 msgid "Clear friends search"
 msgstr "Vymazat hledání přátel"
 
+#. Removes finished downloads from the downloads panel. Downloaded files stay
+#. on disk and in-progress downloads stay in the list.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Clear list"
+msgstr "Vymazat seznam"
+
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
 #: src/features/user/components/settings_utils/search_index/ChatSettingsIndex.ts
@@ -13135,6 +13231,12 @@ msgstr "Porovnání"
 msgid "Complete payment"
 msgstr "Dokončit platbu"
 
+#. Status shown under a file name in the downloads panel once the file has
+#. finished downloading. Keep it short.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Completed"
+msgstr "Dokončeno"
+
 #: src/features/auth/components/pages/SignInLinkPage.tsx
 #: src/features/auth/components/pages/SsoCallbackPage.tsx
 msgid "Completing sign-in…"
@@ -13682,6 +13784,12 @@ msgstr "Připojeno k hlasovému hovoru"
 msgctxt "us-state"
 msgid "Connecticut"
 msgstr "Connecticut"
+
+#. Heading on the SSO callback page while connecting single sign-on from
+#. account settings.
+#: src/features/auth/components/pages/SsoCallbackPage.tsx
+msgid "Connecting single sign-on…"
+msgstr "Propojování jednotného přihlášení…"
 
 #. Auth status shown while connecting to an instance, when the instance
 #. selector resolves it or when sign-in waits for the live connection. Domain
@@ -14699,6 +14807,9 @@ msgstr "Přihlášení se nepodařilo dokončit. Zkuste to znovu."
 
 #. Error title shown when starting to connect single sign-on from account
 #. settings fails.
+#. Heading on the SSO callback page when connecting single sign-on from
+#. account settings failed.
+#: src/features/auth/components/pages/SsoCallbackPage.tsx
 #: src/features/user/components/modals/tabs/account_security_tab/SsoConnectRow.tsx
 msgid "Couldn't connect single sign-on"
 msgstr "Jednotné přihlášení se nepodařilo propojit"
@@ -14831,6 +14942,11 @@ msgstr "Nepodařilo se smazat tento webhook"
 #: src/features/guild/hooks/useDeleteMyMessagesInGuild.tsx
 msgid "Couldn't delete your messages"
 msgstr "Zprávy se nepodařilo smazat"
+
+#. Error title shown when disconnecting single sign-on fails.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid "Couldn't disconnect single sign-on"
+msgstr "Nepodařilo se odpojit jednotné přihlášení"
 
 #. Modal title shown when a desktop update download fails.
 #: src/features/updater/commands/UpdaterModalCommands.tsx
@@ -17017,14 +17133,11 @@ msgstr "Potvrzení smazání"
 msgid "Delete redirect URI"
 msgstr "Smazat URI přesměrování"
 
-#. Danger action in the channel permissions overwrite context menu that
-#. removes a role permission override from the channel.
 #. Destructive button in the role editor that removes the selected role.
 #. Removes the role from every member; keep tone plain.
 #. Destructive context menu action in the community roles settings tab that
 #. immediately removes the right-clicked role from every member. Keep it
 #. short.
-#: src/features/channel/components/modals/channel_tabs/channel_permissions_tab/OverwriteContextMenu.tsx
 #: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx
 #: src/features/guild/components/modals/guild_tabs/GuildRolesTab.tsx
 #: src/features/ui/action_menu/RoleContextMenu.tsx
@@ -17095,12 +17208,6 @@ msgstr ""
 #: src/features/threads/utils/ThreadMessageDescriptors.ts
 msgid "Delete thread"
 msgstr "Smazat vlákno"
-
-#. Danger action in the channel permissions overwrite context menu that
-#. removes a member permission override from the channel.
-#: src/features/channel/components/modals/channel_tabs/channel_permissions_tab/OverwriteContextMenu.tsx
-msgid "Delete user"
-msgstr "Smazat uživatele"
 
 #. Danger button label that deletes a webhook.
 #: src/features/webhook/components/WebhookListItem.tsx
@@ -17626,14 +17733,14 @@ msgstr "Stav pro vývojáře"
 #. Title of the info alert shown when clicking an internal developer-tools
 #. deep link.
 #: src/features/channel/components/channel_header_components/UtilityButtons.tsx
-#: src/features/messaging/components/markdown/renderers/LinkRenderer.tsx
+#: src/features/messaging/utils/InAppLinkUtils.tsx
 #: src/features/ui/action_menu/items/StaffDeveloperUserControlsMenuItem.tsx
 msgid "Developer tools"
 msgstr "Nástroje pro vývojáře"
 
 #. Body of the developer-tools info alert. Refers to the staff badge button in
 #. the channel header.
-#: src/features/messaging/components/markdown/renderers/LinkRenderer.tsx
+#: src/features/messaging/utils/InAppLinkUtils.tsx
 msgid ""
 "Developer tools are available from the staff badge in the channel header."
 msgstr ""
@@ -17813,6 +17920,7 @@ msgstr "Náhledy přímých zpráv"
 #. Review row label for direct messages.
 #: src/features/app/components/setup/SetupWizardSteps.tsx
 #: src/features/channel/components/direct_message/DirectMessageList.tsx
+#: src/features/guild/components/modals/guild_tabs/GuildModerationTab.tsx
 #: src/features/i18n/utils/CommonMessageDescriptors.ts
 #: src/features/user/components/modals/tabs/privacy_safety_tab/ConnectionsTab.tsx
 msgid "Direct messages"
@@ -18085,6 +18193,19 @@ msgstr "Zahodit hlasovou zprávu"
 msgid "Disconnect"
 msgstr "Odpojit"
 
+#. Button that disconnects the account from single sign-on.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgctxt "sso"
+msgid "Disconnect"
+msgstr "Odpojit"
+
+#. Confirmation title when disconnecting the current account from the
+#. instance's single sign-on provider. providerName is the provider name typed
+#. by the admin.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid "Disconnect {providerName}?"
+msgstr "Odpojit {providerName}?"
+
 #. Voice menu action that disconnects every active device or session from
 #. voice chat.
 #: src/features/voice/utils/VoiceMessageDescriptors.ts
@@ -18111,6 +18232,12 @@ msgstr "Odpojit od {channel}"
 #: src/features/platform/utils/DesktopLocaleBridge.ts
 msgid "Disconnect from voice"
 msgstr "Odpojit se od hlasového hovoru"
+
+#. Confirmation title when disconnecting the current account from single sign-
+#. on and the admin has not given the provider a name.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid "Disconnect single sign-on?"
+msgstr "Odpojit jednotné přihlášení?"
 
 #: src/features/channel/components/channel_header_components/developer_tools/ToolsMenu.tsx
 msgid "Disconnect socket"
@@ -18684,6 +18811,11 @@ msgstr "Stáhněte si novou verzi a aktualizujte {appName}."
 #: src/features/ui/action_menu/items/MediaMenuData.tsx
 msgid "Download video"
 msgstr "Stáhnout video"
+
+#. Heading of the downloads panel.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Downloads"
+msgstr "Stažené soubory"
 
 #. Short heading in the keyboard shortcuts cheatsheet.
 #. Short label in the keybinds tab. Keep it concise.
@@ -21083,6 +21215,12 @@ msgstr "Simulovat chyby při načítání zpráv"
 msgid "Fail message sends"
 msgstr "Simulovat chyby při odesílání zpráv"
 
+#. Status shown under a file name in the downloads panel when the download did
+#. not finish. Keep it short.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Failed"
+msgstr "Selhalo"
+
 #: src/features/moderation/components/modals/BanMemberModal.tsx
 msgid "Failed to ban member. Try again."
 msgstr "Člena se nepodařilo zabanovat. Zkuste to znovu."
@@ -21946,18 +22084,6 @@ msgstr ""
 "sanalyer se nemohl spojit s {instanceName} a ověřit, zda prohlížeč schválil "
 "toto přihlášení. Zkontrolujte připojení a pak zvolte „Zkusit znovu“."
 
-#. Error shown in the desktop app when a passkey prompt starts but no security
-#. key is connected to the computer.
-#: src/features/auth/utils/PasskeyErrorMessages.ts
-msgid ""
-"sanalyer couldn't find a security key on this computer. Connect your "
-"security key and try again, or open sanalyer in your web browser and use "
-"your passkey there."
-msgstr ""
-"sanalyer na tomto počítači nenašel žádný bezpečnostní klíč. Připojte "
-"bezpečnostní klíč a zkuste to znovu, nebo otevřete sanalyer ve webovém "
-"prohlížeči a použijte přístupový klíč tam."
-
 #. Name of the section in the Operator Pass settings tab about the Fluxer Labs
 #. community. Fluxer Labs is the name of a community, keep it as is.
 #: src/features/premium/utils/PremiumMessageDescriptors.ts
@@ -22615,6 +22741,12 @@ msgctxt "privacy-settings-section"
 msgid "Friends & direct messages"
 msgstr "Přátelé a přímé zprávy"
 
+#. Privacy > Profile privacy: radio option label allowing every community
+#. member to see the profile.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/ProfilePrivacyTab.tsx
+msgid "Friends and all communities"
+msgstr "Přátelé a všechny komunity"
+
 #. Privacy > Communication: select option for the custom group chat add
 #. permission tier.
 #: src/features/user/components/modals/tabs/privacy_safety_tab/CommunicationTab.tsx
@@ -22626,6 +22758,12 @@ msgstr "Přátelé a vybrané skupiny uživatelů vás mohou přidávat bez potv
 #: src/features/user/components/modals/tabs/privacy_safety_tab/CommunicationTab.tsx
 msgid "Friends and selected groups can call you"
 msgstr "Přátelé a vybrané skupiny uživatelů vám mohou volat"
+
+#. Privacy > Profile privacy: radio option label allowing only friends and
+#. members of small communities.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/ProfilePrivacyTab.tsx
+msgid "Friends and small communities only"
+msgstr "Pouze přátelé a malé komunity"
 
 #. Reassurance in the privacy setup modal that friends can always send direct
 #. messages.
@@ -22640,6 +22778,16 @@ msgid ""
 msgstr ""
 "Přátelé vám mohou vždy poslat zprávu. Tato nastavení se týkají lidí a botů, "
 "se kterými sdílíte pouze komunitu."
+
+#. Help text under the switch that turns off direct messages between community
+#. members who are not friends, in the community moderation settings tab.
+#: src/features/guild/components/modals/guild_tabs/GuildModerationTab.tsx
+msgid ""
+"Friends can still DM each other, and so can members who share another "
+"community. Bots aren't affected."
+msgstr ""
+"Přátelé si stále mohou posílat soukromé zprávy, stejně jako členové, kteří "
+"sdílejí jinou komunitu. Botů se to netýká."
 
 #. Privacy option label for people connected through mutual friends.
 #: src/features/i18n/utils/CommonMessageDescriptors.ts
@@ -24046,6 +24194,20 @@ msgstr "Skrýt"
 #: src/features/platform/utils/DesktopLocaleBridge.ts
 msgid "Hide {appName}"
 msgstr "Skrýt aplikaci {appName}"
+
+#. Switch under the premium badge row in the "Badges" profile settings.
+#. Preserve {premiumProductName}; it is inserted by code. Keep the tone plain
+#. and specific.
+#: src/features/user/components/modals/tabs/my_profile_tab/ProfileBadgeSettings.tsx
+msgid "Hide {premiumProductName} purchase date"
+msgstr "Skrýt datum nákupu {premiumProductName}"
+
+#. Context menu item on the Plutonium button in the direct messages list.
+#. Hides the button. productName is the premium product name, Plutonium on
+#. fluxer.com.
+#: src/features/channel/components/direct_message/DirectMessageList.tsx
+msgid "Hide {productName} button"
+msgstr ""
 
 #. Accessible label for the button that collapses the other accounts section
 #. in the inbox.
@@ -27576,7 +27738,7 @@ msgstr "Styl odkazů"
 
 #. Title of the alert shown when clicking an internal link that is not
 #. available to the current account.
-#: src/features/messaging/components/markdown/renderers/LinkRenderer.tsx
+#: src/features/messaging/utils/InAppLinkUtils.tsx
 msgid "Link unavailable"
 msgstr "Odkaz není k dispozici"
 
@@ -27668,6 +27830,13 @@ msgstr "Aplikace pro Linux"
 #: src/features/voice/utils/VoiceMessageDescriptors.ts
 msgid "Linux default"
 msgstr "Výchozí zařízení v systému Linux"
+
+#. Desktop setting description under the Linux unread app icon badge toggle.
+#: src/features/user/components/modals/tabs/DesktopSettingsTab.tsx
+msgid ""
+"Linux taskbars can only show a number, so unread messages without mentions "
+"show as 1. Mentions always show their count."
+msgstr ""
 
 #. Forum layout name shown inside an activity log row.
 #. Forum layout option that shows posts as rows.
@@ -28044,6 +28213,14 @@ msgid "Make {userName} the group owner? You'll lose owner privileges."
 msgstr ""
 "Chcete, aby se uživatel {userName} stal vlastníkem skupiny? Ztratíte "
 "oprávnění vlastníka."
+
+#. Description of the community ownership transfer section in community
+#. settings.
+#: src/features/guild/components/modals/guild_tabs/guild_overview_tab/sections/OwnerTransferSection.tsx
+msgid "Make another member the owner of this community. You cannot undo this."
+msgstr ""
+"Udělejte z jiného člena vlastníka této komunity. Tuto akci nelze vrátit "
+"zpět."
 
 #. Group DM action that transfers ownership of the group to the selected
 #. member.
@@ -28461,6 +28638,12 @@ msgstr "Hlavní hlasitost"
 msgctxt "code-editor"
 msgid "Match case"
 msgstr "Rozlišovat malá/velká písmena"
+
+#. Tray icon color option. The app picks white or black from the taskbar or
+#. panel color.
+#: src/features/user/components/modals/tabs/DesktopSettingsTab.tsx
+msgid "Match the taskbar"
+msgstr ""
 
 #: src/features/channel/components/MatureContentChannelGate.tsx
 msgid "Mature category"
@@ -31893,6 +32076,12 @@ msgstr "Není povoleno"
 msgid "Not applied yet"
 msgstr "Zatím neaplikováno"
 
+#. Shown instead of a key when the desktop has no key assigned to a system-
+#. wide shortcut.
+#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
+msgid "Not assigned"
+msgstr "Nepřiřazeno"
+
 #. Screen reader text for a cross in the Plutonium page comparison table.
 #: src/features/premium/components/plutonium_page/PlutoniumPageMessages.ts
 msgid "Not available"
@@ -33193,6 +33382,12 @@ msgstr "Znovu otevřít platební stránku"
 #: src/features/ui/components/form/FormCombobox.tsx
 msgid "Open popup"
 msgstr "Otevřít vyskakovací okno"
+
+#. Accessible label of a picture or video tile in the Media tab of the full
+#. profile page; opens that post.
+#: src/features/user/components/pages/ProfileMediaGrid.tsx
+msgid "Open post"
+msgstr "Open post"
 
 #. Accessible label for the avatar button in the channel header of a DM. Opens
 #. the recipient user profile.
@@ -34938,6 +35133,11 @@ msgstr "Vyberte, která tlačítka se mají zobrazovat ve vstupním poli zpráv"
 msgid "Pick which kinds of conversations to clean up."
 msgstr "Vyberte, jaké typy konverzací chcete vyčistit."
 
+#. Description under the automatic tray icon color option.
+#: src/features/user/components/modals/tabs/DesktopSettingsTab.tsx
+msgid "Pick white or black from the color of your taskbar or panel."
+msgstr ""
+
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
 #: src/features/user/components/settings_utils/search_index/MyProfileIndex.ts
@@ -35134,6 +35334,11 @@ msgstr "Přehrát"
 msgid "Play animated emojis"
 msgstr "Přehrávat animované emoji"
 
+#. Short label for a toggle in the animation tab. Keep it concise.
+#: src/features/user/components/modals/tabs/accessibility_tab/AnimationTab.tsx
+msgid "Play GIFs in the GIF picker"
+msgstr "Přehrávat GIFy ve výběru GIFů"
+
 #. Short label in the accessibility tab. Keep it concise.
 #: src/features/user/components/modals/tabs/AccessibilityTab.tsx
 msgid "Play sample"
@@ -35210,6 +35415,12 @@ msgstr "Počkejte chvíli a zkuste smazání znovu."
 #: src/features/emoji/components/emojis/EmojiListItem.tsx
 msgid "Please wait a moment and try renaming again."
 msgstr "Počkejte chvíli a zkuste přejmenování znovu."
+
+#. Settings search entry description. One-line summary of what the setting
+#. controls. Plutonium is the product name.
+#: src/features/user/components/settings_utils/search_index/AppearanceIndex.ts
+msgid "Plutonium button in the direct messages list"
+msgstr ""
 
 #. Country name. EU member state in the illegal-content report country
 #. dropdown.
@@ -35404,6 +35615,12 @@ msgstr "Preferovaný kodek pro sdílení obrazovky"
 #: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
 msgid "Prefers reduced motion"
 msgstr "Preferuje omezené animace"
+
+#. Settings search synonym. Used to match this term when the user types it in
+#. the settings search bar.
+#: src/features/user/components/settings_utils/search_index/PlutoniumIndex.ts
+msgid "Premium"
+msgstr "Premium"
 
 #. Progress label on the save button while an animated image crop starts. Keep
 #. it concise.
@@ -37361,6 +37578,11 @@ msgstr "Odebrat z oblíbených"
 msgid "Remove from group"
 msgstr "Odebrat ze skupiny"
 
+#. Removes a finished download from the downloads panel.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Remove from list"
+msgstr "Odebrat ze seznamu"
+
 #. Context menu item that removes a self-hosted instance from the
 #. authentication instance picker history.
 #: src/features/auth/flow/instance_selector/InstancePickerRows.tsx
@@ -37448,6 +37670,12 @@ msgstr "Odebrat reakce"
 msgid "Remove reverse image search"
 msgstr "Odebrat vyhledávání podle obrázku"
 
+#. Danger action in the channel permissions overwrite context menu that
+#. removes a role permission override from the channel.
+#: src/features/channel/components/modals/channel_tabs/channel_permissions_tab/OverwriteContextMenu.tsx
+msgid "Remove role"
+msgstr "Odebrat roli"
+
 #. Button or menu action label in the community role management. Keep it
 #. concise. Preserve {roleName}; it is inserted by code. Keep the tone plain
 #. and specific.
@@ -37502,6 +37730,19 @@ msgstr "Zrušit dočasné omezení"
 #: src/features/user/components/modals/tabs/chat_settings_tab/SearchEnginesTab.tsx
 msgid "Remove translator"
 msgstr "Odebrat překladač"
+
+#. Danger action in the channel permissions overwrite context menu that
+#. removes a member permission override from the channel.
+#: src/features/channel/components/modals/channel_tabs/channel_permissions_tab/OverwriteContextMenu.tsx
+msgid "Remove user"
+msgstr "Odebrat uživatele"
+
+#. Description of the switch that hides the purchase date, under the premium
+#. badge row in the "Badges" profile settings. Preserve {premiumProductName};
+#. it is inserted by code. Keep the tone plain and specific.
+#: src/features/user/components/modals/tabs/my_profile_tab/ProfileBadgeSettings.tsx
+msgid "Remove when you first bought {premiumProductName} from your badge"
+msgstr "Skrýt na odznaku datum prvního nákupu {premiumProductName}"
 
 #. Title of the confirmation shown before deleting the age range from an Apple
 #. or Google account.
@@ -40001,6 +40242,12 @@ msgstr "Hledat kód jazyka…"
 msgid "Search languages…"
 msgstr "Hledat jazyky…"
 
+#. Placeholder of the member search in the community ownership transfer
+#. section.
+#: src/features/guild/components/modals/guild_tabs/guild_overview_tab/sections/OwnerTransferSection.tsx
+msgid "Search members"
+msgstr "Hledat členy"
+
 #. Placeholder of the search box in the add members or roles step of the
 #. create channel modal.
 #: src/features/channel/components/modals/ChannelCreateAccessStep.tsx
@@ -42342,6 +42589,11 @@ msgstr "Zobrazit ikonu po sbalení"
 msgid "Show in all communities"
 msgstr "Zobrazit ve všech komunitách"
 
+#. Opens the folder containing a downloaded file.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Show in folder"
+msgstr "Zobrazit ve složce"
+
 #. Setting label that shows a badge for incoming friend requests.
 #: src/features/ui/action_menu/FluxerButtonContextMenu.tsx
 msgid "Show incoming friend request count"
@@ -42529,6 +42781,12 @@ msgstr "Zobrazit heslo"
 msgid "Show per-device participant volume sliders in voice menus"
 msgstr ""
 "Zobrazit posuvníky hlasitosti účastníků pro každé zařízení v nabídkách hlasu"
+
+#. Toggle label and settings search entry for showing the Plutonium button in
+#. the direct messages list. Plutonium is the product name.
+#: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
+msgid "Show Plutonium button"
+msgstr ""
 
 #. Row in the quick CSS editor shortcuts dialog.
 #: src/features/theme_settings/components/QuickCssShortcutsModal.tsx
@@ -43126,8 +43384,8 @@ msgstr "Jeden řádek"
 
 #. Heading of the single sign-on panel when the admin has not given the sign-
 #. in provider a name.
-#. Label of the account settings row for connecting single sign-on when the
-#. admin has not given the provider a name.
+#. Label of the account settings row for single sign-on when the admin has not
+#. given the provider a name.
 #: src/features/auth/flow/AuthSsoPanel.tsx
 #: src/features/user/components/modals/tabs/account_security_tab/SsoConnectRow.tsx
 msgid "Single sign-on"
@@ -44382,6 +44640,12 @@ msgstr "Zahájeno uživatelem {name}"
 #: src/features/guild/utils/guild_tabs/audit_log/AuditLogRoleMessages.ts
 msgid "Started displaying members with this role separately"
 msgstr "Zapnuto oddělené zobrazení členů s touto rolí"
+
+#. Status shown under a file name in the downloads panel while the download is
+#. starting and no data has arrived yet. Keep it short.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Starting"
+msgstr "Zahajuje se"
 
 #. SMTP encryption option that upgrades only when the mail server offers
 #. STARTTLS.
@@ -46405,6 +46669,12 @@ msgid ""
 "The file contains the verification token we will fetch from <0>{dnsUrl}</0>."
 msgstr "Soubor obsahuje ověřovací token, který načteme z <0>{dnsUrl}</0>."
 
+#. Status shown under a file name in the downloads panel when the download
+#. finished but the file is no longer where it was saved.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "The file was moved or deleted."
+msgstr "Soubor byl přesunut nebo smazán."
+
 #. Body of the file-too-large alert when a single file exceeds the per-file
 #. size limit.
 #: src/features/messaging/components/alerts/FileSizeTooLargeModal.tsx
@@ -46414,18 +46684,6 @@ msgid ""
 msgstr ""
 "Soubor, který se snažíte nahrát, překračuje maximální povolenou velikost "
 "{maxSizeFormatted}."
-
-#. Helper text under "Age range from your Apple or Google account" in the
-#. sensitive content settings.
-#: src/features/user/components/modals/tabs/privacy_safety_tab/AgeRangeSection.tsx
-msgid ""
-"The sanalyer app for iPhone, iPad or Android sent us this age range. If it "
-"shows that you're 18 or older, you can see 18+ content in the UK and Brazil."
-" It doesn't change your date of birth."
-msgstr ""
-"Tuto věkovou skupinu nám poslala aplikace sanalyer pro iPhone, iPad nebo "
-"Android. Pokud ukazuje, že je vám 18 let nebo více, můžete ve Spojeném "
-"království a Brazílii zobrazit obsah 18+. Vaše datum narození se tím nemění."
 
 #. Setup wizard body explaining the push relay.
 #: src/features/app/components/setup/SetupPolicySteps.tsx
@@ -47636,6 +47894,14 @@ msgstr "Tato komunita pozastavila pozvánky."
 msgid "This community has paused invites. You can try again later."
 msgstr "Tato komunita pozastavila pozvánky. Můžete to zkusit později."
 
+#. Shown in the community privacy modal under the direct messages switch when
+#. the community admins have turned off direct messages between members who
+#. are not friends, so the personal switch has no effect.
+#: src/features/guild/components/modals/GuildPrivacySettingsModal.tsx
+msgid "This community has turned off DMs between members who aren't friends"
+msgstr ""
+"Tato komunita vypnula soukromé zprávy mezi členy, kteří nejsou přátelé"
+
 #. Description text in the guild at capacity modal.
 #: src/features/guild/components/alerts/GuildAtCapacityModal.tsx
 msgid ""
@@ -48065,8 +48331,20 @@ msgid ""
 "This instance has not finished setting up single sign-on. Ask an "
 "administrator to enable it."
 msgstr ""
-"Tato instance ještě nedokončila nastavení jednotného přihlašování. Požádejte"
-" administrátora o jeho povolení."
+"Tato instance ještě nedokončila nastavení jednotného přihlášení. Požádejte "
+"administrátora o jeho povolení."
+
+#. Description of the account settings row for single sign-on when the
+#. instance requires it. providerName is the provider name typed by the admin.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid "This instance requires you to sign in with {providerName}."
+msgstr "Tato instance vyžaduje přihlášení přes {providerName}."
+
+#. Description of the account settings row for single sign-on when the
+#. instance requires it and the admin has not given the provider a name.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid "This instance requires you to sign in with single sign-on."
+msgstr "Tato instance vyžaduje jednotné přihlášení."
 
 #. Setup wizard explanation of why the sign-in method is fixed: the instance
 #. is older than username sign-in.
@@ -48283,7 +48561,7 @@ msgid "This link has expired"
 msgstr "Tento odkaz vypršel"
 
 #. Body of the link-unavailable alert.
-#: src/features/messaging/components/markdown/renderers/LinkRenderer.tsx
+#: src/features/messaging/utils/InAppLinkUtils.tsx
 msgid "This link is not available for your account."
 msgstr "Tento odkaz není pro váš účet dostupný."
 
@@ -49184,6 +49462,32 @@ msgctxt "code-editor"
 msgid "to"
 msgstr "až"
 
+#. Instructions for GNOME. Keep "Settings" and "Apps" as the GNOME menu names
+#. in your language. {productName} is the app name.
+#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
+msgid "To change the keys, go to Settings > Apps > {productName}."
+msgstr ""
+"Chcete-li změnit klávesy, přejděte do Nastavení > Aplikace > {productName}."
+
+#. Instructions for KDE Plasma. Keep "System Settings", "Keyboard" and
+#. "Shortcuts" as the KDE menu names in your language. {productName} is the
+#. app name.
+#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
+msgid ""
+"To change the keys, go to System Settings > Keyboard > Shortcuts > "
+"{productName}."
+msgstr ""
+"Chcete-li změnit klávesy, přejděte do Nastavení systému > Klávesnice > "
+"Klávesové zkratky > {productName}."
+
+#. Instructions for changing system-wide shortcut keys on an unrecognized
+#. Linux desktop.
+#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
+msgid "To change the keys, open your desktop's keyboard shortcut settings."
+msgstr ""
+"Chcete-li změnit klávesy, otevřete nastavení klávesových zkratek vašeho "
+"desktopového prostředí."
+
 #. Follows a Shift + Enter key hint under the forum search box. Starts
 #. lowercase because it continues the key hint.
 #: src/features/forum/utils/ForumMessageDescriptors.ts
@@ -49203,6 +49507,17 @@ msgstr ""
 msgid "To let people in, make a registration link in the admin panel."
 msgstr ""
 "Chcete-li lidi pustit dovnitř, vytvořte v administraci registrační odkaz."
+
+#. Description of the account settings row for single sign-on in the desktop
+#. app, which cannot connect it. providerName is the provider name typed by
+#. the admin.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoConnectRow.tsx
+msgid ""
+"To sign in to this account with {providerName}, connect it in the web app in"
+" a browser."
+msgstr ""
+"Pokud se chceš k tomuto účtu přihlašovat přes {providerName}, propoj ho ve "
+"webové aplikaci v prohlížeči."
 
 #: src/features/guild/components/modals/GuildOwnershipWarningModal.tsx
 msgid ""
@@ -49308,6 +49623,12 @@ msgstr "Zobrazit nebo skrýt uložená média"
 #: src/features/user/components/modals/tabs/component_gallery_tab/SelectionsTab.tsx
 msgid "Toggle switches on and off to see state changes."
 msgstr "Zapínejte a vypínejte přepínače a sledujte změny jejich stavu."
+
+#. Keyboard shortcut action label shown in the shortcuts list and keybind
+#. editor. Keep short, sentence case.
+#: src/features/input/state/input_keybind/shared.ts
+msgid "Toggle the downloads panel"
+msgstr "Zobrazit nebo skrýt panel stahování"
 
 #. Keyboard shortcut action label shown in the shortcuts list and keybind
 #. editor. Keep short, sentence case.
@@ -49476,8 +49797,9 @@ msgstr "Sledování"
 msgid "Tracking parameters"
 msgstr "Parametry sledování"
 
-#. Short label in the transfer ownership modal. Keep it concise.
-#: src/features/guild/components/modals/TransferOwnershipModal.tsx
+#. Title of the community ownership transfer section in community settings and
+#. of its confirmation modal.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
 msgid "Transfer community ownership"
 msgstr "Převést vlastnictví komunity"
 
@@ -49488,10 +49810,15 @@ msgstr "Předat vlastnictví skupiny uživateli {userName}?"
 
 #. Action label in community settings that hands ownership of the community to
 #. another member.
-#: src/features/guild/components/modals/TransferOwnershipModal.tsx
 #: src/features/i18n/utils/CommonMessageDescriptors.ts
 msgid "Transfer ownership"
 msgstr "Převést vlastnictví"
+
+#. Disabled confirm button in the transfer ownership modal. The number is a
+#. countdown in seconds until the button can be pressed.
+#: src/features/guild/components/modals/TransferOwnershipModal.tsx
+msgid "Transfer ownership ({secondsRemaining})"
+msgstr "Převést vlastnictví ({secondsRemaining})"
 
 #. Activity log detail line under a community settings update, shown when the
 #. community got a new owner. It continues the entry summary, so it has no
@@ -49571,6 +49898,12 @@ msgstr ""
 "V Linuxu se změny ikony v oznamovací oblasti projeví až po restartu, protože"
 " její protokol neumožňuje aplikacím spolehlivě přidávat nebo odebírat ikony "
 "za běhu. Restartujte aplikaci nyní, aby se změna projevila."
+
+#. Desktop settings section title on Windows and Linux for choosing the color
+#. of the monochrome system tray icon.
+#: src/features/user/components/modals/tabs/DesktopSettingsTab.tsx
+msgid "Tray icon color"
+msgstr ""
 
 #. Short label in the channel and chat gif picker grid. Keep it concise.
 #. Short label in the channel and chat gif picker header. Keep it concise.
@@ -49910,6 +50243,13 @@ msgstr "Vypnout kameru zařízení"
 msgid "Turn off device stream"
 msgstr "Vypnout stream zařízení"
 
+#. Switch label in the community moderation settings tab. When on, members of
+#. this community who are not friends cannot start or continue direct messages
+#. through this community.
+#: src/features/guild/components/modals/guild_tabs/GuildModerationTab.tsx
+msgid "Turn off DMs between members who aren't friends"
+msgstr "Vypnout soukromé zprávy mezi členy, kteří nejsou přátelé"
+
 #. Voice menu action that ends the current user screen share.
 #: src/features/ui/action_menu/items/voice_participant_menu_data/shared.ts
 msgid "Turn off stream"
@@ -49923,6 +50263,12 @@ msgid ""
 msgstr ""
 "Před zobrazením přihlašovacích údajů nebo podrobností o zabezpečení účtu "
 "vypněte soukromí při streamování."
+
+#. Section description shown when the colored tray icon is on, so the
+#. monochrome color choice has no effect.
+#: src/features/user/components/modals/tabs/DesktopSettingsTab.tsx
+msgid "Turn off the colored tray icon to choose a color here."
+msgstr ""
 
 #. Button that turns on the Operator Pass that comes with Visionary, in
 #. profile settings and at the bottom of its dialog. Nothing is bought.
@@ -49996,6 +50342,26 @@ msgstr "Převádět textové emotikony na emoji"
 #: src/features/theme_settings/components/QuickCssFiles.tsx
 msgid "Turn this theme on to see your changes in the app."
 msgstr "Zapněte tento motiv, abyste viděli změny v aplikaci."
+
+#. Activity log detail line under a community settings update, shown when the
+#. setting that stops direct messages between community members who are not
+#. friends was turned off again. It continues the entry summary, so it has no
+#. subject. It is a past tense record of a change the actor in the summary
+#. already made, never an instruction to the reader. Do not write it as a
+#. command, a button label or in first or second person.
+#: src/features/guild/utils/guild_tabs/audit_log/AuditLogGuildMessages.ts
+msgid "Turned DMs between members who aren't friends back on"
+msgstr "Znovu zapnuty soukromé zprávy mezi členy, kteří nejsou přátelé"
+
+#. Activity log detail line under a community settings update, shown when the
+#. setting that stops direct messages between community members who are not
+#. friends was turned on. It continues the entry summary, so it has no
+#. subject. It is a past tense record of a change the actor in the summary
+#. already made, never an instruction to the reader. Do not write it as a
+#. command, a button label or in first or second person.
+#: src/features/guild/utils/guild_tabs/audit_log/AuditLogGuildMessages.ts
+msgid "Turned off DMs between members who aren't friends"
+msgstr "Vypnuty soukromé zprávy mezi členy, kteří nejsou přátelé"
 
 #. Activity log detail line under a community settings update, shown when the
 #. Mature content setting of the community was turned off. It continues the
@@ -52821,6 +53187,23 @@ msgstr "Zobrazit podrobnosti"
 msgid "View devices that are signed in to your account"
 msgstr "Zobrazit zařízení přihlášená k vašemu účtu"
 
+#. Button in the app layout native titlebar that opens the downloads panel.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "View downloads"
+msgstr "Zobrazit stažené soubory"
+
+#. Screen reader label of the titlebar button that opens the downloads panel,
+#. used while downloads are running. {count} is the number of downloads in
+#. progress.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid ""
+"View downloads. {count, plural, one {# download in progress} other {# "
+"downloads in progress}}"
+msgstr ""
+"Zobrazit stažené soubory. {count, plural, one {Probíhá # stahování} few "
+"{Probíhají # stahování} many {Probíhá # stahování} other {Probíhá # "
+"stahování}}"
+
 #: src/features/user/components/popouts/UserProfileShared.tsx
 msgid "View full profile"
 msgstr "Zobrazit celý profil"
@@ -53667,21 +54050,6 @@ msgstr "Vaši věkovou skupinu se nepodařilo odebrat. Zkuste to prosím znovu."
 msgid "We couldn't save that theme."
 msgstr "Nepodařilo se nám uložit toto téma."
 
-#. Body of the confirmation shown before deleting the age range. App Attest is
-#. an Apple product name and stays in English.
-#: src/features/user/components/modals/tabs/privacy_safety_tab/AgeRangeSection.tsx
-msgid ""
-"We delete the age range, the time we got it and the App Attest keys for your"
-" Apple devices. In the UK and Brazil, you can't see 18+ content until the "
-"app sends an age range again. The app may send it again later if your Apple "
-"or Google account still shares it with sanalyer."
-msgstr ""
-"Smažeme věkovou skupinu, čas, kdy jsme ji obdrželi, a klíče App Attest pro "
-"vaše zařízení Apple. Ve Spojeném království a Brazílii neuvidíte obsah 18+, "
-"dokud aplikace znovu nepošle věkovou skupinu. Aplikace může vaši věkovou "
-"skupinu později poslat znovu, pokud ji váš účet Apple nebo Google stále "
-"sdílí s sanalyerem."
-
 #. Modal body for existing-subscription block. Directs the user to the billing
 #. portal and addresses the just-paid race case. Keep plain and reassuring.
 #: src/features/app/components/dialogs/components/plutonium/hooks/useCheckoutActions.tsx
@@ -54483,6 +54851,21 @@ msgstr ""
 "Po spuštění při přihlášení se zobrazí v oznamovací oblasti místo otevření "
 "okna"
 
+#. Description for the GIF picker animation toggle in the animation tab on
+#. desktop.
+#: src/features/user/components/modals/tabs/accessibility_tab/AnimationTab.tsx
+msgid ""
+"When off, GIFs in the picker show a still frame until you hover over them."
+msgstr ""
+"Když je vypnuto, GIFy ve výběru zobrazují statický snímek, dokud na ně "
+"nenajedete myší."
+
+#. Description for the GIF picker animation toggle in the animation tab on
+#. mobile.
+#: src/features/user/components/modals/tabs/accessibility_tab/AnimationTab.tsx
+msgid "When off, GIFs in the picker show a still frame."
+msgstr "Když je vypnuto, GIFy ve výběru zobrazují statický snímek."
+
 #. Label in the display tab.
 #: src/features/user/components/modals/tabs/chat_settings_tab/DisplayTab.tsx
 msgid "When posted as links in chat"
@@ -54622,6 +55005,12 @@ msgid ""
 msgstr ""
 "Dokud je tento odznak skrytý, {labsName} vás zobrazuje bez role Operator a "
 "#operators vám zůstává."
+
+#. Tray icon color option for a white monochrome tray icon, for dark taskbars
+#. and panels.
+#: src/features/user/components/modals/tabs/DesktopSettingsTab.tsx
+msgid "White"
+msgstr ""
 
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
@@ -55188,14 +55577,19 @@ msgstr "Toto propojení už máte."
 msgid "You are about to leave {productName}"
 msgstr "Chystáte se opustit aplikaci {productName}"
 
+#. Warning in the ownership transfer confirmation. {0} is the new owner's
+#. display name and targetUserId is their numeric user ID, shown in brackets
+#. after the name.
 #. placeholder {0}: NicknameUtils.getNickname(targetUser, guildId)
 #: src/features/guild/components/modals/TransferOwnershipModal.tsx
 msgid ""
-"You are about to transfer ownership of this community to <0>{0}</0>. This "
-"action is <1>irreversible</1> and you will lose all owner privileges."
+"You are about to transfer ownership of this community to <0>{0}</0> "
+"({targetUserId}). This action is <1>irreversible</1> and you will lose all "
+"owner privileges."
 msgstr ""
-"Chystáte se převést vlastnictví této komunity na uživatele <0>{0}</0>. Tato "
-"akce je <1>nevratná</1> a ztratíte všechna oprávnění vlastníka."
+"Chystáte se převést vlastnictví této komunity na uživatele <0>{0}</0> "
+"({targetUserId}). Tato akce je <1>nevratná</1> a ztratíte všechna oprávnění "
+"vlastníka."
 
 #. Error message in the user banned from guild modal. Keep the tone plain and
 #. specific.
@@ -55216,11 +55610,6 @@ msgid ""
 msgstr ""
 "Upravujete svůj profil pro tuto komunitu. Bude viditelný pouze zde a bude "
 "mít přednost před vaším globálním profilem."
-
-#. Body text in the settings dialog client info.
-#: src/features/app/components/dialogs/components/ClientInfo.tsx
-msgid "You are now a developer!"
-msgstr "Nyní jste vývojář!"
 
 #. Modal body for the mobile checkout confirmation. Explains that the user is
 #. leaving the app to pay.
@@ -55357,18 +55746,6 @@ msgstr ""
 "Plnou refundaci můžete získat do {date}. Tím také ihned končí vaše "
 "předplatné."
 
-#. Nagbar body telling people that the Fluxer app for Android phones can be
-#. installed from Google Play. {googlePlay} is the store brand name Google
-#. Play and must stay as is. Keep Fluxer and Android untranslated. Keep the
-#. tone calm and plain.
-#: src/features/app/components/layout/app_layout/nagbars/AndroidAppNagbar.tsx
-msgid ""
-"You can get the sanalyer app for Android on {googlePlay} and chat from your "
-"phone."
-msgstr ""
-"Aplikaci sanalyer pro Android si můžete stáhnout z {googlePlay} a chatovat z"
-" mobilu."
-
 #. Line under "Full refund" in the Payments settings. {amount} is the price
 #. paid, with currency, and {date} is the last day of the refund window, such
 #. as Nov 2, 2026. Both are filled in by code.
@@ -55463,6 +55840,19 @@ msgstr ""
 #: src/features/auth/components/accounts/AccountSwitcherModal.tsx
 msgid "You can sign back in at any time."
 msgstr "Kdykoli se můžete znovu přihlásit."
+
+#. Description of the account settings row that disconnects the account from
+#. the instance's single sign-on provider. providerName is the provider name
+#. typed by the admin.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid "You can sign in to this account with {providerName}."
+msgstr "K tomuto účtu se můžeš přihlásit přes {providerName}."
+
+#. Description of the account settings row that disconnects the account from
+#. single sign-on when the admin has not given the provider a name.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid "You can sign in to this account with single sign-on."
+msgstr "K tomuto účtu se můžeš přihlásit přes jednotné přihlášení."
 
 #. Cooldown notice in the new thread pane when the parent channel has
 #. slowmode. seconds is the wait time.
@@ -55823,7 +56213,7 @@ msgstr ""
 " neobnoví."
 
 #. Body of the access-denied alert for clicked message links.
-#: src/features/messaging/components/markdown/renderers/LinkRenderer.tsx
+#: src/features/messaging/utils/InAppLinkUtils.tsx
 msgid "You do not have access to the channel where this message was sent."
 msgstr "Nemáte přístup ke kanálu, ve kterém byla tato zpráva odeslána."
 
@@ -56294,6 +56684,26 @@ msgstr "Moderátoři vám vypnuli zvuk"
 #: src/features/auth/components/pages/oauth_authorize_page/OAuthAuthorizeActions.tsx
 msgid "You will be taken to {redirectHostname} after authorizing."
 msgstr "Po autorizaci budete přesměrováni na {redirectHostname}."
+
+#. Warning shown before disconnecting single sign-on. providerName is the
+#. provider name typed by the admin.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid ""
+"You won't be able to sign in with {providerName} anymore. You can still use "
+"your other sign-in methods."
+msgstr ""
+"Přes {providerName} se už nebudeš moct přihlásit. Své ostatní metody "
+"přihlášení můžeš používat dál."
+
+#. Warning shown before disconnecting single sign-on when the admin has not
+#. given the provider a name.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid ""
+"You won't be able to sign in with single sign-on anymore. You can still use "
+"your other sign-in methods."
+msgstr ""
+"Přes jednotné přihlášení se už nebudeš moct přihlásit. Své ostatní metody "
+"přihlášení můžeš používat dál."
 
 #. Security settings: confirmation modal body for turning off passkey-based
 #. two-factor authentication when the account also has an authenticator app.
@@ -57160,6 +57570,32 @@ msgstr "Vaše současná sada přestane fungovat, jakmile bude vytvořena nová.
 msgid "Your desktop didn't set up system-wide keybinds."
 msgstr "Vaše desktopové prostředí nenastavilo zkratky pro celý systém."
 
+#. Linux settings note under the list of system-wide shortcuts the desktop
+#. runs (KDE, GNOME). A key assigned here stops reaching every other app.
+#. {productName} is the app name.
+#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
+msgid ""
+"Your desktop keeps these keys for {productName}, so other apps can't use "
+"them."
+msgstr ""
+"Vaše desktopové prostředí vyhradí tyto klávesy pro aplikaci {productName}, "
+"takže je ostatní aplikace nemohou používat."
+
+#. Linux settings note under the list of system-wide shortcuts the desktop
+#. runs (KDE, GNOME), shown when the "Use direct input device access" switch
+#. is offered below it. A key assigned here stops reaching every other app.
+#. {productName} is the app name.
+#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
+msgid ""
+"Your desktop keeps these keys for {productName}, so other apps can't use "
+"them. To use the same key in other apps, turn on direct input device access "
+"below."
+msgstr ""
+"Vaše desktopové prostředí vyhradí tyto klávesy pro aplikaci {productName}, "
+"takže je ostatní aplikace nemohou používat. Chcete-li stejnou klávesu "
+"používat i v jiných aplikacích, zapněte níže přímý přístup ke vstupním "
+"zařízením."
+
 #. Subtitle above the list of system-wide shortcuts assigned by the Linux
 #. desktop. {productName} is the app name.
 #: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
@@ -57247,6 +57683,12 @@ msgid ""
 msgstr ""
 "Váš výchozí zvuk při vstupu pro všechny komunity a soukromé konverzace. "
 "Přednost mají konkrétnější nastavení."
+
+#. Shown in the invite modal when every friend is already a member of this
+#. community.
+#: src/features/invite/components/modals/InviteModal.tsx
+msgid "Your friends are already in this community."
+msgstr ""
 
 #. Empty state title in the friends list Online tab when no friends are
 #. online. Tone can be friendly.
@@ -57363,6 +57805,17 @@ msgstr ""
 "Vaše zpráva nemohla být doručena, protože byla označena našimi "
 "bezpečnostními systémy. Pokud se domníváte, že jde o chybu, kontaktujte "
 "prosím správce této instance."
+
+#. System message in a DM after a send fails because the only community the
+#. two people share has turned off direct messages between members who are not
+#. friends.
+#: src/features/messaging/state/MessageQueue.tsx
+msgid ""
+"Your message could not be delivered. A community you share with this person "
+"has turned off direct messages between members who aren't friends."
+msgstr ""
+"Vaši zprávu se nepodařilo doručit. Komunita, kterou s touto osobou sdílíte, "
+"vypnula soukromé zprávy mezi členy, kteří nejsou přátelé."
 
 #. Label in the message queue state.
 #: src/features/messaging/state/MessageQueue.tsx
@@ -57948,6 +58401,67 @@ msgstr "Přiblížit"
 #: src/features/user/components/settings_utils/search_index/KeybindsIndex.ts
 msgid "Zoom out"
 msgstr "Oddálit"
+
+#. Help text under the theme color picker in the setup wizard branding step.
+#: src/features/app/components/setup/SetupBrandingFields.tsx
+msgid ""
+"Buttons, links and highlights across the app use this color, and phone "
+"browsers use it for their toolbar. Reset it to keep Fluxer's indigo."
+msgstr ""
+"Tuto barvu používají tlačítka, odkazy a zvýraznění v celé aplikaci a mobilní"
+" prohlížeče ji používají pro svůj panel nástrojů. Pokud ji obnovíte, zůstane"
+" indigová barva sanalyeru."
+
+#. Error shown in the desktop app when a passkey prompt starts but no security
+#. key is connected to the computer.
+#: src/features/auth/utils/PasskeyErrorMessages.ts
+msgid ""
+"sanalyer couldn't find a security key on this computer. Connect your "
+"security key and try again, or open sanalyer in your web browser and use "
+"your passkey there."
+msgstr ""
+"sanalyer na tomto počítači nenašel žádný bezpečnostní klíč. Připojte "
+"bezpečnostní klíč a zkuste to znovu, nebo otevřete sanalyer ve webovém "
+"prohlížeči a použijte přístupový klíč tam."
+
+#. Helper text under "Age range from your Apple or Google account" in the
+#. sensitive content settings.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/AgeRangeSection.tsx
+msgid ""
+"The sanalyer app for iPhone, iPad or Android sent us this age range. If it "
+"shows that you're 18 or older, you can see 18+ content in the UK and Brazil."
+" It doesn't change your date of birth."
+msgstr ""
+"Tuto věkovou skupinu nám poslala aplikace sanalyer pro iPhone, iPad nebo "
+"Android. Pokud ukazuje, že je vám 18 let nebo více, můžete ve Spojeném "
+"království a Brazílii zobrazit obsah 18+. Vaše datum narození se tím nemění."
+
+#. Body of the confirmation shown before deleting the age range. App Attest is
+#. an Apple product name and stays in English.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/AgeRangeSection.tsx
+msgid ""
+"We delete the age range, the time we got it and the App Attest keys for your"
+" Apple devices. In the UK and Brazil, you can't see 18+ content until the "
+"app sends an age range again. The app may send it again later if your Apple "
+"or Google account still shares it with sanalyer."
+msgstr ""
+"Smažeme věkovou skupinu, čas, kdy jsme ji obdrželi, a klíče App Attest pro "
+"vaše zařízení Apple. Ve Spojeném království a Brazílii neuvidíte obsah 18+, "
+"dokud aplikace znovu nepošle věkovou skupinu. Aplikace může vaši věkovou "
+"skupinu později poslat znovu, pokud ji váš účet Apple nebo Google stále "
+"sdílí s sanalyerem."
+
+#. Nagbar body telling people that the Fluxer app for Android phones can be
+#. installed from Google Play. {googlePlay} is the store brand name Google
+#. Play and must stay as is. Keep Fluxer and Android untranslated. Keep the
+#. tone calm and plain.
+#: src/features/app/components/layout/app_layout/nagbars/AndroidAppNagbar.tsx
+msgid ""
+"You can get the sanalyer app for Android on {googlePlay} and chat from your "
+"phone."
+msgstr ""
+"Aplikaci sanalyer pro Android si můžete stáhnout z {googlePlay} a chatovat z"
+" mobilu."
 
 #. Instance selector error shown when no Fluxer instance answered at the
 #. address. Domain is interpolated.
@@ -60926,12 +61440,6 @@ msgstr "Open first, then add to sets."
 msgid "Open Microsoft Store"
 msgstr "Open Microsoft Store"
 
-#. Accessible label of a picture or video tile in the Media tab of the full
-#. profile page; opens that post.
-#: src/features/user/components/pages/ProfileMediaGrid.tsx
-msgid "Open post"
-msgstr "Open post"
-
 #. Button on the small profile card, the profile modal and the mobile profile
 #. sheet that opens the full profile page.
 #. Button on the small profile card, the profile modal and the mobile profile
@@ -61603,11 +62111,6 @@ msgstr ""
 #: src/features/feed/utils/FeedReportCopy.ts
 msgid "Scams, malware, or misinformation"
 msgstr "Podvody, malware nebo dezinformace"
-
-#. Search community members before viewing their bot warnings.
-#: src/features/micupbot/components/MicupBotWarnings.tsx
-msgid "Search members"
-msgstr "Hledat členy"
 
 #. Link under the Plus perk tiles; opens the shop. Ultra decorations (wings)
 #. are sold, not included.
@@ -66276,98 +66779,3 @@ msgstr "Timing test"
 msgctxt "band-latency-hint"
 msgid "Dismiss"
 msgstr "Dismiss"
-
-#. Short label in the Explore page sidebar. Keep it concise.
-#: src/features/discovery/discovery/DiscoverySidebar.tsx
-msgid "Apps"
-msgstr "Aplikace"
-
-#. Description of the switch that hides the purchase date, under the premium
-#. badge row in the "Badges" profile settings. Preserve {premiumProductName};
-#. it is inserted by code. Keep the tone plain and specific.
-#: src/features/user/components/modals/tabs/my_profile_tab/ProfileBadgeSettings.tsx
-msgid "Remove when you first bought {premiumProductName} from your badge"
-msgstr "Skrýt na odznaku datum prvního nákupu {premiumProductName}"
-
-#. Linux settings note under the list of system-wide shortcuts the desktop
-#. runs (KDE, GNOME). A key assigned here stops reaching every other app.
-#. {productName} is the app name.
-#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
-msgid ""
-"Your desktop keeps these keys for {productName}, so other apps can't use "
-"them."
-msgstr ""
-"Vaše desktopové prostředí vyhradí tyto klávesy pro aplikaci {productName}, "
-"takže je ostatní aplikace nemohou používat."
-
-#. Settings search synonym. Used to match this term when the user types it in
-#. the settings search bar.
-#: src/features/user/components/settings_utils/search_index/PlutoniumIndex.ts
-msgid "Premium"
-msgstr "Premium"
-
-#. Linux settings note under the list of system-wide shortcuts the desktop
-#. runs (KDE, GNOME), shown when the "Use direct input device access" switch
-#. is offered below it. A key assigned here stops reaching every other app.
-#. {productName} is the app name.
-#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
-msgid ""
-"Your desktop keeps these keys for {productName}, so other apps can't use "
-"them. To use the same key in other apps, turn on direct input device access "
-"below."
-msgstr ""
-"Vaše desktopové prostředí vyhradí tyto klávesy pro aplikaci {productName}, "
-"takže je ostatní aplikace nemohou používat. Chcete-li stejnou klávesu "
-"používat i v jiných aplikacích, zapněte níže přímý přístup ke vstupním "
-"zařízením."
-
-#. Instructions for GNOME. Keep "Settings" and "Apps" as the GNOME menu names
-#. in your language. {productName} is the app name.
-#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
-msgid "To change the keys, go to Settings > Apps > {productName}."
-msgstr ""
-"Chcete-li změnit klávesy, přejděte do Nastavení > Aplikace > {productName}."
-
-#. Privacy > Profile privacy: radio option label allowing every community
-#. member to see the profile.
-#: src/features/user/components/modals/tabs/privacy_safety_tab/ProfilePrivacyTab.tsx
-msgid "Friends and all communities"
-msgstr "Přátelé a všechny komunity"
-
-#. Privacy > Profile privacy: radio option label allowing only friends and
-#. members of small communities.
-#: src/features/user/components/modals/tabs/privacy_safety_tab/ProfilePrivacyTab.tsx
-msgid "Friends and small communities only"
-msgstr "Pouze přátelé a malé komunity"
-
-#. Shown instead of a key when the desktop has no key assigned to a system-
-#. wide shortcut.
-#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
-msgid "Not assigned"
-msgstr "Nepřiřazeno"
-
-#. Instructions for changing system-wide shortcut keys on an unrecognized
-#. Linux desktop.
-#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
-msgid "To change the keys, open your desktop's keyboard shortcut settings."
-msgstr ""
-"Chcete-li změnit klávesy, otevřete nastavení klávesových zkratek vašeho "
-"desktopového prostředí."
-
-#. Switch under the premium badge row in the "Badges" profile settings.
-#. Preserve {premiumProductName}; it is inserted by code. Keep the tone plain
-#. and specific.
-#: src/features/user/components/modals/tabs/my_profile_tab/ProfileBadgeSettings.tsx
-msgid "Hide {premiumProductName} purchase date"
-msgstr "Skrýt datum nákupu {premiumProductName}"
-
-#. Instructions for KDE Plasma. Keep "System Settings", "Keyboard" and
-#. "Shortcuts" as the KDE menu names in your language. {productName} is the
-#. app name.
-#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
-msgid ""
-"To change the keys, go to System Settings > Keyboard > Shortcuts > "
-"{productName}."
-msgstr ""
-"Chcete-li změnit klávesy, přejděte do Nastavení systému > Klávesnice > "
-"Klávesové zkratky > {productName}."

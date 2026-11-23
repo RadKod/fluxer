@@ -89,6 +89,8 @@ const LANE_CONFIG = {
 			'verifyShopOrder',
 			'drainActivitySpool',
 			'liftExpiredGuildInvitePauses',
+			'endExpiredPlannedJoinWaves',
+			'restatePlannedJoinWaves',
 			'endGuildVisitsForCode',
 			'pruneGuildVisits',
 			'endUnassignedGuildVisits',

@@ -229,7 +229,7 @@ function formatReleaseChannelLabel(value: string): string {
 
 function getBuildString(desktopInfo: DesktopInfo): string {
 	const buildVersion = process.env.BUILD_VERSION || desktopInfo.version || 'dev';
-	const releaseChannel = formatReleaseChannelLabel(process.env.BUILD_CHANNEL || desktopInfo.channel);
+	const releaseChannel = formatReleaseChannelLabel(desktopInfo.channel);
 	return `${releaseChannel} Desktop ${buildVersion}`;
 }
 
@@ -290,6 +290,8 @@ function formatWindowBehavior(settings: DesktopWindowBehaviorSettings): string {
 	return [
 		`showTrayIcon=${settings.showTrayIcon}`,
 		`coloredTrayIcon=${settings.coloredTrayIcon}`,
+		`monochromeTrayIconTone=${settings.monochromeTrayIconTone}`,
+		`unreadLauncherBadge=${settings.unreadLauncherBadge}`,
 		`minimizeToTray=${settings.minimizeToTray}`,
 		`closeToTray=${settings.closeToTray}`,
 		`startMinimized=${settings.startMinimized}`,

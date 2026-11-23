@@ -13,8 +13,6 @@ export const CACHE_PURGE_ADAPTER_NAMES = ['none', 'http', 'controller', 'bunny',
 export type CachePurgeAdapterName = (typeof CACHE_PURGE_ADAPTER_NAMES)[number];
 export const BUNNY_PURGE_MODES = ['prefix', 'tag'] as const;
 export type BunnyPurgeMode = (typeof BUNNY_PURGE_MODES)[number];
-export const CASSANDRA_CONSISTENCY_NAMES = ['local_one', 'local_quorum', 'quorum', 'one'] as const;
-export type CassandraConsistencyName = (typeof CASSANDRA_CONSISTENCY_NAMES)[number];
 export const STORE_PRODUCT_SLOT_NAMES = ['monthly', 'yearly', 'gift_1_month', 'gift_1_year'] as const;
 export type StoreProductSlotName = (typeof STORE_PRODUCT_SLOT_NAMES)[number];
 export const ACCOUNT_IDENTITY_MODE_NAMES = ['email', 'username'] as const;
@@ -85,9 +83,10 @@ export interface MasterConfig {
 			port: number;
 			keyspace: string;
 			local_dc: string;
+			consistency: string;
+			serial_consistency: string;
 			username: string;
 			password: string;
-			consistency?: CassandraConsistencyName;
 		};
 		postgres: {
 			url: string;
@@ -122,11 +121,25 @@ export interface MasterConfig {
 			reports: string;
 			harvests: string;
 		};
+		store_id: string;
+		dual_store_enabled: boolean;
+		fallback_reads_enabled: boolean;
+		fallback?: {
+			store_id: string;
+			endpoint: string;
+			presigned_url_base?: string;
+			force_path_style: boolean;
+			region: string;
+			access_key_id: string;
+			secret_access_key: string;
+			bucket_map: string;
+		};
 	};
 	services: {
 		api: {
 			port: number;
 			host?: string;
+			metrics_port?: number;
 			headers_timeout_ms: number;
 			request_timeout_ms: number;
 			max_inflight_requests: number;
@@ -191,6 +204,12 @@ export interface MasterConfig {
 				enabled?: boolean;
 				stream?: string;
 				skip_buckets?: Array<string>;
+			};
+			cassandra_write_capture?: {
+				mode?: 'off' | 'behind';
+				nats_url?: string;
+				auth_token?: string;
+				stream?: string;
 			};
 		};
 		nats?: {

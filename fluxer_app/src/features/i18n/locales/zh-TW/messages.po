@@ -3427,6 +3427,13 @@ msgstr "{productName} 啟動時不會更新。有可用的更新時，您可以�
 msgid "{productName} wordmark"
 msgstr "{productName} 文字標誌"
 
+#. Download progress shown under a file name in the downloads panel.
+#. {progress} is the formatted percentage downloaded so far, for example 42%.
+#. {total} is the formatted size of the whole file, for example 3.2 MB.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "{progress} of {total}"
+msgstr "{progress}，共 {total}"
+
 #: src/features/connection/components/modals/AddConnectionModal.tsx
 msgid ""
 "{providerName} opens in your browser. Sign in there to connect your account."
@@ -3529,6 +3536,13 @@ msgstr "{resultCount, plural, other {有 # 個結果}}"
 #: src/features/channel/components/bottomsheets/ChannelSearchBottomSheet.tsx
 msgid "{resultCount, plural, one {# result} other {# results}}"
 msgstr "{resultCount, plural, other {# 個結果}}"
+
+#. OAuth authorize page error shown when the authorization link asks for a
+#. scope this app does not offer. Preserve {scope}, it is the technical scope
+#. name inserted by code.
+#: src/features/auth/components/pages/oauth_authorize_page/state/useAuthorizeFlow.ts
+msgid "{scope} is not a supported scope."
+msgstr ""
 
 #. AFK timeout label for a stored custom duration shown in the idle settings
 #. section.
@@ -4879,6 +4893,42 @@ msgid ""
 " also do this later in settings."
 msgstr "新增通行金鑰，即可使用指紋、臉部或螢幕鎖定進行登入。您之後也可以在設定中完成。"
 
+#. Description of the account settings row for single sign-on when the account
+#. has no other way to sign in. providerName is the provider name typed by the
+#. admin.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid ""
+"Add a password or passkey to your account before you disconnect "
+"{providerName}."
+msgstr "在中斷 {providerName} 之前，請為你的帳號新增密碼或通行金鑰。"
+
+#. Description of the account settings row for single sign-on when the account
+#. has no other way to sign in and the admin has not given the provider a
+#. name.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid ""
+"Add a password or passkey to your account before you disconnect single sign-"
+"on."
+msgstr "在中斷單一登入之前，請為你的帳號新增密碼或通行金鑰。"
+
+#. Description of the account settings row for single sign-on when the account
+#. has no other way to sign in and the instance allows sign-in with codes sent
+#. by email. providerName is the provider name typed by the admin.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid ""
+"Add a password or passkey, or confirm your email address to sign in with "
+"emailed codes, before you disconnect {providerName}."
+msgstr "在中斷 {providerName} 之前，請新增密碼或通行金鑰，或確認你的電子郵件地址，以便使用電子郵件驗證碼登入。"
+
+#. Description of the account settings row for single sign-on when the account
+#. has no other way to sign in, the instance allows sign-in with codes sent by
+#. email and the admin has not given the provider a name.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid ""
+"Add a password or passkey, or confirm your email address to sign in with "
+"emailed codes, before you disconnect single sign-on."
+msgstr "在中斷單一登入之前，請新增密碼或通行金鑰，或確認你的電子郵件地址，以便使用電子郵件驗證碼登入。"
+
 #. Form placeholder for the tag input on an expression form.
 #: src/features/expressions/components/modals/TagListField.tsx
 msgid "Add a tag"
@@ -4920,8 +4970,12 @@ msgstr "新增帳號"
 msgid "Add action."
 msgstr "新增動作。"
 
+#. Button on the startup screen shown when the current account's instance is
+#. offline or not responding. Restarts the app signed out so the person can
+#. sign in to an account on any instance. The current account stays saved.
 #. Last tile in the account switcher grid, and the title of the step it opens,
 #. where another saved account is added by signing in or registering.
+#: src/features/app/components/BootstrapErrorScreen.tsx
 #: src/features/auth/components/accounts/account_switcher_modal/AccountSwitcherAuthFlow.tsx
 msgid "Add an account"
 msgstr "新增帳號"
@@ -7115,6 +7169,11 @@ msgstr "從您正在使用的 {productName} 應用程式核准此應用程式。
 msgid "Approved"
 msgstr "已核准"
 
+#. Short label in the Explore page sidebar. Keep it concise.
+#: src/features/discovery/discovery/DiscoverySidebar.tsx
+msgid "Apps"
+msgstr "應用程式"
+
 #. Security settings card title for third-party app access and signed-in
 #. devices.
 #: src/features/user/components/modals/tabs/account_security_tab/SecurityTab.tsx
@@ -8193,6 +8252,12 @@ msgstr "備用碼已重新產生"
 msgid "Badge and wall count: {count}"
 msgstr "徽章和牆上的數量：{count}"
 
+#. Desktop setting toggle label on Linux. Controls whether unread messages
+#. without mentions put a badge on the app icon in the taskbar or dock.
+#: src/features/user/components/modals/tabs/DesktopSettingsTab.tsx
+msgid "Badge the app icon for unread messages"
+msgstr ""
+
 #. Title of the profile settings section that lists the badges you hold and
 #. lets you hide each one.
 #. Title of the window that lists every badge of a person or community.
@@ -8473,6 +8538,12 @@ msgstr "生物辨識"
 #: src/features/user/utils/UserMessageDescriptors.ts
 msgid "Bitrate"
 msgstr "位元率"
+
+#. Tray icon color option for a black monochrome tray icon, for light taskbars
+#. and panels.
+#: src/features/user/components/modals/tabs/DesktopSettingsTab.tsx
+msgid "Black"
+msgstr ""
 
 #. Generic destructive action label that blocks a user.
 #. Settings search synonym. Used to match this term when the user types it in
@@ -9052,6 +9123,13 @@ msgstr "含操作選單的按鈕"
 msgid "Buttons"
 msgstr "按鈕"
 
+#. Help text under the theme color picker in the setup wizard branding step.
+#: src/features/app/components/setup/SetupBrandingFields.tsx
+msgid ""
+"Buttons and highlights across the app use this color, and phone browsers use"
+" it for their toolbar. Reset it to keep Fluxer's indigo."
+msgstr "應用程式中的按鈕和醒目標示都會使用此顏色，手機瀏覽器也會將它用作工具列顏色。重設後將保留 sanalyer 的靛藍色。"
+
 #: src/features/user/components/modals/tabs/component_gallery_tab/ComponentGalleryTabButtonsTab.tsx
 msgid ""
 "Buttons can trigger context menus on click by passing the onClick event "
@@ -9071,13 +9149,6 @@ msgstr "當 submitting 為 true 時，按鈕會顯示載入指示器。"
 #: src/features/user/components/modals/tabs/component_gallery_tab/ComponentGalleryTabButtonsTab.tsx
 msgid "Buttons with icons"
 msgstr "含圖示的按鈕"
-
-#. Help text under the theme color picker in the setup wizard branding step.
-#: src/features/app/components/setup/SetupBrandingFields.tsx
-msgid ""
-"Buttons, links and highlights across the app use this color, and phone "
-"browsers use it for their toolbar. Reset it to keep Fluxer's indigo."
-msgstr "應用程式中的按鈕、連結和醒目標示都會使用此顏色，手機瀏覽器也會將它用作工具列顏色。重設後將保留 sanalyer 的靛藍色。"
 
 #. Gift inventory empty-state description. premiumProductName is the premium
 #. tab name and product name.
@@ -9476,6 +9547,11 @@ msgstr "無法在這裡上傳檔案"
 msgid "Cancel"
 msgstr "取消"
 
+#. Stops an in-progress download and deletes the partial file.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Cancel download"
+msgstr "取消下載"
+
 #. Button or menu action label in the channel and chat edit bar. Keep it
 #. concise.
 #: src/features/channel/components/ChannelEditBar.tsx
@@ -9558,6 +9634,13 @@ msgstr "要取消對 {displayName} 的好友邀請嗎？"
 #: src/features/user/components/settings_utils/section_registry/VoiceVideoSections.ts
 msgid "Cancellation"
 msgstr "消除迴音"
+
+#. Status shown under a file name in the downloads panel after the user
+#. cancels the download. The part of the file that had already downloaded is
+#. deleted.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Cancelled. The partial file was deleted."
+msgstr "已取消。未下載完成的檔案已刪除。"
 
 #: src/features/app/components/dialogs/components/plutonium/SubscriptionDescription.tsx
 msgid "Cancels on <0>{cancelDate}</0>. <1/> remain active until then."
@@ -10473,7 +10556,7 @@ msgstr "頻道存取權"
 
 #. Title of the alert shown when clicking a message link the user does not
 #. have permission to view.
-#: src/features/messaging/components/markdown/renderers/LinkRenderer.tsx
+#: src/features/messaging/utils/InAppLinkUtils.tsx
 msgid "Channel access denied"
 msgstr "頻道存取遭拒"
 
@@ -11459,6 +11542,12 @@ msgstr "要清除此訊息的所有反應嗎？"
 msgid "Clear friends search"
 msgstr "清除好友搜尋"
 
+#. Removes finished downloads from the downloads panel. Downloaded files stay
+#. on disk and in-progress downloads stay in the list.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Clear list"
+msgstr "清除清單"
+
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
 #: src/features/user/components/settings_utils/search_index/ChatSettingsIndex.ts
@@ -12428,6 +12517,12 @@ msgstr "比較"
 msgid "Complete payment"
 msgstr "完成付款"
 
+#. Status shown under a file name in the downloads panel once the file has
+#. finished downloading. Keep it short.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Completed"
+msgstr "已完成"
+
 #: src/features/auth/components/pages/SignInLinkPage.tsx
 #: src/features/auth/components/pages/SsoCallbackPage.tsx
 msgid "Completing sign-in…"
@@ -12953,6 +13048,12 @@ msgstr "已連線到語音"
 msgctxt "us-state"
 msgid "Connecticut"
 msgstr "康乃狄克州"
+
+#. Heading on the SSO callback page while connecting single sign-on from
+#. account settings.
+#: src/features/auth/components/pages/SsoCallbackPage.tsx
+msgid "Connecting single sign-on…"
+msgstr "正在連結單一登入…"
 
 #. Auth status shown while connecting to an instance, when the instance
 #. selector resolves it or when sign-in waits for the live connection. Domain
@@ -13951,6 +14052,9 @@ msgstr "無法完成登入。請再試一次。"
 
 #. Error title shown when starting to connect single sign-on from account
 #. settings fails.
+#. Heading on the SSO callback page when connecting single sign-on from
+#. account settings failed.
+#: src/features/auth/components/pages/SsoCallbackPage.tsx
 #: src/features/user/components/modals/tabs/account_security_tab/SsoConnectRow.tsx
 msgid "Couldn't connect single sign-on"
 msgstr "無法連結單一登入"
@@ -14079,6 +14183,11 @@ msgstr "無法刪除此 Webhook"
 #: src/features/guild/hooks/useDeleteMyMessagesInGuild.tsx
 msgid "Couldn't delete your messages"
 msgstr "無法刪除您的訊息"
+
+#. Error title shown when disconnecting single sign-on fails.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid "Couldn't disconnect single sign-on"
+msgstr "無法中斷單一登入"
 
 #. Modal title shown when a desktop update download fails.
 #: src/features/updater/commands/UpdaterModalCommands.tsx
@@ -16230,14 +16339,11 @@ msgstr "刪除提示"
 msgid "Delete redirect URI"
 msgstr "刪除重新導向 URI"
 
-#. Danger action in the channel permissions overwrite context menu that
-#. removes a role permission override from the channel.
 #. Destructive button in the role editor that removes the selected role.
 #. Removes the role from every member; keep tone plain.
 #. Destructive context menu action in the community roles settings tab that
 #. immediately removes the right-clicked role from every member. Keep it
 #. short.
-#: src/features/channel/components/modals/channel_tabs/channel_permissions_tab/OverwriteContextMenu.tsx
 #: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx
 #: src/features/guild/components/modals/guild_tabs/GuildRolesTab.tsx
 #: src/features/ui/action_menu/RoleContextMenu.tsx
@@ -16306,12 +16412,6 @@ msgstr "刪除此訊息？無法復原。此訊息也會從所有追蹤此頻道
 #: src/features/threads/utils/ThreadMessageDescriptors.ts
 msgid "Delete thread"
 msgstr "刪除討論串"
-
-#. Danger action in the channel permissions overwrite context menu that
-#. removes a member permission override from the channel.
-#: src/features/channel/components/modals/channel_tabs/channel_permissions_tab/OverwriteContextMenu.tsx
-msgid "Delete user"
-msgstr "刪除使用者"
 
 #. Danger button label that deletes a webhook.
 #: src/features/webhook/components/WebhookListItem.tsx
@@ -16811,14 +16911,14 @@ msgstr "開發人員狀態"
 #. Title of the info alert shown when clicking an internal developer-tools
 #. deep link.
 #: src/features/channel/components/channel_header_components/UtilityButtons.tsx
-#: src/features/messaging/components/markdown/renderers/LinkRenderer.tsx
+#: src/features/messaging/utils/InAppLinkUtils.tsx
 #: src/features/ui/action_menu/items/StaffDeveloperUserControlsMenuItem.tsx
 msgid "Developer tools"
 msgstr "開發人員工具"
 
 #. Body of the developer-tools info alert. Refers to the staff badge button in
 #. the channel header.
-#: src/features/messaging/components/markdown/renderers/LinkRenderer.tsx
+#: src/features/messaging/utils/InAppLinkUtils.tsx
 msgid ""
 "Developer tools are available from the staff badge in the channel header."
 msgstr "開發人員工具可從頻道標題列的員工徽章開啟。"
@@ -16994,6 +17094,7 @@ msgstr "私訊預覽"
 #. Review row label for direct messages.
 #: src/features/app/components/setup/SetupWizardSteps.tsx
 #: src/features/channel/components/direct_message/DirectMessageList.tsx
+#: src/features/guild/components/modals/guild_tabs/GuildModerationTab.tsx
 #: src/features/i18n/utils/CommonMessageDescriptors.ts
 #: src/features/user/components/modals/tabs/privacy_safety_tab/ConnectionsTab.tsx
 msgid "Direct messages"
@@ -17260,6 +17361,19 @@ msgstr "捨棄語音訊息"
 msgid "Disconnect"
 msgstr "中斷連線"
 
+#. Button that disconnects the account from single sign-on.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgctxt "sso"
+msgid "Disconnect"
+msgstr "中斷"
+
+#. Confirmation title when disconnecting the current account from the
+#. instance's single sign-on provider. providerName is the provider name typed
+#. by the admin.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid "Disconnect {providerName}?"
+msgstr "中斷 {providerName}？"
+
 #. Voice menu action that disconnects every active device or session from
 #. voice chat.
 #: src/features/voice/utils/VoiceMessageDescriptors.ts
@@ -17286,6 +17400,12 @@ msgstr "從 {channel} 中斷連線"
 #: src/features/platform/utils/DesktopLocaleBridge.ts
 msgid "Disconnect from voice"
 msgstr "中斷語音連線"
+
+#. Confirmation title when disconnecting the current account from single sign-
+#. on and the admin has not given the provider a name.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid "Disconnect single sign-on?"
+msgstr "中斷單一登入？"
 
 #: src/features/channel/components/channel_header_components/developer_tools/ToolsMenu.tsx
 msgid "Disconnect socket"
@@ -17845,6 +17965,11 @@ msgstr "請下載新版本以更新 {appName}。"
 #: src/features/ui/action_menu/items/MediaMenuData.tsx
 msgid "Download video"
 msgstr "下載影片"
+
+#. Heading of the downloads panel.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Downloads"
+msgstr "下載"
 
 #. Short heading in the keyboard shortcuts cheatsheet.
 #. Short label in the keybinds tab. Keep it concise.
@@ -20134,6 +20259,12 @@ msgstr "讓訊息載入失敗"
 msgid "Fail message sends"
 msgstr "讓訊息傳送失敗"
 
+#. Status shown under a file name in the downloads panel when the download did
+#. not finish. Keep it short.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Failed"
+msgstr "失敗"
+
 #: src/features/moderation/components/modals/BanMemberModal.tsx
 msgid "Failed to ban member. Try again."
 msgstr "無法停權成員。請再試一次。"
@@ -20980,16 +21111,6 @@ msgid ""
 "approved this sign-in. Check your connection, then select \"Try again\"."
 msgstr "sanalyer 無法連線到 {instanceName} 來檢查瀏覽器是否已核准此登入。請檢查網路連線，然後選取「再試一次」。"
 
-#. Error shown in the desktop app when a passkey prompt starts but no security
-#. key is connected to the computer.
-#: src/features/auth/utils/PasskeyErrorMessages.ts
-msgid ""
-"sanalyer couldn't find a security key on this computer. Connect your "
-"security key and try again, or open sanalyer in your web browser and use "
-"your passkey there."
-msgstr ""
-"sanalyer 在這台電腦上找不到安全金鑰。請連接你的安全金鑰後再試一次，或在網頁瀏覽器中開啟 sanalyer 並在那裡使用你的通行金鑰。"
-
 #. Name of the section in the Operator Pass settings tab about the Fluxer Labs
 #. community. Fluxer Labs is the name of a community, keep it as is.
 #: src/features/premium/utils/PremiumMessageDescriptors.ts
@@ -21630,6 +21751,12 @@ msgctxt "privacy-settings-section"
 msgid "Friends & direct messages"
 msgstr "好友與私訊"
 
+#. Privacy > Profile privacy: radio option label allowing every community
+#. member to see the profile.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/ProfilePrivacyTab.tsx
+msgid "Friends and all communities"
+msgstr "好友和所有社群"
+
 #. Privacy > Communication: select option for the custom group chat add
 #. permission tier.
 #: src/features/user/components/modals/tabs/privacy_safety_tab/CommunicationTab.tsx
@@ -21642,6 +21769,12 @@ msgstr "好友和選定的群組可以不經詢問就將您加入"
 msgid "Friends and selected groups can call you"
 msgstr "好友和選定的群組可以致電您"
 
+#. Privacy > Profile privacy: radio option label allowing only friends and
+#. members of small communities.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/ProfilePrivacyTab.tsx
+msgid "Friends and small communities only"
+msgstr "僅限好友和小型社群"
+
 #. Reassurance in the privacy setup modal that friends can always send direct
 #. messages.
 #: src/features/user/components/modals/PrivacySetupModal.tsx
@@ -21653,6 +21786,14 @@ msgid ""
 "Friends can always message you. These settings cover people and bots you "
 "only share a community with."
 msgstr "好友隨時都能傳訊息給你。這些設定適用於你僅與其共享社群的人員和機器人。"
+
+#. Help text under the switch that turns off direct messages between community
+#. members who are not friends, in the community moderation settings tab.
+#: src/features/guild/components/modals/guild_tabs/GuildModerationTab.tsx
+msgid ""
+"Friends can still DM each other, and so can members who share another "
+"community. Bots aren't affected."
+msgstr "好友之間仍可互傳私訊，同在另一個社群的成員之間也可以。機器人不受影響。"
 
 #. Privacy option label for people connected through mutual friends.
 #: src/features/i18n/utils/CommonMessageDescriptors.ts
@@ -23028,6 +23169,20 @@ msgstr "隱藏"
 #: src/features/platform/utils/DesktopLocaleBridge.ts
 msgid "Hide {appName}"
 msgstr "隱藏 {appName}"
+
+#. Switch under the premium badge row in the "Badges" profile settings.
+#. Preserve {premiumProductName}; it is inserted by code. Keep the tone plain
+#. and specific.
+#: src/features/user/components/modals/tabs/my_profile_tab/ProfileBadgeSettings.tsx
+msgid "Hide {premiumProductName} purchase date"
+msgstr "隱藏 {premiumProductName} 購買日期"
+
+#. Context menu item on the Plutonium button in the direct messages list.
+#. Hides the button. productName is the premium product name, Plutonium on
+#. fluxer.com.
+#: src/features/channel/components/direct_message/DirectMessageList.tsx
+msgid "Hide {productName} button"
+msgstr ""
 
 #. Accessible label for the button that collapses the other accounts section
 #. in the inbox.
@@ -26396,7 +26551,7 @@ msgstr "連結樣式"
 
 #. Title of the alert shown when clicking an internal link that is not
 #. available to the current account.
-#: src/features/messaging/components/markdown/renderers/LinkRenderer.tsx
+#: src/features/messaging/utils/InAppLinkUtils.tsx
 msgid "Link unavailable"
 msgstr "連結無法使用"
 
@@ -26482,6 +26637,13 @@ msgstr "Linux 應用程式"
 #: src/features/voice/utils/VoiceMessageDescriptors.ts
 msgid "Linux default"
 msgstr "Linux 預設值"
+
+#. Desktop setting description under the Linux unread app icon badge toggle.
+#: src/features/user/components/modals/tabs/DesktopSettingsTab.tsx
+msgid ""
+"Linux taskbars can only show a number, so unread messages without mentions "
+"show as 1. Mentions always show their count."
+msgstr ""
 
 #. Forum layout name shown inside an activity log row.
 #. Forum layout option that shows posts as rows.
@@ -26850,6 +27012,12 @@ msgstr "預計於 {localizedTime} 進行維護。預計持續時間：{duration}
 #: src/features/ui/action_menu/GroupDMContextMenu.tsx
 msgid "Make {userName} the group owner? You'll lose owner privileges."
 msgstr "要將 {userName} 設為群組擁有者嗎？您將會失去擁有者權限。"
+
+#. Description of the community ownership transfer section in community
+#. settings.
+#: src/features/guild/components/modals/guild_tabs/guild_overview_tab/sections/OwnerTransferSection.tsx
+msgid "Make another member the owner of this community. You cannot undo this."
+msgstr "將另一位成員設為此社群的擁有者。此動作無法復原。"
 
 #. Group DM action that transfers ownership of the group to the selected
 #. member.
@@ -27259,6 +27427,12 @@ msgstr "主音量"
 msgctxt "code-editor"
 msgid "Match case"
 msgstr "區分大小寫"
+
+#. Tray icon color option. The app picks white or black from the taskbar or
+#. panel color.
+#: src/features/user/components/modals/tabs/DesktopSettingsTab.tsx
+msgid "Match the taskbar"
+msgstr ""
 
 #: src/features/channel/components/MatureContentChannelGate.tsx
 msgid "Mature category"
@@ -30619,6 +30793,12 @@ msgstr "不允許"
 msgid "Not applied yet"
 msgstr "尚未套用"
 
+#. Shown instead of a key when the desktop has no key assigned to a system-
+#. wide shortcut.
+#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
+msgid "Not assigned"
+msgstr "未指定"
+
 #. Screen reader text for a cross in the Plutonium page comparison table.
 #: src/features/premium/components/plutonium_page/PlutoniumPageMessages.ts
 msgid "Not available"
@@ -31877,6 +32057,12 @@ msgstr "再次開啟付款頁面"
 #: src/features/ui/components/form/FormCombobox.tsx
 msgid "Open popup"
 msgstr "開啟彈出式視窗"
+
+#. Accessible label of a picture or video tile in the Media tab of the full
+#. profile page; opens that post.
+#: src/features/user/components/pages/ProfileMediaGrid.tsx
+msgid "Open post"
+msgstr "Open post"
 
 #. Accessible label for the avatar button in the channel header of a DM. Opens
 #. the recipient user profile.
@@ -33533,6 +33719,11 @@ msgstr "選擇要在訊息輸入欄中顯示哪些按鈕"
 msgid "Pick which kinds of conversations to clean up."
 msgstr "選擇要清理哪些類型的對話。"
 
+#. Description under the automatic tray icon color option.
+#: src/features/user/components/modals/tabs/DesktopSettingsTab.tsx
+msgid "Pick white or black from the color of your taskbar or panel."
+msgstr ""
+
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
 #: src/features/user/components/settings_utils/search_index/MyProfileIndex.ts
@@ -33729,6 +33920,11 @@ msgstr "播放"
 msgid "Play animated emojis"
 msgstr "播放動態表情符號"
 
+#. Short label for a toggle in the animation tab. Keep it concise.
+#: src/features/user/components/modals/tabs/accessibility_tab/AnimationTab.tsx
+msgid "Play GIFs in the GIF picker"
+msgstr "在 GIF 選擇器中播放 GIF"
+
 #. Short label in the accessibility tab. Keep it concise.
 #: src/features/user/components/modals/tabs/AccessibilityTab.tsx
 msgid "Play sample"
@@ -33805,6 +34001,12 @@ msgstr "請稍候片刻，然後再試著刪除。"
 #: src/features/emoji/components/emojis/EmojiListItem.tsx
 msgid "Please wait a moment and try renaming again."
 msgstr "請稍候片刻，然後再試著重新命名。"
+
+#. Settings search entry description. One-line summary of what the setting
+#. controls. Plutonium is the product name.
+#: src/features/user/components/settings_utils/search_index/AppearanceIndex.ts
+msgid "Plutonium button in the direct messages list"
+msgstr ""
 
 #. Country name. EU member state in the illegal-content report country
 #. dropdown.
@@ -33997,6 +34199,12 @@ msgstr "偏好的螢幕分享編解碼器"
 #: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
 msgid "Prefers reduced motion"
 msgstr "偏好減少動態效果"
+
+#. Settings search synonym. Used to match this term when the user types it in
+#. the settings search bar.
+#: src/features/user/components/settings_utils/search_index/PlutoniumIndex.ts
+msgid "Premium"
+msgstr "進階方案"
 
 #. Progress label on the save button while an animated image crop starts. Keep
 #. it concise.
@@ -35873,6 +36081,11 @@ msgstr "從我的最愛移除"
 msgid "Remove from group"
 msgstr "從群組中移除"
 
+#. Removes a finished download from the downloads panel.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Remove from list"
+msgstr "從清單中移除"
+
 #. Context menu item that removes a self-hosted instance from the
 #. authentication instance picker history.
 #: src/features/auth/flow/instance_selector/InstancePickerRows.tsx
@@ -35957,6 +36170,12 @@ msgstr "移除反應"
 msgid "Remove reverse image search"
 msgstr "移除以圖搜圖"
 
+#. Danger action in the channel permissions overwrite context menu that
+#. removes a role permission override from the channel.
+#: src/features/channel/components/modals/channel_tabs/channel_permissions_tab/OverwriteContextMenu.tsx
+msgid "Remove role"
+msgstr "移除身分組"
+
 #. Button or menu action label in the community role management. Keep it
 #. concise. Preserve {roleName}; it is inserted by code. Keep the tone plain
 #. and specific.
@@ -36011,6 +36230,19 @@ msgstr "解除禁言"
 #: src/features/user/components/modals/tabs/chat_settings_tab/SearchEnginesTab.tsx
 msgid "Remove translator"
 msgstr "移除翻譯工具"
+
+#. Danger action in the channel permissions overwrite context menu that
+#. removes a member permission override from the channel.
+#: src/features/channel/components/modals/channel_tabs/channel_permissions_tab/OverwriteContextMenu.tsx
+msgid "Remove user"
+msgstr "移除使用者"
+
+#. Description of the switch that hides the purchase date, under the premium
+#. badge row in the "Badges" profile settings. Preserve {premiumProductName};
+#. it is inserted by code. Keep the tone plain and specific.
+#: src/features/user/components/modals/tabs/my_profile_tab/ProfileBadgeSettings.tsx
+msgid "Remove when you first bought {premiumProductName} from your badge"
+msgstr "從徽章中移除您首次購買 {premiumProductName} 的時間"
 
 #. Title of the confirmation shown before deleting the age range from an Apple
 #. or Google account.
@@ -38479,6 +38711,12 @@ msgstr "搜尋語言代碼…"
 msgid "Search languages…"
 msgstr "搜尋語言…"
 
+#. Placeholder of the member search in the community ownership transfer
+#. section.
+#: src/features/guild/components/modals/guild_tabs/guild_overview_tab/sections/OwnerTransferSection.tsx
+msgid "Search members"
+msgstr "搜尋成員"
+
 #. Placeholder of the search box in the add members or roles step of the
 #. create channel modal.
 #: src/features/channel/components/modals/ChannelCreateAccessStep.tsx
@@ -40763,6 +41001,11 @@ msgstr "收合時顯示圖示"
 msgid "Show in all communities"
 msgstr "在所有社群中顯示"
 
+#. Opens the folder containing a downloaded file.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Show in folder"
+msgstr "在資料夾中顯示"
+
 #. Setting label that shows a badge for incoming friend requests.
 #: src/features/ui/action_menu/FluxerButtonContextMenu.tsx
 msgid "Show incoming friend request count"
@@ -40949,6 +41192,12 @@ msgstr "顯示密碼"
 #: src/features/user/components/settings_utils/search_index/VoiceVideoIndex.ts
 msgid "Show per-device participant volume sliders in voice menus"
 msgstr "在語音選單中顯示個別裝置的參與者音量滑桿"
+
+#. Toggle label and settings search entry for showing the Plutonium button in
+#. the direct messages list. Plutonium is the product name.
+#: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
+msgid "Show Plutonium button"
+msgstr ""
 
 #. Row in the quick CSS editor shortcuts dialog.
 #: src/features/theme_settings/components/QuickCssShortcutsModal.tsx
@@ -41525,8 +41774,8 @@ msgstr "單行"
 
 #. Heading of the single sign-on panel when the admin has not given the sign-
 #. in provider a name.
-#. Label of the account settings row for connecting single sign-on when the
-#. admin has not given the provider a name.
+#. Label of the account settings row for single sign-on when the admin has not
+#. given the provider a name.
 #: src/features/auth/flow/AuthSsoPanel.tsx
 #: src/features/user/components/modals/tabs/account_security_tab/SsoConnectRow.tsx
 msgid "Single sign-on"
@@ -42726,6 +42975,12 @@ msgstr "由 {name} 發起"
 #: src/features/guild/utils/guild_tabs/audit_log/AuditLogRoleMessages.ts
 msgid "Started displaying members with this role separately"
 msgstr "開始將擁有此身分組的成員獨立顯示"
+
+#. Status shown under a file name in the downloads panel while the download is
+#. starting and no data has arrived yet. Keep it short.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "Starting"
+msgstr "正在開始"
 
 #. SMTP encryption option that upgrades only when the mail server offers
 #. STARTTLS.
@@ -44664,6 +44919,12 @@ msgid ""
 "The file contains the verification token we will fetch from <0>{dnsUrl}</0>."
 msgstr "此檔案包含我們將從 <0>{dnsUrl}</0> 擷取的驗證權杖。"
 
+#. Status shown under a file name in the downloads panel when the download
+#. finished but the file is no longer where it was saved.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "The file was moved or deleted."
+msgstr "檔案已被移動或刪除。"
+
 #. Body of the file-too-large alert when a single file exceeds the per-file
 #. size limit.
 #: src/features/messaging/components/alerts/FileSizeTooLargeModal.tsx
@@ -44671,17 +44932,6 @@ msgid ""
 "The file you're trying to upload exceeds the maximum size limit of "
 "{maxSizeFormatted}."
 msgstr "您嘗試上傳的檔案大小超過 {maxSizeFormatted} 的上限。"
-
-#. Helper text under "Age range from your Apple or Google account" in the
-#. sensitive content settings.
-#: src/features/user/components/modals/tabs/privacy_safety_tab/AgeRangeSection.tsx
-msgid ""
-"The sanalyer app for iPhone, iPad or Android sent us this age range. If it "
-"shows that you're 18 or older, you can see 18+ content in the UK and Brazil."
-" It doesn't change your date of birth."
-msgstr ""
-"適用於 iPhone、iPad 或 Android 的 sanalyer 應用程式向我們傳送了這個年齡層。如果它顯示您已滿 18 "
-"歲，您可以在英國和巴西查看 18+ 內容。它不會變更您的出生日期。"
 
 #. Setup wizard body explaining the push relay.
 #: src/features/app/components/setup/SetupPolicySteps.tsx
@@ -45780,6 +46030,13 @@ msgstr "此社群已暫停邀請。"
 msgid "This community has paused invites. You can try again later."
 msgstr "此社群已暫停邀請。您可以稍後再試。"
 
+#. Shown in the community privacy modal under the direct messages switch when
+#. the community admins have turned off direct messages between members who
+#. are not friends, so the personal switch has no effect.
+#: src/features/guild/components/modals/GuildPrivacySettingsModal.tsx
+msgid "This community has turned off DMs between members who aren't friends"
+msgstr "此社群已關閉非好友成員之間的私訊"
+
 #. Description text in the guild at capacity modal.
 #: src/features/guild/components/alerts/GuildAtCapacityModal.tsx
 msgid ""
@@ -46161,6 +46418,18 @@ msgid ""
 "administrator to enable it."
 msgstr "此伺服器尚未完成單一登入設定。請詢問管理員啟用它。"
 
+#. Description of the account settings row for single sign-on when the
+#. instance requires it. providerName is the provider name typed by the admin.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid "This instance requires you to sign in with {providerName}."
+msgstr "此實例要求你使用 {providerName} 登入。"
+
+#. Description of the account settings row for single sign-on when the
+#. instance requires it and the admin has not given the provider a name.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid "This instance requires you to sign in with single sign-on."
+msgstr "此實例要求你使用單一登入。"
+
 #. Setup wizard explanation of why the sign-in method is fixed: the instance
 #. is older than username sign-in.
 #: src/features/app/components/setup/SetupWizardSteps.tsx
@@ -46355,7 +46624,7 @@ msgid "This link has expired"
 msgstr "這個連結已過期"
 
 #. Body of the link-unavailable alert.
-#: src/features/messaging/components/markdown/renderers/LinkRenderer.tsx
+#: src/features/messaging/utils/InAppLinkUtils.tsx
 msgid "This link is not available for your account."
 msgstr "您的帳號無法使用此連結。"
 
@@ -47187,6 +47456,27 @@ msgctxt "code-editor"
 msgid "to"
 msgstr "到"
 
+#. Instructions for GNOME. Keep "Settings" and "Apps" as the GNOME menu names
+#. in your language. {productName} is the app name.
+#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
+msgid "To change the keys, go to Settings > Apps > {productName}."
+msgstr "若要變更按鍵，請前往「設定」>「應用程式」>「{productName}」。"
+
+#. Instructions for KDE Plasma. Keep "System Settings", "Keyboard" and
+#. "Shortcuts" as the KDE menu names in your language. {productName} is the
+#. app name.
+#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
+msgid ""
+"To change the keys, go to System Settings > Keyboard > Shortcuts > "
+"{productName}."
+msgstr "若要變更按鍵，請前往「系統設定」>「鍵盤」>「快捷鍵」>「{productName}」。"
+
+#. Instructions for changing system-wide shortcut keys on an unrecognized
+#. Linux desktop.
+#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
+msgid "To change the keys, open your desktop's keyboard shortcut settings."
+msgstr "若要變更按鍵，請開啟桌面環境的鍵盤快速鍵設定。"
+
 #. Follows a Shift + Enter key hint under the forum search box. Starts
 #. lowercase because it continues the key hint.
 #: src/features/forum/utils/ForumMessageDescriptors.ts
@@ -47205,6 +47495,15 @@ msgstr ""
 #: src/features/app/components/setup/SetupWizardSteps.tsx
 msgid "To let people in, make a registration link in the admin panel."
 msgstr "若要讓大家加入，請在管理面板中建立註冊連結。"
+
+#. Description of the account settings row for single sign-on in the desktop
+#. app, which cannot connect it. providerName is the provider name typed by
+#. the admin.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoConnectRow.tsx
+msgid ""
+"To sign in to this account with {providerName}, connect it in the web app in"
+" a browser."
+msgstr "如需使用 {providerName} 登入此帳號，請在瀏覽器中透過網頁版應用程式連結。"
 
 #: src/features/guild/components/modals/GuildOwnershipWarningModal.tsx
 msgid ""
@@ -47308,6 +47607,12 @@ msgstr "切換已儲存的媒體"
 #: src/features/user/components/modals/tabs/component_gallery_tab/SelectionsTab.tsx
 msgid "Toggle switches on and off to see state changes."
 msgstr "切換開關以查看狀態變化。"
+
+#. Keyboard shortcut action label shown in the shortcuts list and keybind
+#. editor. Keep short, sentence case.
+#: src/features/input/state/input_keybind/shared.ts
+msgid "Toggle the downloads panel"
+msgstr "切換下載面板"
 
 #. Keyboard shortcut action label shown in the shortcuts list and keybind
 #. editor. Keep short, sentence case.
@@ -47472,8 +47777,9 @@ msgstr "追蹤"
 msgid "Tracking parameters"
 msgstr "追蹤參數"
 
-#. Short label in the transfer ownership modal. Keep it concise.
-#: src/features/guild/components/modals/TransferOwnershipModal.tsx
+#. Title of the community ownership transfer section in community settings and
+#. of its confirmation modal.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
 msgid "Transfer community ownership"
 msgstr "轉移社群擁有權"
 
@@ -47484,10 +47790,15 @@ msgstr "要將群組擁有權轉移給 {userName} 嗎？"
 
 #. Action label in community settings that hands ownership of the community to
 #. another member.
-#: src/features/guild/components/modals/TransferOwnershipModal.tsx
 #: src/features/i18n/utils/CommonMessageDescriptors.ts
 msgid "Transfer ownership"
 msgstr "轉移擁有權"
+
+#. Disabled confirm button in the transfer ownership modal. The number is a
+#. countdown in seconds until the button can be pressed.
+#: src/features/guild/components/modals/TransferOwnershipModal.tsx
+msgid "Transfer ownership ({secondsRemaining})"
+msgstr "轉移擁有權（{secondsRemaining}）"
 
 #. Activity log detail line under a community settings update, shown when the
 #. community got a new owner. It continues the entry summary, so it has no
@@ -47565,6 +47876,12 @@ msgid ""
 "Restart now to apply your change."
 msgstr ""
 "在 Linux 上，系統匣圖示的變更只有在重新啟動後才會生效，因為系統匣通訊協定無法可靠地讓應用程式在執行時新增或移除圖示。立即重新啟動以套用您的變更。"
+
+#. Desktop settings section title on Windows and Linux for choosing the color
+#. of the monochrome system tray icon.
+#: src/features/user/components/modals/tabs/DesktopSettingsTab.tsx
+msgid "Tray icon color"
+msgstr ""
 
 #. Short label in the channel and chat gif picker grid. Keep it concise.
 #. Short label in the channel and chat gif picker header. Keep it concise.
@@ -47900,6 +48217,13 @@ msgstr "關閉裝置相機"
 msgid "Turn off device stream"
 msgstr "關閉裝置直播"
 
+#. Switch label in the community moderation settings tab. When on, members of
+#. this community who are not friends cannot start or continue direct messages
+#. through this community.
+#: src/features/guild/components/modals/guild_tabs/GuildModerationTab.tsx
+msgid "Turn off DMs between members who aren't friends"
+msgstr "關閉非好友成員之間的私訊"
+
 #. Voice menu action that ends the current user screen share.
 #: src/features/ui/action_menu/items/voice_participant_menu_data/shared.ts
 msgid "Turn off stream"
@@ -47911,6 +48235,12 @@ msgstr "關閉直播"
 msgid ""
 "Turn off streaming privacy before viewing login or account security details."
 msgstr "請先關閉直播隱私設定，才能查看登入或帳號安全詳細資訊。"
+
+#. Section description shown when the colored tray icon is on, so the
+#. monochrome color choice has no effect.
+#: src/features/user/components/modals/tabs/DesktopSettingsTab.tsx
+msgid "Turn off the colored tray icon to choose a color here."
+msgstr ""
 
 #. Button that turns on the Operator Pass that comes with Visionary, in
 #. profile settings and at the bottom of its dialog. Nothing is bought.
@@ -47984,6 +48314,26 @@ msgstr "將文字笑臉轉換為表情符號"
 #: src/features/theme_settings/components/QuickCssFiles.tsx
 msgid "Turn this theme on to see your changes in the app."
 msgstr "請先啟用此主題，才能在應用程式中看到你的變更。"
+
+#. Activity log detail line under a community settings update, shown when the
+#. setting that stops direct messages between community members who are not
+#. friends was turned off again. It continues the entry summary, so it has no
+#. subject. It is a past tense record of a change the actor in the summary
+#. already made, never an instruction to the reader. Do not write it as a
+#. command, a button label or in first or second person.
+#: src/features/guild/utils/guild_tabs/audit_log/AuditLogGuildMessages.ts
+msgid "Turned DMs between members who aren't friends back on"
+msgstr "重新開啟了非好友成員之間的私訊"
+
+#. Activity log detail line under a community settings update, shown when the
+#. setting that stops direct messages between community members who are not
+#. friends was turned on. It continues the entry summary, so it has no
+#. subject. It is a past tense record of a change the actor in the summary
+#. already made, never an instruction to the reader. Do not write it as a
+#. command, a button label or in first or second person.
+#: src/features/guild/utils/guild_tabs/audit_log/AuditLogGuildMessages.ts
+msgid "Turned off DMs between members who aren't friends"
+msgstr "關閉了非好友成員之間的私訊"
 
 #. Activity log detail line under a community settings update, shown when the
 #. Mature content setting of the community was turned off. It continues the
@@ -50745,6 +51095,20 @@ msgstr "查看詳情"
 msgid "View devices that are signed in to your account"
 msgstr "檢視已登入您帳號的裝置"
 
+#. Button in the app layout native titlebar that opens the downloads panel.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid "View downloads"
+msgstr "檢視下載"
+
+#. Screen reader label of the titlebar button that opens the downloads panel,
+#. used while downloads are running. {count} is the number of downloads in
+#. progress.
+#: src/features/app/components/layout/NativeDownloads.tsx
+msgid ""
+"View downloads. {count, plural, one {# download in progress} other {# "
+"downloads in progress}}"
+msgstr "檢視下載。{count, plural, one {# 個下載正在進行} other {# 個下載正在進行}}"
+
 #: src/features/user/components/popouts/UserProfileShared.tsx
 msgid "View full profile"
 msgstr "查看完整個人檔案"
@@ -51553,18 +51917,6 @@ msgstr "無法移除您的年齡層。請再試一次。"
 msgid "We couldn't save that theme."
 msgstr "我們無法儲存該佈景主題。"
 
-#. Body of the confirmation shown before deleting the age range. App Attest is
-#. an Apple product name and stays in English.
-#: src/features/user/components/modals/tabs/privacy_safety_tab/AgeRangeSection.tsx
-msgid ""
-"We delete the age range, the time we got it and the App Attest keys for your"
-" Apple devices. In the UK and Brazil, you can't see 18+ content until the "
-"app sends an age range again. The app may send it again later if your Apple "
-"or Google account still shares it with sanalyer."
-msgstr ""
-"我們會刪除這個年齡層、收到它的時間，以及您的 Apple 裝置的 App Attest 金鑰。在英國和巴西，在應用程式再次傳送年齡層之前，您無法查看 "
-"18+ 內容。如果您的 Apple 或 Google 帳號仍與 sanalyer 分享年齡層，應用程式之後可能會再次傳送。"
-
 #. Modal body for existing-subscription block. Directs the user to the billing
 #. portal and addresses the just-paid race case. Keep plain and reassuring.
 #: src/features/app/components/dialogs/components/plutonium/hooks/useCheckoutActions.tsx
@@ -52295,6 +52647,19 @@ msgid ""
 "window"
 msgstr "登入時啟動，改為從系統匣啟動，而非開啟視窗"
 
+#. Description for the GIF picker animation toggle in the animation tab on
+#. desktop.
+#: src/features/user/components/modals/tabs/accessibility_tab/AnimationTab.tsx
+msgid ""
+"When off, GIFs in the picker show a still frame until you hover over them."
+msgstr "關閉後，選擇器中的 GIF 會顯示靜態畫面，直到你將滑鼠游標停在上面。"
+
+#. Description for the GIF picker animation toggle in the animation tab on
+#. mobile.
+#: src/features/user/components/modals/tabs/accessibility_tab/AnimationTab.tsx
+msgid "When off, GIFs in the picker show a still frame."
+msgstr "關閉後，選擇器中的 GIF 會顯示靜態畫面。"
+
 #. Label in the display tab.
 #: src/features/user/components/modals/tabs/chat_settings_tab/DisplayTab.tsx
 msgid "When posted as links in chat"
@@ -52412,6 +52777,12 @@ msgid ""
 "While this badge is hidden, {labsName} shows you without the Operator role, "
 "and you keep #operators."
 msgstr "在此徽章隱藏期間，{labsName} 顯示您時不帶 Operator 角色，您仍可使用 #operators。"
+
+#. Tray icon color option for a white monochrome tray icon, for dark taskbars
+#. and panels.
+#: src/features/user/components/modals/tabs/DesktopSettingsTab.tsx
+msgid "White"
+msgstr ""
 
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
@@ -52950,12 +53321,16 @@ msgstr "您已經有這個連線了。"
 msgid "You are about to leave {productName}"
 msgstr "您即將離開 {productName}"
 
+#. Warning in the ownership transfer confirmation. {0} is the new owner's
+#. display name and targetUserId is their numeric user ID, shown in brackets
+#. after the name.
 #. placeholder {0}: NicknameUtils.getNickname(targetUser, guildId)
 #: src/features/guild/components/modals/TransferOwnershipModal.tsx
 msgid ""
-"You are about to transfer ownership of this community to <0>{0}</0>. This "
-"action is <1>irreversible</1> and you will lose all owner privileges."
-msgstr "您即將轉移此社群的擁有權給 <0>{0}</0>。此動作<1>無法復原</1>，且您將失去所有擁有者權限。"
+"You are about to transfer ownership of this community to <0>{0}</0> "
+"({targetUserId}). This action is <1>irreversible</1> and you will lose all "
+"owner privileges."
+msgstr "您即將轉移此社群的擁有權給 <0>{0}</0>（{targetUserId}）。此動作<1>無法復原</1>，且您將失去所有擁有者權限。"
 
 #. Error message in the user banned from guild modal. Keep the tone plain and
 #. specific.
@@ -52974,11 +53349,6 @@ msgid ""
 "You are editing your per-community profile. This profile will only be "
 "visible in this community and will override your global profile."
 msgstr "您正在編輯您的社群專屬個人檔案。此個人檔案只會在此社群中顯示，並會覆寫您的全域個人檔案。"
-
-#. Body text in the settings dialog client info.
-#: src/features/app/components/dialogs/components/ClientInfo.tsx
-msgid "You are now a developer!"
-msgstr "您現在是開發人員了！"
 
 #. Modal body for the mobile checkout confirmation. Explains that the user is
 #. leaving the app to pay.
@@ -53097,16 +53467,6 @@ msgid ""
 "right away."
 msgstr "您可以在 {date} 前申請全額退款。這也會立即結束您的訂閱。"
 
-#. Nagbar body telling people that the Fluxer app for Android phones can be
-#. installed from Google Play. {googlePlay} is the store brand name Google
-#. Play and must stay as is. Keep Fluxer and Android untranslated. Keep the
-#. tone calm and plain.
-#: src/features/app/components/layout/app_layout/nagbars/AndroidAppNagbar.tsx
-msgid ""
-"You can get the sanalyer app for Android on {googlePlay} and chat from your "
-"phone."
-msgstr "你可以在 {googlePlay} 下載 sanalyer 的 Android 應用程式，用手機聊天。"
-
 #. Line under "Full refund" in the Payments settings. {amount} is the price
 #. paid, with currency, and {date} is the last day of the refund window, such
 #. as Nov 2, 2026. Both are filled in by code.
@@ -53188,6 +53548,19 @@ msgstr ""
 #: src/features/auth/components/accounts/AccountSwitcherModal.tsx
 msgid "You can sign back in at any time."
 msgstr "您可以隨時重新登入。"
+
+#. Description of the account settings row that disconnects the account from
+#. the instance's single sign-on provider. providerName is the provider name
+#. typed by the admin.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid "You can sign in to this account with {providerName}."
+msgstr "你可以使用 {providerName} 登入此帳號。"
+
+#. Description of the account settings row that disconnects the account from
+#. single sign-on when the admin has not given the provider a name.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid "You can sign in to this account with single sign-on."
+msgstr "你可以使用單一登入登入此帳號。"
 
 #. Cooldown notice in the new thread pane when the parent channel has
 #. slowmode. seconds is the wait time.
@@ -53521,7 +53894,7 @@ msgstr ""
 "到期時，標籤將會隨機重新產生。"
 
 #. Body of the access-denied alert for clicked message links.
-#: src/features/messaging/components/markdown/renderers/LinkRenderer.tsx
+#: src/features/messaging/utils/InAppLinkUtils.tsx
 msgid "You do not have access to the channel where this message was sent."
 msgstr "您沒有權限存取傳送此訊息的頻道。"
 
@@ -53935,6 +54308,22 @@ msgstr "您已遭管理員設為耳機靜音"
 #: src/features/auth/components/pages/oauth_authorize_page/OAuthAuthorizeActions.tsx
 msgid "You will be taken to {redirectHostname} after authorizing."
 msgstr "授權後，您將會被導向 {redirectHostname}。"
+
+#. Warning shown before disconnecting single sign-on. providerName is the
+#. provider name typed by the admin.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid ""
+"You won't be able to sign in with {providerName} anymore. You can still use "
+"your other sign-in methods."
+msgstr "你將無法再使用 {providerName} 登入。你仍可使用其他登入方式。"
+
+#. Warning shown before disconnecting single sign-on when the admin has not
+#. given the provider a name.
+#: src/features/user/components/modals/tabs/account_security_tab/SsoDisconnectRow.tsx
+msgid ""
+"You won't be able to sign in with single sign-on anymore. You can still use "
+"your other sign-in methods."
+msgstr "你將無法再使用單一登入。你仍可使用其他登入方式。"
 
 #. Security settings: confirmation modal body for turning off passkey-based
 #. two-factor authentication when the account also has an authenticator app.
@@ -54695,6 +55084,27 @@ msgstr "你目前的套件將在新套件建立後立即失效。"
 msgid "Your desktop didn't set up system-wide keybinds."
 msgstr "桌面環境未設定全系統快速鍵。"
 
+#. Linux settings note under the list of system-wide shortcuts the desktop
+#. runs (KDE, GNOME). A key assigned here stops reaching every other app.
+#. {productName} is the app name.
+#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
+msgid ""
+"Your desktop keeps these keys for {productName}, so other apps can't use "
+"them."
+msgstr "桌面環境會為 {productName} 保留這些按鍵，因此其他應用程式無法使用。"
+
+#. Linux settings note under the list of system-wide shortcuts the desktop
+#. runs (KDE, GNOME), shown when the "Use direct input device access" switch
+#. is offered below it. A key assigned here stops reaching every other app.
+#. {productName} is the app name.
+#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
+msgid ""
+"Your desktop keeps these keys for {productName}, so other apps can't use "
+"them. To use the same key in other apps, turn on direct input device access "
+"below."
+msgstr ""
+"桌面環境會為 {productName} 保留這些按鍵，因此其他應用程式無法使用。若要在其他應用程式中使用相同按鍵，請在下方開啟「直接存取輸入裝置」。"
+
 #. Subtitle above the list of system-wide shortcuts assigned by the Linux
 #. desktop. {productName} is the app name.
 #: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
@@ -54769,6 +55179,12 @@ msgid ""
 "Your fallback entrance sound for all communities and direct messages. More "
 "specific settings override it."
 msgstr "這是所有社群和私訊的預設進入音效。更具體的設定會覆寫此設定。"
+
+#. Shown in the invite modal when every friend is already a member of this
+#. community.
+#: src/features/invite/components/modals/InviteModal.tsx
+msgid "Your friends are already in this community."
+msgstr ""
 
 #. Empty state title in the friends list Online tab when no friends are
 #. online. Tone can be friendly.
@@ -54866,6 +55282,15 @@ msgid ""
 "systems. If you believe this is a mistake, please contact the administrators"
 " of this instance."
 msgstr "您的訊息無法送達，因為它已被我們的安全系統標記。如果您認為這是錯誤，請聯絡此實例的管理員。"
+
+#. System message in a DM after a send fails because the only community the
+#. two people share has turned off direct messages between members who are not
+#. friends.
+#: src/features/messaging/state/MessageQueue.tsx
+msgid ""
+"Your message could not be delivered. A community you share with this person "
+"has turned off direct messages between members who aren't friends."
+msgstr "您的訊息無法送達。您與此人共同所在的某個社群已關閉非好友成員之間的私訊。"
 
 #. Label in the message queue state.
 #: src/features/messaging/state/MessageQueue.tsx
@@ -55398,6 +55823,56 @@ msgstr "放大"
 #: src/features/user/components/settings_utils/search_index/KeybindsIndex.ts
 msgid "Zoom out"
 msgstr "縮小"
+
+#. Help text under the theme color picker in the setup wizard branding step.
+#: src/features/app/components/setup/SetupBrandingFields.tsx
+msgid ""
+"Buttons, links and highlights across the app use this color, and phone "
+"browsers use it for their toolbar. Reset it to keep Fluxer's indigo."
+msgstr "應用程式中的按鈕、連結和醒目標示都會使用此顏色，手機瀏覽器也會將它用作工具列顏色。重設後將保留 sanalyer 的靛藍色。"
+
+#. Error shown in the desktop app when a passkey prompt starts but no security
+#. key is connected to the computer.
+#: src/features/auth/utils/PasskeyErrorMessages.ts
+msgid ""
+"sanalyer couldn't find a security key on this computer. Connect your "
+"security key and try again, or open sanalyer in your web browser and use "
+"your passkey there."
+msgstr ""
+"sanalyer 在這台電腦上找不到安全金鑰。請連接你的安全金鑰後再試一次，或在網頁瀏覽器中開啟 sanalyer 並在那裡使用你的通行金鑰。"
+
+#. Helper text under "Age range from your Apple or Google account" in the
+#. sensitive content settings.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/AgeRangeSection.tsx
+msgid ""
+"The sanalyer app for iPhone, iPad or Android sent us this age range. If it "
+"shows that you're 18 or older, you can see 18+ content in the UK and Brazil."
+" It doesn't change your date of birth."
+msgstr ""
+"適用於 iPhone、iPad 或 Android 的 sanalyer 應用程式向我們傳送了這個年齡層。如果它顯示您已滿 18 "
+"歲，您可以在英國和巴西查看 18+ 內容。它不會變更您的出生日期。"
+
+#. Body of the confirmation shown before deleting the age range. App Attest is
+#. an Apple product name and stays in English.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/AgeRangeSection.tsx
+msgid ""
+"We delete the age range, the time we got it and the App Attest keys for your"
+" Apple devices. In the UK and Brazil, you can't see 18+ content until the "
+"app sends an age range again. The app may send it again later if your Apple "
+"or Google account still shares it with sanalyer."
+msgstr ""
+"我們會刪除這個年齡層、收到它的時間，以及您的 Apple 裝置的 App Attest 金鑰。在英國和巴西，在應用程式再次傳送年齡層之前，您無法查看 "
+"18+ 內容。如果您的 Apple 或 Google 帳號仍與 sanalyer 分享年齡層，應用程式之後可能會再次傳送。"
+
+#. Nagbar body telling people that the Fluxer app for Android phones can be
+#. installed from Google Play. {googlePlay} is the store brand name Google
+#. Play and must stay as is. Keep Fluxer and Android untranslated. Keep the
+#. tone calm and plain.
+#: src/features/app/components/layout/app_layout/nagbars/AndroidAppNagbar.tsx
+msgid ""
+"You can get the sanalyer app for Android on {googlePlay} and chat from your "
+"phone."
+msgstr "你可以在 {googlePlay} 下載 sanalyer 的 Android 應用程式，用手機聊天。"
 
 #. Instance selector error shown when no Fluxer instance answered at the
 #. address. Domain is interpolated.
@@ -58283,12 +58758,6 @@ msgstr "Open first, then add to sets."
 msgid "Open Microsoft Store"
 msgstr "Open Microsoft Store"
 
-#. Accessible label of a picture or video tile in the Media tab of the full
-#. profile page; opens that post.
-#: src/features/user/components/pages/ProfileMediaGrid.tsx
-msgid "Open post"
-msgstr "Open post"
-
 #. Button on the small profile card, the profile modal and the mobile profile
 #. sheet that opens the full profile page.
 #. Button on the small profile card, the profile modal and the mobile profile
@@ -58945,11 +59414,6 @@ msgstr "儲存已啟用的禁言規則需要「將成員暫時禁言」權限；
 #: src/features/feed/utils/FeedReportCopy.ts
 msgid "Scams, malware, or misinformation"
 msgstr "詐騙、惡意軟體或不實資訊"
-
-#. Search community members before viewing their bot warnings.
-#: src/features/micupbot/components/MicupBotWarnings.tsx
-msgid "Search members"
-msgstr "搜尋成員"
 
 #. Link under the Plus perk tiles; opens the shop. Ultra decorations (wings)
 #. are sold, not included.
@@ -63577,88 +64041,3 @@ msgstr "Timing test"
 msgctxt "band-latency-hint"
 msgid "Dismiss"
 msgstr "Dismiss"
-
-#. Short label in the Explore page sidebar. Keep it concise.
-#: src/features/discovery/discovery/DiscoverySidebar.tsx
-msgid "Apps"
-msgstr "應用程式"
-
-#. Description of the switch that hides the purchase date, under the premium
-#. badge row in the "Badges" profile settings. Preserve {premiumProductName};
-#. it is inserted by code. Keep the tone plain and specific.
-#: src/features/user/components/modals/tabs/my_profile_tab/ProfileBadgeSettings.tsx
-msgid "Remove when you first bought {premiumProductName} from your badge"
-msgstr "從徽章中移除您首次購買 {premiumProductName} 的時間"
-
-#. Linux settings note under the list of system-wide shortcuts the desktop
-#. runs (KDE, GNOME). A key assigned here stops reaching every other app.
-#. {productName} is the app name.
-#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
-msgid ""
-"Your desktop keeps these keys for {productName}, so other apps can't use "
-"them."
-msgstr "桌面環境會為 {productName} 保留這些按鍵，因此其他應用程式無法使用。"
-
-#. Settings search synonym. Used to match this term when the user types it in
-#. the settings search bar.
-#: src/features/user/components/settings_utils/search_index/PlutoniumIndex.ts
-msgid "Premium"
-msgstr "進階方案"
-
-#. Linux settings note under the list of system-wide shortcuts the desktop
-#. runs (KDE, GNOME), shown when the "Use direct input device access" switch
-#. is offered below it. A key assigned here stops reaching every other app.
-#. {productName} is the app name.
-#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
-msgid ""
-"Your desktop keeps these keys for {productName}, so other apps can't use "
-"them. To use the same key in other apps, turn on direct input device access "
-"below."
-msgstr ""
-"桌面環境會為 {productName} 保留這些按鍵，因此其他應用程式無法使用。若要在其他應用程式中使用相同按鍵，請在下方開啟「直接存取輸入裝置」。"
-
-#. Instructions for GNOME. Keep "Settings" and "Apps" as the GNOME menu names
-#. in your language. {productName} is the app name.
-#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
-msgid "To change the keys, go to Settings > Apps > {productName}."
-msgstr "若要變更按鍵，請前往「設定」>「應用程式」>「{productName}」。"
-
-#. Privacy > Profile privacy: radio option label allowing every community
-#. member to see the profile.
-#: src/features/user/components/modals/tabs/privacy_safety_tab/ProfilePrivacyTab.tsx
-msgid "Friends and all communities"
-msgstr "好友和所有社群"
-
-#. Privacy > Profile privacy: radio option label allowing only friends and
-#. members of small communities.
-#: src/features/user/components/modals/tabs/privacy_safety_tab/ProfilePrivacyTab.tsx
-msgid "Friends and small communities only"
-msgstr "僅限好友和小型社群"
-
-#. Shown instead of a key when the desktop has no key assigned to a system-
-#. wide shortcut.
-#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
-msgid "Not assigned"
-msgstr "未指定"
-
-#. Instructions for changing system-wide shortcut keys on an unrecognized
-#. Linux desktop.
-#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
-msgid "To change the keys, open your desktop's keyboard shortcut settings."
-msgstr "若要變更按鍵，請開啟桌面環境的鍵盤快速鍵設定。"
-
-#. Switch under the premium badge row in the "Badges" profile settings.
-#. Preserve {premiumProductName}; it is inserted by code. Keep the tone plain
-#. and specific.
-#: src/features/user/components/modals/tabs/my_profile_tab/ProfileBadgeSettings.tsx
-msgid "Hide {premiumProductName} purchase date"
-msgstr "隱藏 {premiumProductName} 購買日期"
-
-#. Instructions for KDE Plasma. Keep "System Settings", "Keyboard" and
-#. "Shortcuts" as the KDE menu names in your language. {productName} is the
-#. app name.
-#: src/features/user/components/modals/tabs/components/SystemShortcutsSection.tsx
-msgid ""
-"To change the keys, go to System Settings > Keyboard > Shortcuts > "
-"{productName}."
-msgstr "若要變更按鍵，請前往「系統設定」>「鍵盤」>「快捷鍵」>「{productName}」。"

@@ -10,6 +10,7 @@ import {isGuildRosterLive, rosterBotApplicationId} from '@app/api/guild/roster/G
 import {ROSTER_BOT_INVITE_PERMISSIONS} from '@app/api/guild/roster/GuildRosterConstants';
 import type {AccountIdentity} from '@app/api/instance/AccountIdentityModeCache';
 import {withAccountIdentitySetupLock} from '@app/api/instance/AccountIdentitySetupLock';
+import {isApiProxiedAttachments} from '@app/api/instance/AttachmentAccessMode';
 import {type CustomBadge, compareBigInts} from '@app/api/instance/custom_badges/CustomBadgeRepository';
 import {
 	type DiscoveryValidators,
@@ -167,6 +168,7 @@ function buildDiscoveryStaticInput(
 			stripe_serviceable: isStripeServiceable(),
 			self_hosted: Config.instance.selfHosted,
 			presigned_attachment_uploads: Config.presignedAttachmentUploadsEnabled,
+			...(isApiProxiedAttachments() ? {proxy_attachments_through_api: true} : {}),
 			emails_enabled: runtime.emailDeliveryState === EmailDeliveryStates.ON,
 			premium_trial_days: runtime.premiumTrialDays,
 			gift_codes_enabled: !Config.instance.selfHosted || runtime.premiumMode === 'mirror',

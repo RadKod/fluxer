@@ -10,26 +10,50 @@ const DEFAULT_READ_TIMEOUT_MS = 5000;
 
 export const BACKGROUND_READ_TIMEOUT_MS = 12000;
 
-export type CassandraConsistencyName = 'local_one' | 'local_quorum' | 'quorum' | 'one';
+export type CassandraConsistencyName = 'one' | 'localOne' | 'quorum' | 'localQuorum' | 'eachQuorum' | 'all';
+export type CassandraSerialConsistencyName = 'serial' | 'localSerial';
 
-type DriverConsistencyName = 'local_one' | 'local_quorum' | 'quorum' | 'one' | 'all' | 'serial';
+const CONSISTENCY_NAMES: Record<string, CassandraConsistencyName> = {
+	one: 'one',
+	local_one: 'localOne',
+	quorum: 'quorum',
+	local_quorum: 'localQuorum',
+	each_quorum: 'eachQuorum',
+	all: 'all',
+};
 
-function getDriverConsistencies(driver: CassandraDriver): Record<DriverConsistencyName, cassandra.types.consistencies> {
-	return {
-		local_one: driver.types.consistencies.localOne,
-		local_quorum: driver.types.consistencies.localQuorum,
-		quorum: driver.types.consistencies.quorum,
-		one: driver.types.consistencies.one,
-		all: driver.types.consistencies.all,
-		serial: driver.types.consistencies.serial,
-	};
+const SERIAL_CONSISTENCY_NAMES: Record<string, CassandraSerialConsistencyName> = {
+	serial: 'serial',
+	local_serial: 'localSerial',
+};
+
+function normalizeConsistencyKey(value: string): string {
+	return value
+		.trim()
+		.replace(/([a-z])([A-Z])/g, '$1_$2')
+		.toLowerCase();
 }
 
-export function toDriverConsistency(name: DriverConsistencyName): cassandra.types.consistencies {
-	if (!loadedDriver) {
-		throw new Error('Cassandra driver is not loaded; connect the client before resolving consistency levels');
+export function parseCassandraConsistency(value: string | undefined): CassandraConsistencyName {
+	if (!value?.trim()) return 'localQuorum';
+	const name = CONSISTENCY_NAMES[normalizeConsistencyKey(value)];
+	if (!name) {
+		throw new Error(
+			`Unsupported Cassandra consistency "${value}". Use one of: ${Object.keys(CONSISTENCY_NAMES).join(', ')}`,
+		);
 	}
-	return getDriverConsistencies(loadedDriver)[name];
+	return name;
+}
+
+export function parseCassandraSerialConsistency(value: string | undefined): CassandraSerialConsistencyName {
+	if (!value?.trim()) return 'localSerial';
+	const name = SERIAL_CONSISTENCY_NAMES[normalizeConsistencyKey(value)];
+	if (!name) {
+		throw new Error(
+			`Unsupported Cassandra serial consistency "${value}". Use one of: ${Object.keys(SERIAL_CONSISTENCY_NAMES).join(', ')}`,
+		);
+	}
+	return name;
 }
 
 interface CassandraConfig {
@@ -37,10 +61,18 @@ interface CassandraConfig {
 	port?: number | undefined;
 	keyspace: string;
 	localDc: string;
+	consistency?: CassandraConsistencyName | undefined;
+	serialConsistency?: CassandraSerialConsistencyName | undefined;
 	username?: string | undefined;
 	password?: string | undefined;
 	readTimeoutMs?: number | undefined;
-	consistency?: CassandraConsistencyName | undefined;
+}
+
+function driverConsistency(name: CassandraConsistencyName): cassandra.types.consistencies {
+	if (!loadedDriver) {
+		throw new Error('Cassandra driver is not loaded; connect the client before resolving consistency levels');
+	}
+	return loadedDriver.types.consistencies[name];
 }
 
 interface CassandraStatement {
@@ -75,6 +107,7 @@ export function getLoadedCassandraDriver(): CassandraDriver | null {
 class CassandraClient {
 	private readonly config: CassandraConfig;
 	private client: cassandra.Client | null;
+	private timestampGenerator: cassandra.policies.timestampGeneration.TimestampGenerator | null = null;
 
 	public constructor(config: CassandraConfig) {
 		this.config = {
@@ -82,10 +115,11 @@ class CassandraClient {
 			port: config.port,
 			keyspace: config.keyspace,
 			localDc: config.localDc,
+			consistency: config.consistency ?? 'localQuorum',
+			serialConsistency: config.serialConsistency ?? 'localSerial',
 			username: config.username,
 			password: config.password,
 			readTimeoutMs: config.readTimeoutMs,
-			consistency: config.consistency,
 		};
 		this.client = null;
 	}
@@ -97,6 +131,7 @@ class CassandraClient {
 		const {default: driver} = await import('cassandra-driver');
 		loadedDriver = driver;
 		const distance = driver.types.distance;
+		const timestampGenerator = driver.policies.defaultTimestampGenerator();
 		const authProvider = this.config.username
 			? new driver.auth.PlainTextAuthProvider(this.config.username, this.config.password ?? '')
 			: undefined;
@@ -104,9 +139,14 @@ class CassandraClient {
 			contactPoints: this.config.hosts,
 			keyspace: this.config.keyspace,
 			localDataCenter: this.config.localDc,
+			queryOptions: {
+				consistency: driver.types.consistencies[this.config.consistency ?? 'localQuorum'],
+				serialConsistency: driver.types.consistencies[this.config.serialConsistency ?? 'localSerial'],
+			},
 			protocolOptions: {
 				port: this.config.port ?? 9042,
 			},
+			policies: {timestampGeneration: timestampGenerator},
 			pooling: {
 				maxRequestsPerConnection: MAX_REQUESTS_PER_CONNECTION,
 				coreConnectionsPerHost: {
@@ -124,11 +164,11 @@ class CassandraClient {
 				useBigIntAsLong: true,
 				useBigIntAsVarint: true,
 			},
-			...(this.config.consistency ? {queryOptions: {consistency: toDriverConsistency(this.config.consistency)}} : {}),
 			...(authProvider ? {authProvider} : {}),
 		});
 		await client.connect();
 		this.client = client;
+		this.timestampGenerator = timestampGenerator;
 	}
 
 	public async shutdown(): Promise<void> {
@@ -146,7 +186,7 @@ class CassandraClient {
 	): Promise<cassandra.types.ResultSet> {
 		return this.getNativeClient().execute(query.cql, query.params, {
 			prepare: options.prepare ?? true,
-			...(options.consistency ? {consistency: toDriverConsistency(options.consistency)} : {}),
+			...(options.consistency ? {consistency: driverConsistency(options.consistency)} : {}),
 		});
 	}
 
@@ -157,8 +197,21 @@ class CassandraClient {
 		const batch = queries.map((query) => ({query: query.cql, params: query.params}));
 		await this.getNativeClient().batch(batch, {
 			prepare: options.prepare ?? true,
-			...(options.consistency ? {consistency: toDriverConsistency(options.consistency)} : {}),
+			...(options.consistency ? {consistency: driverConsistency(options.consistency)} : {}),
 		});
+	}
+
+	public getSerialConsistency(): CassandraSerialConsistencyName {
+		return this.config.serialConsistency ?? 'localSerial';
+	}
+
+	public nextWriteTimestamp(): number {
+		const client = this.getNativeClient();
+		const timestamp = this.timestampGenerator?.next(client);
+		if (typeof timestamp !== 'number') {
+			throw new Error('Cassandra timestamp generator returned no microsecond timestamp');
+		}
+		return timestamp;
 	}
 
 	public getNativeClient(): cassandra.Client {
@@ -195,4 +248,12 @@ export function getDefaultCassandraClient(): CassandraClient {
 
 export function getClient(): cassandra.Client {
 	return getDefaultCassandraClient().getNativeClient();
+}
+
+export function getSerialConsistency(): CassandraSerialConsistencyName {
+	return defaultClientState.client?.getSerialConsistency() ?? 'localSerial';
+}
+
+export function nextWriteTimestamp(): number {
+	return getDefaultCassandraClient().nextWriteTimestamp();
 }

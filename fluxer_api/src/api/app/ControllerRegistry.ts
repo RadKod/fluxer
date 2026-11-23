@@ -4,6 +4,7 @@ import {ActivityPubController} from '@app/api/activity_pub/ActivityPubController
 import {AdminDownloadController} from '@app/api/admin/AdminDownloadController';
 import {registerAdminControllers} from '@app/api/admin/controllers/index';
 import {AttachmentController} from '@app/api/attachment/AttachmentController';
+import {AttachmentMediaController} from '@app/api/attachment/AttachmentMediaController';
 import {AccountEntryController} from '@app/api/auth/AccountEntryController';
 import {AuthController} from '@app/api/auth/AuthController';
 import {OriginHandoffController} from '@app/api/auth/OriginHandoffController';
@@ -123,6 +124,7 @@ export function registerControllers(routes: HonoApp, config: APIConfig): void {
 	} else {
 		GiftCodeRoutes(routes);
 	}
+	AttachmentMediaController(routes);
 }
 
 // Micup features. The admin controllers join registerAdminControllers and its audit coverage cases

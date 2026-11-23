@@ -112,7 +112,11 @@ import {deriveDominantAvatarColor} from '@app/api/utils/AvatarColorUtils';
 import {allSettledWithConcurrency} from '@app/api/utils/ConcurrencyUtils';
 import {calculateDistance, parseCoordinate} from '@app/api/utils/GeoUtils';
 import {lookupGeoip} from '@app/api/utils/IpUtils';
-import type {VoiceAccessContext, VoiceAvailabilityService} from '@app/api/voice/VoiceAvailabilityService';
+import {
+	isRegionPickable,
+	type VoiceAccessContext,
+	type VoiceAvailabilityService,
+} from '@app/api/voice/VoiceAvailabilityService';
 import type {VoiceService} from '@app/api/voice/VoiceService';
 import {VoiceMembershipHooks} from '@app/api/voice_seat/VoiceMembershipHooks';
 import type {WebhookRepository} from '@app/api/webhook/WebhookRepository';
@@ -1146,8 +1150,7 @@ export class RpcService {
 				this.voiceAvailabilityService === null
 					? []
 					: this.voiceAvailabilityService.getAvailableRegions(voiceAccessContext);
-			const accessibleRegions = availableRegions.filter((region) => region.isAccessible);
-			const sortedRegions = accessibleRegions.slice();
+			const sortedRegions = availableRegions.filter(isRegionPickable);
 			const userLatitude = parseCoordinate(latitude);
 			const userLongitude = parseCoordinate(longitude);
 			const hasLocation = userLatitude !== null && userLongitude !== null;

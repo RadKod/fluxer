@@ -61,6 +61,7 @@ export interface ComboboxProps<
 	id?: string;
 	className?: string;
 	isSearchable?: boolean;
+	onInputValueChange?: (inputValue: string) => void;
 	tabIndex?: number;
 	blurInputOnSelect?: boolean;
 	openMenuOnFocus?: boolean;
@@ -160,6 +161,7 @@ export const Combobox = observer(function Combobox<
 	placeholder,
 	className,
 	isSearchable = true,
+	onInputValueChange,
 	tabIndex,
 	blurInputOnSelect = true,
 	openMenuOnFocus = false,
@@ -283,10 +285,11 @@ export const Combobox = observer(function Combobox<
 		selectSelectedLabel();
 	}, [disabled, openMenuOnFocus, selectSelectedLabel]);
 	const handleInputValueChange = useCallback(
-		(_inputValue: string, eventDetails: BaseCombobox.Root.ChangeEventDetails) => {
+		(inputValue: string, eventDetails: BaseCombobox.Root.ChangeEventDetails) => {
 			if (eventDetails.reason === 'input-change') setIsTyping(true);
+			onInputValueChange?.(inputValue);
 		},
-		[],
+		[onInputValueChange],
 	);
 	const handleInputPointerDown = useCallback(
 		(event: React.PointerEvent<HTMLInputElement>) => {

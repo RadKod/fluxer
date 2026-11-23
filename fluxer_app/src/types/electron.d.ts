@@ -103,10 +103,14 @@ export interface DesktopInfo {
 	chromiumRuntime: ChromiumRuntimeInfo;
 }
 
+export type MonochromeTrayIconTone = 'auto' | 'white' | 'black';
+
 export interface DesktopWindowBehaviorSettings {
 	showTrayIcon: boolean;
 	coloredTrayIcon?: boolean;
+	monochromeTrayIconTone?: MonochromeTrayIconTone;
 	darkTaskbarBadge?: boolean;
+	unreadLauncherBadge?: boolean;
 	minimizeToTray: boolean;
 	closeToTray: boolean;
 	startMinimized?: boolean;
@@ -247,6 +251,17 @@ export interface DownloadResult {
 	checksumMismatch?: boolean;
 	path?: string;
 	error?: string;
+}
+
+type DownloadEntryState = 'started' | 'progressing' | 'completed' | 'failed' | 'canceled';
+
+export interface DownloadEntryEvent {
+	id: string;
+	fileName: string;
+	state: DownloadEntryState;
+	receivedBytes: number;
+	totalBytes: number | null;
+	fileExists: boolean;
 }
 
 interface DesktopLocalAppUploadAPI {
@@ -423,6 +438,13 @@ export interface ElectronAPI {
 	windowMinimize?(): void;
 	windowMaximize?(): void;
 	windowClose?(): void;
+	onDownloadsChanged?(callback: (entries: Array<DownloadEntryEvent>) => void): () => void;
+	downloadsList?(): Promise<Array<DownloadEntryEvent>>;
+	downloadCancel?(id: string): void;
+	downloadOpen?(id: string): void;
+	downloadReveal?(id: string): void;
+	downloadDismiss?(id: string): void;
+	downloadsClear?(): void;
 	passkeyIsSupported?(): Promise<boolean>;
 	passkeyRegister?(
 		options: unknown,
@@ -447,6 +469,7 @@ export interface ElectronAPI {
 	desktopModules?: DesktopModuleAPI;
 	desktopUpdate?: DesktopUpdateAPI;
 	reportLastRoute?: (routePath: string) => void;
+	setApiAttachmentAuthorization?: (apiEndpoint: string, token: string | null) => Promise<boolean>;
 	reportInstanceProductName?: (instanceKey: string, productName: string) => void;
 	notifyFirstContentPainted?: (view?: 'restored') => void;
 	localAppUpload?: DesktopLocalAppUploadAPI;

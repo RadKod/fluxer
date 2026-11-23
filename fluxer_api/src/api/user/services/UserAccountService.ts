@@ -188,6 +188,7 @@ export class UserAccountService {
 					updates.suspicious_activity_flags = newFlags;
 				}
 			}
+			updates.email_bounced = false;
 		}
 		let updatedUser: User;
 		let current = user;

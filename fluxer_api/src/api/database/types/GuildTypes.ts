@@ -53,6 +53,7 @@ export interface GuildRow {
 	invites_paused_until: Date | null;
 	premium_tier?: number | null;
 	premium_subscription_count?: number | null;
+	planned_join_waves_until: Date | null;
 	version: number;
 }
 
@@ -95,6 +96,7 @@ export const GUILD_COLUMNS = [
 	'premium_tier',
 	'premium_subscription_count',
 	'invites_paused_until',
+	'planned_join_waves_until',
 	'version',
 ] as const satisfies ReadonlyArray<keyof GuildRow>;
 

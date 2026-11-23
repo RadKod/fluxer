@@ -186,6 +186,7 @@ const USER_TOGGLEABLE_GUILD_FEATURES: ReadonlySet<string> = new Set([
 	GuildFeatures.CLONE_STICKER_ENABLED,
 	GuildFeatures.HIDE_OWNER_CROWN,
 	GuildFeatures.VISITS_ENABLED,
+	GuildFeatures.MEMBER_DMS_DISABLED,
 ]);
 const SUPPORTED_SYSTEM_CHANNEL_FLAGS = SystemChannelFlags.SUPPRESS_JOIN_NOTIFICATIONS;
 const GUILD_SETTINGS_AUDIT_KEYS: ReadonlySet<string> = new Set([
@@ -489,6 +490,7 @@ export class GuildOperationsService {
 			invites_paused_until: null,
 			premium_tier: null,
 			premium_subscription_count: null,
+			planned_join_waves_until: null,
 			version: 1,
 		};
 		batch.addPrepared(Guilds.insert(guildData));

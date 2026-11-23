@@ -35,6 +35,7 @@ import drainActivitySpool from '@app/api/worker/tasks/DrainActivitySpool';
 import drainFeedVideoJobs from '@app/api/worker/tasks/DrainFeedVideoJobs';
 import ensureUserPremium from '@app/api/worker/tasks/EnsureUserPremium';
 import evaluateReferral from '@app/api/worker/tasks/EvaluateReferral';
+import endExpiredPlannedJoinWaves from '@app/api/worker/tasks/EndExpiredPlannedJoinWaves';
 import expireAttachments from '@app/api/worker/tasks/ExpireAttachments';
 import expireReportSnapshots from '@app/api/worker/tasks/ExpireReportSnapshots';
 import expireStaleJobs from '@app/api/worker/tasks/ExpireStaleJobs';
@@ -122,6 +123,7 @@ import runGuildRosterSlots from '@app/api/worker/tasks/RunGuildRosterSlots';
 import runMicupBotCommand from '@app/api/worker/tasks/RunMicupBotCommand';
 import runMicupBotVoiceSlots from '@app/api/worker/tasks/RunMicupBotVoiceSlots';
 import scanFeedVideo from '@app/api/worker/tasks/ScanFeedVideo';
+import restatePlannedJoinWaves from '@app/api/worker/tasks/RestatePlannedJoinWaves';
 import scanBillingNotices from '@app/api/worker/tasks/ScanBillingNotices';
 import seedThreadPermissions from '@app/api/worker/tasks/SeedThreadPermissions';
 import sendBillingEmail from '@app/api/worker/tasks/SendBillingEmail';
@@ -210,6 +212,8 @@ export const workerTasks: Record<WorkerTaskName, WorkerTaskHandler> = {
 	indexGuildMembers,
 	joinSingleCommunityMembers,
 	liftExpiredGuildInvitePauses,
+	endExpiredPlannedJoinWaves,
+	restatePlannedJoinWaves,
 	messageShred,
 	notifyRegistrationApprovers,
 	operatorPassOfferCompletion,

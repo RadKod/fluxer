@@ -364,6 +364,8 @@ pub struct InstanceBlueskyIntegrationResponse {
 pub struct InstanceMediaResponse {
     #[serde(default)]
     pub attachment_decay: InstanceAttachmentDecayResponse,
+    #[serde(default)]
+    pub proxy_attachments_through_api: bool,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -1371,6 +1373,8 @@ pub struct InstanceBlueskyKeyIntegrationUpdateRequest {
 pub struct InstanceMediaUpdateRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub attachment_decay: Option<InstanceAttachmentDecayUpdateRequest>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub proxy_attachments_through_api: Option<bool>,
 }
 
 #[derive(Clone, Debug, Default, Serialize)]

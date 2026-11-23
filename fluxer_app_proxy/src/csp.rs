@@ -84,6 +84,7 @@ fn has_src_attribute(attributes: &str) -> bool {
 pub struct InstanceCspSources {
     pub static_cdn_endpoint: Option<HttpEndpoint>,
     pub media_endpoint: Option<HttpEndpoint>,
+    pub attachment_api_endpoint: Option<HttpEndpoint>,
     pub connect_origins: Vec<String>,
 }
 
@@ -93,6 +94,8 @@ pub struct RuntimeCspSources {
     pub media_endpoint: Option<HttpEndpoint>,
     pub s3_public_endpoint: Option<HttpEndpoint>,
     pub s3_uploads_endpoint: Option<HttpEndpoint>,
+    pub s3_fallback_public_endpoint: Option<HttpEndpoint>,
+    pub s3_fallback_uploads_endpoint: Option<HttpEndpoint>,
 }
 
 const FRAME_SOURCES: &[&str] = &[
@@ -146,7 +149,6 @@ const CONNECT_SOURCES: &[&str] = &[
     "wss://*.fluxer.com",
     "https://*.fluxer.media",
     "wss://*.fluxer.media",
-    "https://fluxer-uploads.ewr1.vultrobjects.com",
     "https://fluxerstatus.com",
     "https://fluxer.media",
 ];
@@ -204,6 +206,8 @@ impl CompiledCspPolicy {
                 media_endpoint: config.media_endpoint.clone(),
                 s3_public_endpoint: config.s3_public_endpoint.clone(),
                 s3_uploads_endpoint: config.s3_uploads_endpoint.clone(),
+                s3_fallback_public_endpoint: config.s3_fallback_public_endpoint.clone(),
+                s3_fallback_uploads_endpoint: config.s3_fallback_uploads_endpoint.clone(),
             },
         )
     }
@@ -325,11 +329,16 @@ fn build_csp_directives(
     for origin in branding_image_origins {
         push_endpoint_source(&mut img, Some(origin));
     }
+    push_endpoint_source(&mut img, instance_sources.attachment_api_endpoint.as_ref());
     directives.push(format!("img-src {}", img.join(" ")));
 
     let mut media = vec!["'self'".to_owned(), "blob:".to_owned()];
     extend_from(&mut media, &config.extra_media_src, MEDIA_SOURCES);
     extend_runtime_sources(&mut media, runtime_sources, instance_sources, true, true);
+    push_endpoint_source(
+        &mut media,
+        instance_sources.attachment_api_endpoint.as_ref(),
+    );
     directives.push(format!("media-src {}", media.join(" ")));
 
     let mut font = vec!["'self'".to_owned(), "blob:".to_owned(), "data:".to_owned()];
@@ -418,6 +427,11 @@ fn push_endpoint_source(target: &mut Vec<String>, endpoint: Option<&HttpEndpoint
 fn extend_runtime_s3_sources(target: &mut Vec<String>, runtime_sources: &RuntimeCspSources) {
     push_endpoint_source(target, runtime_sources.s3_public_endpoint.as_ref());
     push_endpoint_source(target, runtime_sources.s3_uploads_endpoint.as_ref());
+    push_endpoint_source(target, runtime_sources.s3_fallback_public_endpoint.as_ref());
+    push_endpoint_source(
+        target,
+        runtime_sources.s3_fallback_uploads_endpoint.as_ref(),
+    );
 }
 
 fn http_twin_of_websocket_source(source: &str) -> Option<String> {
@@ -514,6 +528,47 @@ mod tests {
     }
 
     #[test]
+    fn both_stores_upload_hosts_are_connect_sources() {
+        let config = AppProxyConfig::from_env(&fluxer_common::config::EnvMap::from_pairs([
+            (
+                "FLUXER_S3_PUBLIC_ENDPOINT",
+                "https://objects-a.example.test",
+            ),
+            ("FLUXER_S3_BUCKET_UPLOADS", "uploads-a"),
+            (
+                "FLUXER_S3_FALLBACK_PUBLIC_ENDPOINT",
+                "https://objects-b.example.test",
+            ),
+            (
+                "FLUXER_S3_FALLBACK_BUCKET_MAP",
+                "cdn=media-b, uploads=uploads-b",
+            ),
+        ]));
+        let policy = CompiledCspPolicy::from_config(&config).unwrap();
+        let headers = policy.spa_headers(&[], &[], &InstanceCspSources::default());
+        let connect: Vec<&str> = headers
+            .enforced
+            .to_str()
+            .unwrap()
+            .split("; ")
+            .find(|directive| directive.starts_with("connect-src "))
+            .unwrap()
+            .split(' ')
+            .collect();
+        for source in [
+            "https://objects-a.example.test",
+            "https://uploads-a.objects-a.example.test",
+            "https://objects-b.example.test",
+            "https://uploads-b.objects-b.example.test",
+        ] {
+            assert!(
+                connect.contains(&source),
+                "{source} missing from connect-src"
+            );
+        }
+    }
+
+    #[test]
     fn branding_image_origins_are_granted_to_images_and_nothing_else() {
         let policy = CompiledCspPolicy::compile(default_csp_config(), &runtime_sources()).unwrap();
         let branding = [
@@ -585,5 +640,30 @@ mod tests {
             format!("{dark_script} https://www.googletagmanager.com/gtag/js")
         );
         assert!(!spa_directive(&config, "img-src").contains("google"));
+    }
+
+    #[test]
+    fn the_attachment_api_origin_is_granted_to_images_and_media_only_when_set() {
+        let policy = CompiledCspPolicy::compile(default_csp_config(), &runtime_sources()).unwrap();
+        let without = policy.spa_headers(&[], &[], &InstanceCspSources::default());
+        let api = endpoint("https://api.example.test");
+        let with = policy.spa_headers(
+            &[],
+            &[],
+            &InstanceCspSources {
+                attachment_api_endpoint: Some(api.clone()),
+                ..InstanceCspSources::default()
+            },
+        );
+        let without = without.enforced.to_str().unwrap().to_owned();
+        let with = with.enforced.to_str().unwrap().to_owned();
+        assert!(!without.contains(api.csp_origin()));
+        for directive in with.split("; ") {
+            let grants = directive
+                .split(' ')
+                .any(|source| source == api.csp_origin());
+            let expected = directive.starts_with("img-src ") || directive.starts_with("media-src ");
+            assert_eq!(grants, expected, "{directive}");
+        }
     }
 }

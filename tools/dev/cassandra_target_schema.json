@@ -7781,6 +7781,10 @@
 					"type": "timestamp"
 				},
 				{
+					"name": "planned_join_waves_until",
+					"type": "timestamp"
+				},
+				{
 					"name": "premium_tier",
 					"type": "int"
 				},
@@ -13767,6 +13771,10 @@
 				},
 				{
 					"name": "is_default",
+					"type": "boolean"
+				},
+				{
+					"name": "hidden",
 					"type": "boolean"
 				},
 				{
