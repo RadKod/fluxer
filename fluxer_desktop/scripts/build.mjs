@@ -590,8 +590,6 @@ function buildNativeAddons() {
 		buildNativeAddon({
 			label: '@fluxer/win-toast',
 			dirName: 'win-toast',
-			commands: [['pnpm', 'build']],
-			jsEntry: 'index.js',
 		});
 		buildNativeAddon({
 			label: '@fluxer/windows-input-hook',
@@ -616,8 +614,6 @@ function buildNativeAddons() {
 		buildNativeAddon({
 			label: '@fluxer/linux-screen-capture',
 			dirName: 'linux-screen-capture',
-			commands: [['pnpm', 'build']],
-			jsEntry: 'index.js',
 		});
 		buildNativeAddon({
 			label: '@fluxer/linux-portals',

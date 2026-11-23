@@ -8,6 +8,14 @@ publish = false
 [workspace]
 resolver = "2"
 
+# sanalyer: this crate keeps its own workspace and Cargo.lock, so it needs its own copy of the root
+# `desktop-native` profile that tools/ci builds every desktop addon with.
+[profile.desktop-native]
+inherits = "release"
+lto = false
+codegen-units = 16
+strip = "none"
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
