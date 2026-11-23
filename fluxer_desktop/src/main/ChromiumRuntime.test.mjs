@@ -36,6 +36,9 @@ function loadChromiumRuntime(platform = 'win32') {
 	function requireStub(specifier) {
 		if (specifier === 'electron') return {app};
 		if (specifier === 'electron-log') return log;
+		if (specifier === '@electron/main/DesktopDistributionPath') {
+			return {getAppResourcesPath: () => '/tmp/fluxer-resources'};
+		}
 		return require(specifier);
 	}
 

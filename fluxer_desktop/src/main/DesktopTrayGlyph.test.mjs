@@ -14,7 +14,7 @@ for (const name of ['16x16.png', 'tray-glyph.png']) fs.writeFileSync(path.join(r
 Object.defineProperty(process, 'resourcesPath', {value: resourcesPath, configurable: true});
 Object.defineProperty(process, 'platform', {value: 'win32', configurable: true});
 
-const settings = {showTrayIcon: true, coloredTrayIcon: false};
+const settings = {showTrayIcon: true, coloredTrayIcon: false, monochromeTrayIconTone: 'auto'};
 globalThis.__sanalyerTrayGlyphTestSettings__ = settings;
 installTestModuleStub(
 	'@electron/common/DesktopConfig',

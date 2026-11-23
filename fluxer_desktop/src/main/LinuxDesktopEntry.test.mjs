@@ -49,8 +49,10 @@ const desktopStubs = {
 		LINUX_DESKTOP_ENTRY_ID: 'sanalyer',
 		LINUX_ICON_NAME: 'sanalyer',
 		LEGACY_LINUX_DESKTOP_ENTRY_ID: 'sanalyer-legacy',
+		OTHER_CHANNEL_LINUX_DESKTOP_FILES: new Set(['sanalyer-canary.desktop']),
 	},
 	'@electron/common/Logger': {createChildLogger: () => noopLogger},
+	'@electron/main/DesktopDistributionPath': {getAppResourcesPath: () => process.resourcesPath},
 	'@electron/main/JumpList': {
 		TASK_ARG_PREFIX: '--fluxer-task=',
 		isDirectMessagesAvailable: () => true,

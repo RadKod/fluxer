@@ -119,6 +119,17 @@ for (const channel of ['stable', 'canary']) {
 		assert.ok(Buffer.from(embedded[1], 'base64').equals(source));
 	});
 
+	function loadDesktopEntryText() {
+		const entryText = {exports: {}};
+		const entrySource = readFileSync(path.join(desktopRoot, 'src/main/DesktopEntryText.ts'), 'utf8');
+		vm.runInNewContext(require('esbuild').transformSync(entrySource, {loader: 'ts', format: 'cjs'}).code, {
+			module: entryText,
+			exports: entryText.exports,
+			require,
+		});
+		return entryText.exports;
+	}
+
 	test(`${channel} runtime desktop entry installs sanalyer hicolor icons and sets the matching WM class`, () => {
 		const writes = new Map();
 		const copies = [];
@@ -131,6 +142,7 @@ for (const channel of ['stable', 'canary']) {
 			'node:fs': {
 				existsSync: (file) => file.startsWith('/resources/icons/') || writes.has(file),
 				mkdirSync() {},
+				chmodSync() {},
 				copyFileSync: (from, to) => copies.push({from, to}),
 				readFileSync(file) {
 					if (writes.has(file)) return writes.get(file);
@@ -150,6 +162,9 @@ for (const channel of ['stable', 'canary']) {
 				},
 			},
 			'@electron/common/Constants': {APP_PROTOCOL: 'sanalyer'},
+			'@electron/common/OfflineBuild': {IS_OFFLINE_BUILD: false},
+			'@electron/main/DesktopDistributionPath': {getAppResourcesPath: () => '/resources'},
+			'@electron/main/DesktopEntryText': loadDesktopEntryText(),
 			'@electron/common/DesktopIdentity': identityFor(channel),
 			'@electron/common/Logger': {createChildLogger: () => ({debug() {}, info() {}, warn() {}})},
 			'@electron/main/JumpList': {
