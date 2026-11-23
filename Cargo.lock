@@ -2731,6 +2731,7 @@ dependencies = [
  "napi-build",
  "napi-derive",
  "objc2",
+ "objc2-core-audio",
  "objc2-core-audio-types",
  "objc2-core-foundation",
  "objc2-core-graphics",
@@ -4570,10 +4571,13 @@ version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e1eebcea8b0dbff5f7c8504f3107c68fc061a3eb44932051c8cf8a68d969c3b2"
 dependencies = [
+ "block2",
  "dispatch2",
+ "libc",
  "objc2",
  "objc2-core-audio-types",
  "objc2-core-foundation",
+ "objc2-foundation",
 ]
 
 [[package]]
